@@ -1,0 +1,8 @@
+/*
+ * Ajustes propios del proyecto.
+ * Mantiene intacto el CSS original del template y deja un espacio seguro para personalizaciones.
+ */
+
+.site-ready body {
+    visibility: visible;
+}

@@ -78,7 +78,7 @@ try {
         <div class="container-fluid px-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <i class="fas fa-map-marker-alt me-2" style="color:var(--sp-amarillo)"></i>Venancio BenavÃ­dez 3612
+                    <i class="fas fa-map-marker-alt me-2" style="color:var(--sp-amarillo)"></i>Venancio Benavidez 3612
                     <span class="sep">|</span>
                     <i class="fas fa-phone me-2" style="color:var(--sp-amarillo)"></i>+598 2337 3737 *****
                     <span class="sep">|</span>
@@ -139,7 +139,7 @@ try {
                             <?php endif; ?>
                             </li>
                             <?php endforeach; ?>
-                            <li><a href="#" class="sp-btn-matricula">MatrÃ­cula</a></li>
+                            <li><a href="#" class="sp-btn-matricula">Matricula</li>
                     </ul>
                 </nav>
                 <!-- Hamburger (mobile) -->

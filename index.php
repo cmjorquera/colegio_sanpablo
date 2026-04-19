@@ -181,7 +181,7 @@ try {
                 <div>
                     <i class="fas fa-map-marker-alt me-2" style="color:var(--sp-amarillo)"></i>Venancio BenavÃ­dez 3612
                     <span class="sep">|</span>
-                    <i class="fas fa-phone me-2" style="color:var(--sp-amarillo)"></i>+598 2337 3737
+                    <i class="fas fa-phone me-2" style="color:var(--sp-amarillo)"></i>+598 2337 3737 *****
                     <span class="sep">|</span>
                     <i class="fas fa-envelope me-2" style="color:var(--sp-amarillo)"></i>
                     <a href="mailto:info@sanpablo.edu.uy">info@sanpablo.edu.uy</a>

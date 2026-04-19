@@ -857,8 +857,7 @@ try {
                     <div class="section-header mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">PREGUNTAS FRECUENTES
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-about-2-4">
@@ -1363,8 +1362,7 @@ try {
                     <div class="section-header-three mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">Preguntas Frecuentes
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-about-3-4">
@@ -2913,7 +2911,7 @@ try {
     <section class="coming-soon-area bg-image" data-background="assets/images/bg/coming-soon-bg.jpg">
         <div class="container">
             <div class="coming-soon__wrp text-center">
-                <h1 class="text-white">We Are Coming Very Soon</h1>
+                <h1 class="text-white">Llegaremos muy pronto</h1>
                 <div class="coming-soon__items mt-60">
                     <div class="item">
                         <h2 id="day-coming-soon-0">00</h2>
@@ -8194,8 +8192,7 @@ try {
                     <div class="section-header mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">PREGUNTAS FRECUENTES
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-faq-1">
@@ -8353,10 +8350,10 @@ try {
                 </div>
                 <div class="col-lg-6">
                     <div class="section-header">
-                        <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">HOW WE ARE</h5>
+                        <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">COMO SOMOS</h5>
                         <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Explore Master
-                            Embrace New
-                            <span>Languages. <img src="assets/images/shape/header-shape.png" alt="shape"></span>
+                            Abrazar lo nuevo
+                            <span>Idioma. <img src="assets/images/shape/header-shape.png" alt="shape"></span>
                         </h2>
                         <p class="wow fadeInUp" data-wow-delay="400ms" data-wow-duration="1500ms">Brindamos una
                             educacion integral con acompanamiento cercano, formacion en valores y experiencias de
@@ -8680,8 +8677,7 @@ try {
                     <div class="section-header mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">PREGUNTAS FRECUENTES
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-index-10-4">
@@ -8826,18 +8822,11 @@ try {
                                 <div class="swiper-wrapper">
                                     <div class="swiper-slide">
                                         <div class="testimonial__item">
-                                            <p class="fw-500 fs-18">Nullam dignissim, ante scelerisque is euismod
-                                                fermentum
-                                                odio sem
-                                                semper is erat, a
-                                                feugiat leo urna eget eros. Duis
-                                                Aenean a imperdiet risus. Aliquam pellentesque nisi dui eget dapibus
-                                                enim ornare eu.
-                                                Morbi.</p>
+                                            <p class="fw-500 fs-18">El Colegio San Pablo se caracteriza por su compromiso con la formación integral de sus estudiantes, promoviendo valores, respeto y responsabilidad. Su comunidad educativa trabaja de manera cercana para apoyar el aprendizaje, fortalecer el desarrollo personal y crear un ambiente escolar positivo que motive a los alumnos a crecer académica y humanamente.</p>
                                             <div class="d-flex align-items-center justify-content-between gap-4 mt-30">
                                                 <div>
-                                                    <h4>Sumaya Islam</h4>
-                                                    <span>Disenador Web</span>
+                                                    <h4>Cristin Jorquera</h4>
+                                                    <span>Ingeniero Informatico</span>
                                                     <div class="star mt-1">
                                                         <i class="fa-sharp fa-solid fa-star"></i>
                                                         <i class="fa-sharp fa-solid fa-star"></i>
@@ -8854,18 +8843,11 @@ try {
                                     </div>
                                     <div class="swiper-slide">
                                         <div class="testimonial__item">
-                                            <p class="fw-500 fs-18">Nullam dignissim, ante scelerisque is euismod
-                                                fermentum
-                                                odio sem
-                                                semper is erat, a
-                                                feugiat leo urna eget eros. Duis
-                                                Aenean a imperdiet risus. Aliquam pellentesque nisi dui eget dapibus
-                                                enim ornare eu.
-                                                Morbi.</p>
+                                            <p class="fw-500 fs-18">El Colegio San Pablo se caracteriza por su compromiso con la formación integral de sus estudiantes, promoviendo valores, respeto y responsabilidad. Su comunidad educativa trabaja de manera cercana para apoyar el aprendizaje, fortalecer el desarrollo personal y crear un ambiente escolar positivo que motive a los alumnos a crecer académica y humanamente.</p>
                                             <div class="d-flex align-items-center justify-content-between gap-4 mt-30">
                                                 <div>
-                                                    <h4>Kawser Ahmed</h4>
-                                                    <span>Disenador Web</span>
+                                                    <h4>Guadalupe Jorquera</h4>
+                                                    <span>Ingeneira Comercial</span>
                                                     <div class="star mt-1">
                                                         <i class="fa-sharp fa-solid fa-star"></i>
                                                         <i class="fa-sharp fa-solid fa-star"></i>
@@ -8882,18 +8864,11 @@ try {
                                     </div>
                                     <div class="swiper-slide">
                                         <div class="testimonial__item">
-                                            <p class="fw-500 fs-18">Nullam dignissim, ante scelerisque is euismod
-                                                fermentum
-                                                odio sem
-                                                semper is erat, a
-                                                feugiat leo urna eget eros. Duis
-                                                Aenean a imperdiet risus. Aliquam pellentesque nisi dui eget dapibus
-                                                enim ornare eu.
-                                                Morbi.</p>
+                                            <p class="fw-500 fs-18">El Colegio San Pablo se caracteriza por su compromiso con la formación integral de sus estudiantes, promoviendo valores, respeto y responsabilidad. Su comunidad educativa trabaja de manera cercana para apoyar el aprendizaje, fortalecer el desarrollo personal y crear un ambiente escolar positivo que motive a los alumnos a crecer académica y humanamente..</p>
                                             <div class="d-flex align-items-center justify-content-between gap-4 mt-30">
                                                 <div>
-                                                    <h4>Seraboni Roy</h4>
-                                                    <span>Especialista en Marketing</span>
+                                                    <h4>Laura caicedo</h4>
+                                                    <span>Contadora Auditora</span>
                                                     <div class="star mt-1">
                                                         <i class="fa-sharp fa-solid fa-star"></i>
                                                         <i class="fa-sharp fa-solid fa-star"></i>
@@ -10547,8 +10522,7 @@ try {
                     <div class="section-header mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">PREGUNTAS FRECUENTES
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-index-2-5">
@@ -11402,8 +11376,7 @@ try {
                     <div class="section-header-three mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">Preguntas Frecuentes
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-index-3-3">
@@ -13740,8 +13713,7 @@ try {
                     <div class="section-header mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">PREGUNTAS FRECUENTES
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-index-6-5">
@@ -14506,8 +14478,7 @@ try {
                     <div class="section-header mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">PREGUNTAS FRECUENTES
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-index-7-4">
@@ -16560,8 +16531,7 @@ try {
                     <div class="section-header-three mb-40">
                         <h5 class="wow fadeInUp" data-wow-delay="00ms" data-wow-duration="1500ms">Preguntas Frecuentes
                         </h5>
-                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">We Are Always
-                            Ensure Best Course para tir <span>Aprendizaje <img
+                        <h2 class="wow fadeInUp" data-wow-delay="200ms" data-wow-duration="1500ms">Siempre nos aseguramos de que el mejor curso para <span>Aprendizaje <img
                                     src="assets/images/shape/header-shape.png" alt="shape"></span></h2>
                     </div>
                     <div class="accordion" id="accordionExample-index-9-6">

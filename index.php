@@ -123,7 +123,7 @@ try {
                         ?>
                         <li<?= $active ?>>
                             <a href="<?= $url ?>">
-                                <?= $nombre ?><?= $hasSubs ? ' â–¾' : '' ?>
+                                <?= $nombre ?><?= $hasSubs ? ' <span aria-hidden="true">&#9662;</span>' : '' ?>
                             </a>
                             <?php if ($hasSubs): ?>
                             <ul class="dropdown">
@@ -139,7 +139,7 @@ try {
                             <?php endif; ?>
                             </li>
                             <?php endforeach; ?>
-                            <li><a href="#" class="sp-btn-matricula">Matricula</li>
+                            <li><a href="#" class="sp-btn-matricula">Matricula</a></li>
                     </ul>
                 </nav>
                 <!-- Hamburger (mobile) -->

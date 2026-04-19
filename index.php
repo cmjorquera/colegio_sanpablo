@@ -78,9 +78,9 @@ try {
         <div class="container-fluid px-4">
             <div class="d-flex justify-content-between align-items-center">
                 <div>
-                    <i class="fas fa-map-marker-alt me-2" style="color:var(--sp-amarillo)"></i>Venancio BenavÃ­dez 3612
+                    <i class="fas fa-map-marker-alt me-2" style="color:var(--sp-amarillo)"></i>Venancio Benavidez 3612
                     <span class="sep">|</span>
-                    <i class="fas fa-phone me-2" style="color:var(--sp-amarillo)"></i>+598 2337 3737 *****
+                    <i class="fas fa-phone me-2" style="color:var(--sp-amarillo)"></i>+598 2337 3737 
                     <span class="sep">|</span>
                     <i class="fas fa-envelope me-2" style="color:var(--sp-amarillo)"></i>
                     <a href="mailto:info@sanpablo.edu.uy">info@sanpablo.edu.uy</a>
@@ -90,7 +90,7 @@ try {
                     <a href="#" class="sp-login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin"
                         title="Ingresar al sistema">
                         <i class="fas fa-sign-in-alt"></i>
-                        <span>Ingr22222222esar</span>
+                        <span>Ingresar</span>
                     </a>
                     <span class="sep">|</span>
                     <a href="#" class="me-1"><i class="fab fa-instagram me-1"></i>Instagram</a>
@@ -123,7 +123,7 @@ try {
                         ?>
                         <li<?= $active ?>>
                             <a href="<?= $url ?>">
-                                <?= $nombre ?><?= $hasSubs ? ' â–¾' : '' ?>
+                                <?= $nombre ?><?= $hasSubs ? ' <span aria-hidden="true">&#9662;</span>' : '' ?>
                             </a>
                             <?php if ($hasSubs): ?>
                             <ul class="dropdown">
@@ -139,7 +139,7 @@ try {
                             <?php endif; ?>
                             </li>
                             <?php endforeach; ?>
-                            <li><a href="#" class="sp-btn-matricula">MatrÃ­cula</a></li>
+                            <li><a href="#" class="sp-btn-matricula">Matrícula</a></li>
                     </ul>
                 </nav>
                 <!-- Hamburger (mobile) -->
@@ -186,7 +186,7 @@ try {
                     <div class="slide-overlay"></div>
                     <div class="slide-content">
                         <div class="slide-texto">
-                            <span class="slide-label"><i class="fas fa-heart"></i> Nuestra MisiÃ³n</span>
+                            <span class="slide-label"><i class="fas fa-heart"></i> Nuestra Misión</span>
                             <h2>Caminamos<br><strong>Juntos</strong><br>Hacia el Futuro</h2>
                             <div class="slide-botones">
                                 <a href="#noticias" class="slide-btn-primary">Ver novedades</a>
@@ -205,7 +205,7 @@ try {
                             <span class="slide-label"><i class="fas fa-users"></i> Comunidad Educativa</span>
                             <h2>Disfrutamos<br><strong>Creciendo</strong><br>Contigo</h2>
                             <div class="slide-botones">
-                                <a href="#galeria" class="slide-btn-primary">Ver galerÃ­a</a>
+                                <a href="#galeria" class="slide-btn-primary">Ver galería</a>
                                 <a href="#docentes" class="slide-btn-outline">Nuestro equipo</a>
                             </div>
                         </div>
@@ -220,7 +220,7 @@ try {
                             <span class="slide-label"><i class="fas fa-users"></i> Comunidad Educativa</span>
                             <h2>Disfrutamos<br><strong>Creciendo</strong><br>Contigo</h2>
                             <div class="slide-botones">
-                                <a href="#galeria" class="slide-btn-primary">Ver galerÃ­a</a>
+                                <a href="#galeria" class="slide-btn-primary">Ver galería</a>
                                 <a href="#docentes" class="slide-btn-outline">Nuestro equipo</a>
                             </div>
                         </div>
@@ -246,50 +246,50 @@ try {
                 <span class="section-label">Oferta Educativa</span>
                 <h2 class="section-title">Nuestros <span>Niveles</span></h2>
                 <div class="divider-line mx-auto"></div>
-                <p class="section-desc mx-auto">AcompaÃ±amos cada etapa del crecimiento de tus hijos con propuestas
-                    pedagÃ³gicas de calidad.</p>
+                <p class="section-desc mx-auto">Acompañamos cada etapa del crecimiento de tus hijos con propuestas
+                    pedagógicas de calidad.</p>
             </div>
             <div class="row g-4">
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="#" class="nivel-card">
                         <div class="icon"><i class="fas fa-baby"></i></div>
                         <h5>Maternal</h5>
-                        <p>0 a 3 aÃ±os</p>
+                        <p>0 a 3 años</p>
                     </a>
                 </div>
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="#" class="nivel-card">
                         <div class="icon"><i class="fas fa-child"></i></div>
                         <h5>Inicial</h5>
-                        <p>3 a 6 aÃ±os</p>
+                        <p>3 a 6 años</p>
                     </a>
                 </div>
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="#" class="nivel-card">
                         <div class="icon"><i class="fas fa-pencil-alt"></i></div>
                         <h5>Primaria</h5>
-                        <p>6 a 11 aÃ±os</p>
+                        <p>6 a 11 años</p>
                     </a>
                 </div>
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="#" class="nivel-card">
                         <div class="icon"><i class="fas fa-book"></i></div>
                         <h5>3er Ciclo EBI</h5>
-                        <p>12 a 15 aÃ±os</p>
+                        <p>12 a 15 años</p>
                     </a>
                 </div>
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="#" class="nivel-card">
                         <div class="icon"><i class="fas fa-graduation-cap"></i></div>
                         <h5>Bachillerato</h5>
-                        <p>15 a 18 aÃ±os</p>
+                        <p>15 a 18 años</p>
                     </a>
                 </div>
                 <div class="col-6 col-md-4 col-lg-2">
                     <a href="#" class="nivel-card">
                         <div class="icon"><i class="fas fa-user-graduate"></i></div>
                         <h5>Libre Asistido</h5>
-                        <p>EducaciÃ³n flexible</p>
+                        <p>Educación flexible</p>
                     </a>
                 </div>
             </div>
@@ -303,10 +303,10 @@ try {
                 <div class="col-lg-4 mb-4 mb-lg-0">
                     <span class="section-label" style="color:#cde">Portal Digital</span>
                     <h2>Acceso<br>Mi San Pablo</h2>
-                    <p>Plataforma de gestiÃ³n escolar para toda la comunidad educativa. Ingresa con tus credenciales.
+                    <p>Plataforma de gestión escolar para toda la comunidad educativa. Ingresa con tus credenciales.
                     </p>
                     <a href="#" class="btn-primary-sp mt-2"
-                        style="background:var(--sp-amber);border-radius:50px">Recuperar contraseÃ±a</a>
+                        style="background:var(--sp-amber);border-radius:50px">Recuperar contraseña</a>
                 </div>
                 <div class="col-lg-8">
                     <div class="row g-3">
@@ -328,14 +328,14 @@ try {
                             <a href="#" class="portal-card">
                                 <div class="icon"><i class="fas fa-chalkboard-teacher"></i></div>
                                 <h6>Docentes</h6>
-                                <small>PlanificaciÃ³n y registros</small>
+                                <small>Planificación y registros</small>
                             </a>
                         </div>
                         <div class="col-6 col-md-3">
                             <a href="#" class="portal-card">
                                 <div class="icon"><i class="fas fa-briefcase"></i></div>
                                 <h6>Funcionarios</h6>
-                                <small>AdministraciÃ³n interna</small>
+                                <small>Administración interna</small>
                             </a>
                         </div>
                     </div>
@@ -350,7 +350,7 @@ try {
             <div class="d-flex justify-content-between align-items-end mb-5 flex-wrap gap-3">
                 <div>
                     <span class="section-label">Novedades</span>
-                    <h2 class="section-title">Ãšltimas <span>Noticias</span></h2>
+                    <h2 class="section-title">Últimas <span>Noticias</span></h2>
                     <div class="divider-line"></div>
                 </div>
                 <a href="#" class="btn-ver-mas">Ver todas las noticias</a>
@@ -377,11 +377,11 @@ try {
                 <div class="col-md-6 col-lg-3">
                     <div class="noticia-card">
                         <div class="img-wrap">
-                            <img src="assets/images/frontis_02.jpg" alt="Certificaciones InglÃ©s">
+                            <img src="assets/images/frontis_02.jpg" alt="Certificaciones Inglés">
                         </div>
                         <div class="card-body">
                             <span class="tag">Idiomas</span>
-                            <h5>Certificaciones InglÃ©s y PortuguÃ©s</h5>
+                            <h5>Certificaciones Inglés y Portugués</h5>
                             <p>Alumnos de bachillerato rindieron y aprobaron certificaciones internacionales de idiomas.
                             </p>
                             <div class="meta">
@@ -397,9 +397,9 @@ try {
                             <img src="assets/images/frontis_03.jpg" alt="Jornada Orientate">
                         </div>
                         <div class="card-body">
-                            <span class="tag">OrientaciÃ³n</span>
+                            <span class="tag">Orientación</span>
                             <h5>Jornada Orientate</h5>
-                            <p>Jornada de orientaciÃ³n vocacional para estudiantes de 3er ciclo y bachillerato.</p>
+                            <p>Jornada de orientación vocacional para estudiantes de 3er ciclo y bachillerato.</p>
                             <div class="meta">
                                 <i class="fas fa-calendar-alt"></i> Octubre 2025
                             </div>
@@ -415,7 +415,7 @@ try {
                         <div class="card-body">
                             <span class="tag">Medio Ambiente</span>
                             <h5>Proyecto Reciclar Actitudes</h5>
-                            <p>Proyecto de concientizaciÃ³n ambiental que involucra a toda la comunidad escolar.</p>
+                            <p>Proyecto de concientización ambiental que involucra a toda la comunidad escolar.</p>
                             <div class="meta">
                                 <i class="fas fa-calendar-alt"></i> Octubre 2025
                             </div>
@@ -445,8 +445,8 @@ try {
                             <span>Nov</span>
                         </div>
                         <div class="info">
-                            <h6>Calendario de actividades fin de aÃ±o</h6>
-                            <p>Fechas de actos, exÃ¡menes y entrega de libretas del segundo semestre.</p>
+                            <h6>Calendario de actividades fin de año</h6>
+                            <p>Fechas de actos, exámenes y entrega de libretas del segundo semestre.</p>
                         </div>
                         <div class="arrow"><i class="fas fa-chevron-right"></i></div>
                     </a>
@@ -456,8 +456,8 @@ try {
                             <span>Nov</span>
                         </div>
                         <div class="info">
-                            <h6>Proceso de matrÃ­cula 2026</h6>
-                            <p>InformaciÃ³n sobre plazos y documentaciÃ³n requerida para la reinscripciÃ³n.</p>
+                            <h6>Proceso de matrícula 2026</h6>
+                            <p>Información sobre plazos y documentación requerida para la reinscripción.</p>
                         </div>
                         <div class="arrow"><i class="fas fa-chevron-right"></i></div>
                     </a>
@@ -467,8 +467,8 @@ try {
                             <span>Nov</span>
                         </div>
                         <div class="info">
-                            <h6>Nueva organizaciÃ³n del menÃº por niveles educativos</h6>
-                            <p>RenovaciÃ³n del sitio web con mejor navegaciÃ³n por secciones.</p>
+                            <h6>Nueva organización del menú por niveles educativos</h6>
+                            <p>Renovación del sitio web con mejor navegación por secciones.</p>
                         </div>
                         <div class="arrow"><i class="fas fa-chevron-right"></i></div>
                     </a>
@@ -479,7 +479,7 @@ try {
                         </div>
                         <div class="info">
                             <h6>Acto de clausura de primaria</h6>
-                            <p>InvitaciÃ³n a la ceremonia de finalizaciÃ³n del aÃ±o lectivo de 6Â° aÃ±o.</p>
+                            <p>Invitación a la ceremonia de finalización del año lectivo de 6° año.</p>
                         </div>
                         <div class="arrow"><i class="fas fa-chevron-right"></i></div>
                     </a>
@@ -492,7 +492,7 @@ try {
     <section class="sp-video">
         <div class="container">
             <div class="text-center mb-5">
-                <span class="section-label">ConÃ³cenos</span>
+                <span class="section-label">Conócenos</span>
                 <h2 class="section-title">Video <span>Institucional</span></h2>
                 <div class="divider-line mx-auto"></div>
             </div>
@@ -510,14 +510,14 @@ try {
         </div>
     </section>
 
-    <!-- ===================== GALERÃA ===================== -->
+    <!-- ===================== GALERÍA ===================== -->
     <section class="sp-galeria" id="galeria">
         <div class="container">
             <div class="text-center mb-5">
                 <span class="section-label">Vida Escolar</span>
-                <h2 class="section-title">Galeria <span>Fotografica</span></h2>
+                <h2 class="section-title">Galería <span>Fotográfica</span></h2>
                 <div class="divider-line mx-auto"></div>
-                <p class="section-desc mx-auto">Momentos icos de nuestra comunidad educativa a lo largo del año.</p>
+                <p class="section-desc mx-auto">Momentos únicos de nuestra comunidad educativa a lo largo del año.</p>
             </div>
             <div class="gallery-grid">
                 <div class="g-item large">
@@ -19056,14 +19056,14 @@ try {
         </div>
     </section>
 
-    <!-- ===================== ESTADÃSTICAS ===================== -->
+    <!-- ===================== ESTADÍSTICAS ===================== -->
     <section class="sp-stats">
         <div class="container">
             <div class="row g-4 text-center">
                 <div class="col-6 col-md-3">
                     <div class="stat-item">
                         <strong>+50</strong>
-                        <span>AÃ±os de historia</span>
+                        <span>Años de historia</span>
                     </div>
                 </div>
                 <div class="col-6 col-md-3">
@@ -19095,7 +19095,7 @@ try {
                 <span class="section-label">Nuestro equipo</span>
                 <h2 class="section-title">Equipo <span>Docente</span></h2>
                 <div class="divider-line mx-auto"></div>
-                <p class="section-desc mx-auto">Profesionales comprometidos con la educaciÃ³n y el desarrollo integral
+                <p class="section-desc mx-auto">Profesionales comprometidos con la educación y el desarrollo integral
                     de cada alumno.</p>
             </div>
             <div class="row g-4">
@@ -19105,7 +19105,7 @@ try {
                             <img src="assets/images/docentes/member-1.jpg" alt="Docente">
                         </div>
                         <div class="info">
-                            <h5>MarÃ­a GonzÃ¡lez</h5>
+                            <h5>María González</h5>
                             <span>Maestra de Primaria</span>
                             <div class="social">
                                 <a href="#"><i class="fas fa-envelope"></i></a>
@@ -19120,8 +19120,8 @@ try {
                             <img src="assets/images/docentes/member-2.jpg" alt="Docente">
                         </div>
                         <div class="info">
-                            <h5>Carlos RamÃ­rez</h5>
-                            <span>Prof. de MatemÃ¡ticas</span>
+                            <h5>Carlos Ramírez</h5>
+                            <span>Prof. de Matemáticas</span>
                             <div class="social">
                                 <a href="#"><i class="fas fa-envelope"></i></a>
                                 <a href="#"><i class="fab fa-linkedin-in"></i></a>
@@ -19135,8 +19135,8 @@ try {
                             <img src="assets/images/docentes/member-3.jpg" alt="Docente">
                         </div>
                         <div class="info">
-                            <h5>Ana FernÃ¡ndez</h5>
-                            <span>Prof. de InglÃ©s</span>
+                            <h5>Ana Fernández</h5>
+                            <span>Prof. de Inglés</span>
                             <div class="social">
                                 <a href="#"><i class="fas fa-envelope"></i></a>
                                 <a href="#"><i class="fab fa-linkedin-in"></i></a>
@@ -19151,7 +19151,7 @@ try {
                         </div>
                         <div class="info">
                             <h5>Roberto Silva</h5>
-                            <span>Prof. de EducaciÃ³n FÃ­sica</span>
+                            <span>Prof. de Educación Física</span>
                             <div class="social">
                                 <a href="#"><i class="fas fa-envelope"></i></a>
                                 <a href="#"><i class="fab fa-linkedin-in"></i></a>
@@ -19165,7 +19165,7 @@ try {
                             <img src="assets/images/docentes/member-1.jpg" alt="Docente">
                         </div>
                         <div class="info">
-                            <h5>Laura MartÃ­nez</h5>
+                            <h5>Laura Martínez</h5>
                             <span>Maestra de Inicial</span>
                             <div class="social">
                                 <a href="#"><i class="fas fa-envelope"></i></a>
@@ -19195,7 +19195,7 @@ try {
                             <img src="assets/images/docentes/member-9.jpg" alt="Docente">
                         </div>
                         <div class="info">
-                            <h5>SofÃ­a Ãlvarez</h5>
+                            <h5>Sofía Álvarez</h5>
                             <span>Maestra de Maternal</span>
                             <div class="social">
                                 <a href="#"><i class="fas fa-envelope"></i></a>
@@ -19227,14 +19227,14 @@ try {
     <footer class="sp-footer">
         <div class="container">
             <div class="row g-5">
-                <!-- Col 1: Logo + DescripciÃ³n -->
+                <!-- Col 1: Logo + Descripción -->
                 <div class="col-lg-4">
                     <div class="logo-footer">
                         <img src="https://colegiosanpablo.webnia.cl/wp-content/uploads/2025/11/logo-sin-fondo-1.png"
                             alt="Colegio San Pablo" onerror="this.src='assets/images/logo/logo-light.svg'">
                     </div>
-                    <p>"Quien enseÃ±a con amor educa para siempre." Formamos ciudadanos Ã­ntegros, crÃ­ticos y
-                        comprometidos con su entorno desde hace mÃ¡s de 50 aÃ±os.</p>
+                    <p>"Quien enseña con amor educa para siempre." Formamos ciudadanos íntegros, críticos y
+                        comprometidos con su entorno desde hace más de 50 años.</p>
                     <div class="social-links mt-3">
                         <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
                         <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
@@ -19242,9 +19242,9 @@ try {
                         <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
                     </div>
                 </div>
-                <!-- Col 2: MenÃº rÃ¡pido -->
+                <!-- Col 2: Menú rápido -->
                 <div class="col-lg-2 col-md-4">
-                    <h5>MenÃº RÃ¡pido</h5>
+                    <h5>Menú Rápido</h5>
                     <ul>
                         <li><a href="#"><i class="fas fa-chevron-right"></i>Inicio</a></li>
                         <li><a href="#"><i class="fas fa-chevron-right"></i>Institucional</a></li>
@@ -19252,7 +19252,7 @@ try {
                         <li><a href="#"><i class="fas fa-chevron-right"></i>Comunicados</a></li>
                         <li><a href="#"><i class="fas fa-chevron-right"></i>Biblioteca</a></li>
                         <li><a href="#"><i class="fas fa-chevron-right"></i>Confesionalidad</a></li>
-                        <li><a href="#"><i class="fas fa-chevron-right"></i>MatrÃ­cula</a></li>
+                        <li><a href="#"><i class="fas fa-chevron-right"></i>Matrícula</a></li>
                     </ul>
                 </div>
                 <!-- Col 3: Niveles educativos -->
@@ -19273,18 +19273,18 @@ try {
                     <ul>
                         <li>
                             <i class="fas fa-map-marker-alt"></i>
-                            <strong style="color:#fff">AdministraciÃ³n:</strong><br>
-                            <span style="padding-left:24px">Venancio BenavÃ­dez 3612</span>
+                            <strong style="color:#fff">Administración:</strong><br>
+                            <span style="padding-left:24px">Venancio Benavídez 3612</span>
                         </li>
                         <li>
                             <i class="fas fa-map-marker-alt"></i>
                             <strong style="color:#fff">Inicial:</strong><br>
-                            <span style="padding-left:24px">JoaquÃ­n SuÃ¡rez 3596 | Tel 2336 6000</span>
+                            <span style="padding-left:24px">Joaquín Suárez 3596 | Tel 2336 6000</span>
                         </li>
                         <li>
                             <i class="fas fa-map-marker-alt"></i>
                             <strong style="color:#fff">Preuniversitario:</strong><br>
-                            <span style="padding-left:24px">Av. MillÃ¡n 3375 | Tel 2202 0000</span>
+                            <span style="padding-left:24px">Av. Millán 3375 | Tel 2202 0000</span>
                         </li>
                         <li><i class="fas fa-phone"></i> +598 2337 3737</li>
                         <li><i class="fas fa-envelope"></i> <a
@@ -19303,8 +19303,8 @@ try {
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <span>&copy; 2026 Colegio San Pablo. Todos los derechos reservados.</span>
                     <span>
-                        <a href="#">PolÃ­tica de privacidad</a> &nbsp;|&nbsp;
-                        <a href="#">TÃ©rminos legales</a> &nbsp;|&nbsp;
+                        <a href="#">Política de privacidad</a> &nbsp;|&nbsp;
+                        <a href="#">Términos legales</a> &nbsp;|&nbsp;
                         <a href="#">Admisiones</a>
                     </span>
                 </div>
@@ -19331,13 +19331,13 @@ try {
                             <i class="fas fa-school"></i>
                         </div>
                         <h5 id="modalLoginLabel">Mi Colegio San Pablo</h5>
-                        <p>Elige el Ã¡rea a la que deseas ingresar:</p>
+                        <p>Elige el área a la que deseas ingresar:</p>
                     </div>
 
-                    <!-- Opciones de Ã¡rea -->
+                    <!-- Opciones de área -->
                     <div class="sp-modal-areas">
 
-                        <!-- Admin â†’ abre modal de login -->
+                        <!-- Admin -> abre modal de login -->
                         <a href="#" class="sp-area-btn sp-area-admin" id="btnAbrirLogin" data-bs-dismiss="modal"
                             data-bs-toggle="modal" data-bs-target="#modalAdminLogin">
                             <i class="fas fa-lock"></i>
@@ -19348,21 +19348,21 @@ try {
                         <a href="#" class="sp-area-btn btn-abrir-area" data-area="ALUMNOS" data-icono="fa-user-graduate"
                             data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalArea">
                             <i class="fas fa-user-graduate"></i>
-                            <span>Ãrea Alumnos</span>
+                            <span>Área Alumnos</span>
                             <i class="fas fa-chevron-right sp-area-arrow"></i>
                         </a>
 
                         <a href="#" class="sp-area-btn btn-abrir-area" data-area="PADRES" data-icono="fa-users"
                             data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalArea">
                             <i class="fas fa-users"></i>
-                            <span>Ãrea Padres</span>
+                            <span>Área Padres</span>
                             <i class="fas fa-chevron-right sp-area-arrow"></i>
                         </a>
 
                         <a href="#" class="sp-area-btn btn-abrir-area" data-area="FUNCIONARIO" data-icono="fa-briefcase"
                             data-bs-dismiss="modal" data-bs-toggle="modal" data-bs-target="#modalArea">
                             <i class="fas fa-briefcase"></i>
-                            <span>Ãrea Funcionario</span>
+                            <span>Área Funcionario</span>
                             <i class="fas fa-chevron-right sp-area-arrow"></i>
                         </a>
 
@@ -19370,7 +19370,7 @@ try {
                             data-icono="fa-chalkboard-teacher" data-bs-dismiss="modal" data-bs-toggle="modal"
                             data-bs-target="#modalArea">
                             <i class="fas fa-chalkboard-teacher"></i>
-                            <span>Ãrea Docentes</span>
+                            <span>Área Docentes</span>
                             <i class="fas fa-chevron-right sp-area-arrow"></i>
                         </a>
 
@@ -19410,7 +19410,7 @@ try {
                     <form id="formAdminLogin" novalidate autocomplete="off">
                         <div class="sp-login-form">
 
-                            <!-- Alerta de error / Ã©xito -->
+                            <!-- Alerta de error / éxito -->
                             <div id="loginAlert" class="sp-login-alert" style="display:none"></div>
 
                             <!-- Campo usuario -->
@@ -19429,7 +19429,7 @@ try {
                                 </label>
                                 <div class="sp-pass-wrap">
                                     <input type="password" id="loginClave" name="clave"
-                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password" required>
+                                        placeholder="********" autocomplete="current-password" required>
                                     <button type="button" class="sp-toggle-pass" id="adminTogglePass" tabindex="-1"
                                         title="Mostrar/ocultar clave">
                                         <i class="fas fa-eye" id="iconEye"></i>
@@ -19437,7 +19437,7 @@ try {
                                 </div>
                             </div>
 
-                            <!-- BotÃ³n ingresar -->
+                            <!-- Botón ingresar -->
                             <button type="submit" id="btnLogin" class="sp-btn-login">
                                 <span id="btnLoginTxt">
                                     <i class="fas fa-sign-in-alt me-2"></i>Ingresar
@@ -19464,7 +19464,7 @@ try {
     </div>
     <!-- /MODAL ADMIN LOGIN -->
 
-    <!-- ===================== MODAL ÃREA (Alumnos / Padres / Funcionario / Docentes) ===================== -->
+    <!-- ===================== MODAL ÁREA (Alumnos / Padres / Funcionario / Docentes) ===================== -->
     <div class="modal fade" id="modalArea" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered" style="max-width:420px">
             <div class="modal-content sp-modal-login">
@@ -19478,11 +19478,11 @@ try {
                         <button type="button" class="sp-modal-close" data-bs-dismiss="modal">
                             <i class="fas fa-times"></i>
                         </button>
-                        <!-- Ãcono dinÃ¡mico del Ã¡rea -->
+                        <!-- Ícono dinámico del área -->
                         <div class="sp-modal-logo" id="areaIconoWrap">
                             <i class="fas fa-user-graduate" id="areaIcono"></i>
                         </div>
-                        <h5 id="areaTitulo">Ãrea ALUMNOS</h5>
+                        <h5 id="areaTitulo">Área ALUMNOS</h5>
                         <p>Ingresa tus credenciales para continuar</p>
                     </div>
 
@@ -19503,28 +19503,28 @@ try {
                                     autocomplete="username" required>
                             </div>
 
-                            <!-- ContraseÃ±a -->
+                            <!-- Contraseña -->
                             <div class="sp-field">
                                 <label for="areaPass">
-                                    <i class="fas fa-lock"></i> ContraseÃ±a
+                                    <i class="fas fa-lock"></i> Contraseña
                                 </label>
                                 <div class="sp-pass-wrap">
                                     <input type="password" id="areaPass" name="pass"
-                                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢" autocomplete="current-password" required>
+                                        placeholder="********" autocomplete="current-password" required>
                                     <button type="button" class="sp-toggle-pass" id="areaTogglePass" tabindex="-1">
                                         <i class="fas fa-eye" id="areaEyeIcon"></i>
                                     </button>
                                 </div>
                             </div>
 
-                            <!-- OlvidÃ© -->
+                            <!-- Olvidé -->
                             <div class="text-end" style="margin-top:-4px">
                                 <a href="#" class="sp-volver-link" style="font-size:12px;color:rgba(255,255,255,.45)">
-                                    *OlvidÃ© mi contraseÃ±a
+                                    *Olvidé mi contraseña
                                 </a>
                             </div>
 
-                            <!-- BotÃ³n ingresar -->
+                            <!-- Botón ingresar -->
                             <button type="submit" class="sp-btn-login" id="btnAreaIngresar">
                                 <span id="btnAreaTxt">
                                     <i class="fas fa-sign-in-alt me-2"></i>Ingresar
@@ -19550,7 +19550,7 @@ try {
                         <p>info@sanpablo.edu.uy</p>
                         <p>www.sanpablo.edu.uy</p>
                         <p><strong>Colegio San Pablo</strong></p>
-                        <p class="sp-area-lema">"Quien enseÃ±a con amor educa para siempre"</p>
+                        <p class="sp-area-lema">"Quien enseña con amor educa para siempre"</p>
                         <p class="sp-area-copy">Mi Colegio San Pablo v2.0</p>
                     </div>
 
@@ -19558,7 +19558,7 @@ try {
             </div>
         </div>
     </div>
-    <!-- /MODAL ÃREA -->
+    <!-- /MODAL ÁREA -->
 
     <script src="assets/js/jquery-3.7.1.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
@@ -19573,17 +19573,17 @@ try {
     <script src="assets/js/script.js"></script>
 
     <script>
-    // â”€â”€ Modal Ãrea (Alumnos / Padres / Funcionario / Docentes) â”€â”€
+    // Modal Área (Alumnos / Padres / Funcionario / Docentes)
     document.addEventListener('DOMContentLoaded', function() {
 
         var modalAreaEl = document.getElementById('modalArea');
 
-        // Cuando se abre, leer el data-area del botÃ³n que lo disparÃ³
+        // Cuando se abre, leer el data-area del botón que lo disparó
         modalAreaEl.addEventListener('show.bs.modal', function(e) {
             var trigger = e.relatedTarget;
             var area = trigger ? (trigger.dataset.area || 'ALUMNOS') : 'ALUMNOS';
 
-            document.getElementById('areaTitulo').textContent = 'Ãrea ' + area;
+            document.getElementById('areaTitulo').textContent = 'Área ' + area;
             document.getElementById('areaActual').value = area;
 
             // Limpiar formulario y alertas
@@ -19593,7 +19593,7 @@ try {
             document.getElementById('areaPass').classList.remove('is-invalid');
         });
 
-        // Submit â€” por ahora muestra un mensaje (conectar al sistema correspondiente)
+        // Submit: por ahora muestra un mensaje (conectar al sistema correspondiente)
         document.getElementById('formArea').addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -19603,7 +19603,7 @@ try {
             var alertEl = document.getElementById('areaAlert');
 
             if (!usuario || !pass) {
-                alertEl.textContent = 'Completa usuario y contraseÃ±a';
+                alertEl.textContent = 'Completa usuario y contraseña';
                 alertEl.style.display = 'block';
                 if (!usuario) document.getElementById('areaUsuario').classList.add('is-invalid');
                 if (!pass) document.getElementById('areaPass').classList.add('is-invalid');
@@ -19618,14 +19618,14 @@ try {
             spinner.style.display = 'inline';
             alertEl.style.display = 'none';
 
-            // TODO: conectar al endpoint de login de cada Ã¡rea
+            // TODO: conectar al endpoint de login de cada área
             // fetch('login_area.php', { method:'POST', ... })
             // Por ahora simulamos la respuesta:
             setTimeout(function() {
                 btn.disabled = false;
                 btnTxt.style.display = 'inline';
                 spinner.style.display = 'none';
-                alertEl.textContent = 'Acceso al Ã¡rea ' + area + ' prÃ³ximamente disponible.';
+                alertEl.textContent = 'Acceso al área ' + area + ' próximamente disponible.';
                 alertEl.style.display = 'block';
             }, 800);
         });
@@ -19639,7 +19639,7 @@ try {
         });
     });
 
-    // â”€â”€ Login Admin â€” AJAX â”€â”€
+    // Login Admin - AJAX
     document.addEventListener('DOMContentLoaded', function() {
 
         const form = document.getElementById('formAdminLogin');
@@ -19660,7 +19660,7 @@ try {
             claveInput.classList.remove('is-invalid');
         });
 
-        // Mostrar / ocultar clave â€” modal admin
+        // Mostrar / ocultar clave - modal admin
         if (eyeBtn) {
             eyeBtn.addEventListener('click', function() {
                 var icon = document.getElementById('iconEye');
@@ -19674,7 +19674,7 @@ try {
             });
         }
 
-        // Mostrar / ocultar clave â€” modal Ã¡rea
+        // Mostrar / ocultar clave - modal área
         var areaEyeBtn = document.getElementById('areaTogglePass');
         if (areaEyeBtn) {
             areaEyeBtn.addEventListener('click', function() {
@@ -19744,7 +19744,7 @@ try {
                 })
                 .catch(function() {
                     setLoading(false);
-                    mostrarAlerta('Error de conexiÃ³n. Intenta nuevamente.', 'error');
+                    mostrarAlerta('Error de conexión. Intenta nuevamente.', 'error');
                 });
         });
 
@@ -19757,7 +19757,7 @@ try {
         });
     });
 
-    // â”€â”€ Inicializar carrusel explÃ­citamente â”€â”€
+    // Inicializar carrusel explícitamente
     document.addEventListener('DOMContentLoaded', function() {
         var carouselEl = document.getElementById('heroCarousel');
         if (carouselEl) {
@@ -19770,7 +19770,7 @@ try {
         }
     });
 
-    // â”€â”€ Smooth scroll (excluye data-bs-toggle para no interferir con modal) â”€â”€
+    // Smooth scroll (excluye data-bs-toggle para no interferir con modal)
     document.querySelectorAll('a[href^="#"]:not([data-bs-toggle])').forEach(function(anchor) {
         anchor.addEventListener('click', function(e) {
             var target = document.querySelector(this.getAttribute('href'));
@@ -19784,7 +19784,7 @@ try {
         });
     });
 
-    // â”€â”€ Sombra del header al hacer scroll â”€â”€
+    // Sombra del header al hacer scroll
     window.addEventListener('scroll', function() {
         var header = document.querySelector('.sp-header');
         if (window.scrollY > 60) {

@@ -1,6 +1,6 @@
 ---
 deployment:
   tasks:
-    - export DEPLOYPATH=/home/qaseduc/public_html/jorquera/colegiosanpablo/
+    - export DEPLOYPATH=/home/qaseduc/public_html/colegiosanpablo/
     - /bin/mkdir -p $DEPLOYPATH
     - /bin/cp -R ./* $DEPLOYPATH

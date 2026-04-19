@@ -1,4 +1,6 @@
+---
 deployment:
   tasks:
-    - /bin/mkdir -p /home/qaseduc/public_html/jorquera/colegiosanpablo
-    - /bin/rsync -av --delete --exclude='.git' --exclude='.cpanel.yml' ./ /home/qaseduc/public_html/jorquera/colegiosanpablo/
+    - export DEPLOYPATH=/home/qaseduc/public_html/jorquera/colegiosanpablo/
+    - /bin/mkdir -p $DEPLOYPATH
+    - /bin/cp -R ./* $DEPLOYPATH

@@ -90,7 +90,7 @@ try {
                     <a href="#" class="sp-login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin"
                         title="Ingresar al sistema">
                         <i class="fas fa-sign-in-alt"></i>
-                        <span>Ingresar</span>
+                        <span>Ingr22222222esar</span>
                     </a>
                     <span class="sep">|</span>
                     <a href="#" class="me-1"><i class="fab fa-instagram me-1"></i>Instagram</a>

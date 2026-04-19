@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost:3306
--- Tiempo de generación: 19-04-2026 a las 14:01:32
+-- Tiempo de generación: 19-04-2026 a las 18:51:16
 -- Versión del servidor: 10.6.19-MariaDB
 -- Versión de PHP: 8.1.34
 
@@ -20,6 +20,45 @@ SET time_zone = "+00:00";
 --
 -- Base de datos: `qaseduc_colegio_spablo`
 --
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `institucion`
+--
+
+CREATE TABLE `institucion` (
+  `id_institucion` int(11) NOT NULL,
+  `id_tipo_institucion` int(11) NOT NULL,
+  `nombre` varchar(150) NOT NULL,
+  `nombre_corto` varchar(100) DEFAULT NULL,
+  `dominio` varchar(150) DEFAULT NULL,
+  `logo_header` varchar(255) DEFAULT NULL,
+  `logo_footer` varchar(255) DEFAULT NULL,
+  `favicon` varchar(255) DEFAULT NULL,
+  `direccion` varchar(255) DEFAULT NULL,
+  `telefono` varchar(100) DEFAULT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `facebook` varchar(255) DEFAULT NULL,
+  `instagram` varchar(255) DEFAULT NULL,
+  `youtube` varchar(255) DEFAULT NULL,
+  `linkedin` varchar(255) DEFAULT NULL,
+  `color_primario` varchar(20) DEFAULT '#1D4ED8',
+  `color_secundario` varchar(20) DEFAULT '#F59E0B',
+  `color_terciario` varchar(20) DEFAULT '#111827',
+  `color_cuaternario` varchar(20) DEFAULT '#F3F4F6',
+  `texto_boton_principal` varchar(100) DEFAULT NULL,
+  `url_boton_principal` varchar(255) DEFAULT NULL,
+  `estado` enum('activo','inactivo') NOT NULL DEFAULT 'activo',
+  `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Volcado de datos para la tabla `institucion`
+--
+
+INSERT INTO `institucion` (`id_institucion`, `id_tipo_institucion`, `nombre`, `nombre_corto`, `dominio`, `logo_header`, `logo_footer`, `favicon`, `direccion`, `telefono`, `email`, `facebook`, `instagram`, `youtube`, `linkedin`, `color_primario`, `color_secundario`, `color_terciario`, `color_cuaternario`, `texto_boton_principal`, `url_boton_principal`, `estado`, `fecha_creacion`) VALUES
+(1, 1, 'Colegio San Pablo', 'San Pablo', 'www.sanpablo.edu.uy', 'uploads/institucion/logo_header_sanpablo.png', 'uploads/institucion/logo_footer_sanpablo.png', 'uploads/institucion/favicon_sanpablo.ico', 'Venancio Benavidez 3612', '+598 2337 3737', 'info@sanpablo.edu.uy', 'https://facebook.com/sanpablo', 'https://instagram.com/sanpablo', NULL, NULL, '#2563EB', '#E9A629', '#222222', '#F8F8F8', 'Matrícula', '#', 'activo', '2026-04-19 18:43:44');
 
 -- --------------------------------------------------------
 
@@ -60,85 +99,6 @@ INSERT INTO `menus` (`id_menu`, `nombre`, `url`, `icono`, `id_padre`, `orden`, `
 -- --------------------------------------------------------
 
 --
--- Estructura de tabla para la tabla `menus_`
---
-
-CREATE TABLE `menus_` (
-  `id_menu` int(11) NOT NULL,
-  `nombre` varchar(120) NOT NULL,
-  `url` varchar(255) DEFAULT NULL,
-  `icono` varchar(100) DEFAULT NULL,
-  `id_padre` int(11) DEFAULT NULL,
-  `orden` int(11) NOT NULL DEFAULT 0,
-  `activo` tinyint(1) NOT NULL DEFAULT 1,
-  `visible` tinyint(1) NOT NULL DEFAULT 1,
-  `fecha_creacion` timestamp NOT NULL DEFAULT current_timestamp(),
-  `fecha_actualizacion` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
---
--- Volcado de datos para la tabla `menus_`
---
-
-INSERT INTO `menus_` (`id_menu`, `nombre`, `url`, `icono`, `id_padre`, `orden`, `activo`, `visible`, `fecha_creacion`, `fecha_actualizacion`) VALUES
-(1, 'Inicio', 'index.php', 'bi bi-house-door', NULL, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(2, 'Institucional', NULL, 'bi bi-building', NULL, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(3, 'Material', NULL, 'bi bi-journal-bookmark', NULL, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(4, 'Inicial', NULL, 'bi bi-balloon-heart', NULL, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(5, 'Primaria', NULL, 'bi bi-book', NULL, 5, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(6, '3er Ciclo EBI', NULL, 'bi bi-mortarboard', NULL, 6, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(7, 'Bachillerato', NULL, 'bi bi-mortarboard-fill', NULL, 7, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(8, 'Libre Asistido', NULL, 'bi bi-person-workspace', NULL, 8, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(9, 'Confesionalidad', NULL, 'bi bi-stars', NULL, 9, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(10, 'Biblioteca', NULL, 'bi bi-bookshelf', NULL, 10, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(11, 'Mi San Pablo', NULL, 'bi bi-person-circle', NULL, 11, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(12, 'Presentación', 'institucional/presentacion.php', 'bi bi-chevron-right', 2, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(13, 'Historia', 'institucional/historia.php', 'bi bi-chevron-right', 2, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(14, 'Logotipo y Lema', 'institucional/logotipo-y-lema.php', 'bi bi-chevron-right', 2, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(15, 'Visión y Misión', 'institucional/vision-y-mision.php', 'bi bi-chevron-right', 2, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(16, 'Principios de Identidad', 'institucional/principios-de-identidad.php', 'bi bi-chevron-right', 2, 5, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(17, 'Propuesta Pedagógica', 'institucional/propuesta-pedagogica.php', 'bi bi-chevron-right', 2, 6, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(18, 'Perfil del Alumno', 'institucional/perfil-del-alumno.php', 'bi bi-chevron-right', 2, 7, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(19, 'Estructura Física', 'institucional/estructura-fisica.php', 'bi bi-chevron-right', 2, 8, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(20, 'Administración', 'institucional/administracion.php', 'bi bi-chevron-right', 2, 9, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(21, 'Presentación', 'material/presentacion.php', 'bi bi-chevron-right', 3, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(22, 'Grupos y Horarios', 'material/grupos-y-horarios.php', 'bi bi-chevron-right', 3, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(23, 'Propuesta Bilingüe', 'material/propuesta-bilingue.php', 'bi bi-chevron-right', 3, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(24, 'Actividades', 'material/actividades.php', 'bi bi-chevron-right', 3, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(25, 'Presentación', 'inicial/presentacion.php', 'bi bi-chevron-right', 4, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(26, 'Propuesta Curricular', 'inicial/propuesta-curricular.php', 'bi bi-chevron-right', 4, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(27, 'Propuesta Bilingüe', 'inicial/propuesta-bilingue.php', 'bi bi-chevron-right', 4, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(28, 'Actividades', 'inicial/actividades.php', 'bi bi-chevron-right', 4, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(29, 'Presentación', 'primaria/presentacion.php', 'bi bi-chevron-right', 5, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(30, 'Propuesta Curricular', 'primaria/propuesta-curricular.php', 'bi bi-chevron-right', 5, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(31, 'Propuesta Bilingüe', 'primaria/propuesta-bilingue.php', 'bi bi-chevron-right', 5, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(32, 'Actividades Extracurriculares', 'primaria/actividades-extracurriculares.php', 'bi bi-chevron-right', 5, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(33, 'Biblioteca', 'primaria/biblioteca.php', 'bi bi-chevron-right', 5, 5, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(34, 'Presentación', 'tercer-ciclo-ebi/presentacion.php', 'bi bi-chevron-right', 6, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(35, 'Propuesta Curricular', 'tercer-ciclo-ebi/propuesta-curricular.php', 'bi bi-chevron-right', 6, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(36, 'Propuesta Bilingüe', 'tercer-ciclo-ebi/propuesta-bilingue.php', 'bi bi-chevron-right', 6, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(37, 'Actividades Extracurriculares', 'tercer-ciclo-ebi/actividades-extracurriculares.php', 'bi bi-chevron-right', 6, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(38, 'Servicios Educativos', 'tercer-ciclo-ebi/servicios-educativos.php', 'bi bi-chevron-right', 6, 5, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(39, 'Presentación', 'libre-asistido/presentacion.php', 'bi bi-chevron-right', 8, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(40, 'Inscripciones', 'libre-asistido/inscripciones.php', 'bi bi-chevron-right', 8, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(41, 'Identidad', 'confesionalidad/identidad.php', 'bi bi-chevron-right', 9, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(42, 'Visión', 'confesionalidad/vision.php', 'bi bi-chevron-right', 9, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(43, 'La Confesionalidad en la Práctica', 'confesionalidad/la-confesionalidad-en-la-practica.php', 'bi bi-chevron-right', 9, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(44, 'Capellanía', 'confesionalidad/capellania.php', 'bi bi-chevron-right', 9, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(45, 'Educación Cristiana', 'confesionalidad/educacion-cristiana.php', 'bi bi-chevron-right', 9, 5, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(46, 'Iglesia Luterana', 'confesionalidad/iglesia-luterana.php', 'bi bi-chevron-right', 9, 6, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(47, 'Presentación', 'biblioteca/presentacion.php', 'bi bi-chevron-right', 10, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(48, 'La Función de la Biblioteca', 'biblioteca/la-funcion-de-la-biblioteca.php', 'bi bi-chevron-right', 10, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(49, 'Objetivos', 'biblioteca/objetivos.php', 'bi bi-chevron-right', 10, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(50, 'Área Alumnos', 'mi-san-pablo/area-alumnos.php', 'bi bi-chevron-right', 11, 1, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(51, 'Área Padres', 'mi-san-pablo/area-padres.php', 'bi bi-chevron-right', 11, 2, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(52, 'Área Funcionarios', 'mi-san-pablo/area-funcionarios.php', 'bi bi-chevron-right', 11, 3, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(53, 'Área Docentes', 'mi-san-pablo/area-docentes.php', 'bi bi-chevron-right', 11, 4, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42'),
-(54, 'Webmail', 'mi-san-pablo/webmail.php', 'bi bi-chevron-right', 11, 5, 1, 1, '2026-03-27 03:19:42', '2026-03-27 03:19:42');
-
--- --------------------------------------------------------
-
---
 -- Estructura de tabla para la tabla `perfiles`
 --
 
@@ -148,6 +108,102 @@ CREATE TABLE `perfiles` (
   `descripcion` varchar(255) DEFAULT NULL,
   `estado` enum('activo','inactivo') NOT NULL DEFAULT 'activo'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `seccion`
+--
+
+CREATE TABLE `seccion` (
+  `id_seccion` int(11) NOT NULL,
+  `id_institucion` int(11) NOT NULL,
+  `nombre_interno` varchar(100) NOT NULL,
+  `titulo_admin` varchar(150) NOT NULL,
+  `tipo_seccion` enum('header','hero','carousel','cards','news','gallery','footer','custom') NOT NULL,
+  `variante` varchar(100) DEFAULT NULL,
+  `visible` enum('si','no') NOT NULL DEFAULT 'si',
+  `orden` int(11) NOT NULL DEFAULT 1,
+  `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Volcado de datos para la tabla `seccion`
+--
+
+INSERT INTO `seccion` (`id_seccion`, `id_institucion`, `nombre_interno`, `titulo_admin`, `tipo_seccion`, `variante`, `visible`, `orden`, `fecha_creacion`) VALUES
+(1, 1, 'header_principal', 'Header principal', 'header', 'header_clasico', 'si', 1, '2026-04-19 18:43:44'),
+(2, 1, 'hero_principal', 'Carrusel principal', 'carousel', 'texto_izquierda', 'si', 2, '2026-04-19 18:43:44'),
+(3, 1, 'noticias_home', 'Bloque de noticias', 'news', 'cards_4', 'si', 3, '2026-04-19 18:43:44');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `seccion_config`
+--
+
+CREATE TABLE `seccion_config` (
+  `id_config` int(11) NOT NULL,
+  `id_seccion` int(11) NOT NULL,
+  `clave` varchar(100) NOT NULL,
+  `valor` text DEFAULT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Volcado de datos para la tabla `seccion_config`
+--
+
+INSERT INTO `seccion_config` (`id_config`, `id_seccion`, `clave`, `valor`) VALUES
+(1, 2, 'alto', '650px'),
+(2, 2, 'alineacion_texto', 'izquierda'),
+(3, 2, 'color_texto', '#FFFFFF'),
+(4, 2, 'overlay', 'oscuro'),
+(5, 2, 'mostrar_indicadores', 'si'),
+(6, 2, 'mostrar_flechas', 'si'),
+(7, 3, 'titulo_bloque', 'Últimas Noticias'),
+(8, 3, 'subtitulo_bloque', 'Novedades'),
+(9, 3, 'cantidad_items', '4'),
+(10, 3, 'mostrar_boton_general', 'si'),
+(11, 3, 'texto_boton_general', 'Ver todas las noticias'),
+(12, 3, 'url_boton_general', '#');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `seccion_item`
+--
+
+CREATE TABLE `seccion_item` (
+  `id_item` int(11) NOT NULL,
+  `id_seccion` int(11) NOT NULL,
+  `titulo` varchar(255) DEFAULT NULL,
+  `subtitulo` varchar(255) DEFAULT NULL,
+  `descripcion` text DEFAULT NULL,
+  `imagen` varchar(255) DEFAULT NULL,
+  `imagen_mobile` varchar(255) DEFAULT NULL,
+  `boton_1_texto` varchar(100) DEFAULT NULL,
+  `boton_1_url` varchar(255) DEFAULT NULL,
+  `boton_2_texto` varchar(100) DEFAULT NULL,
+  `boton_2_url` varchar(255) DEFAULT NULL,
+  `etiqueta` varchar(100) DEFAULT NULL,
+  `fecha_publicacion` date DEFAULT NULL,
+  `visible` enum('si','no') NOT NULL DEFAULT 'si',
+  `orden` int(11) NOT NULL DEFAULT 1,
+  `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Volcado de datos para la tabla `seccion_item`
+--
+
+INSERT INTO `seccion_item` (`id_item`, `id_seccion`, `titulo`, `subtitulo`, `descripcion`, `imagen`, `imagen_mobile`, `boton_1_texto`, `boton_1_url`, `boton_2_texto`, `boton_2_url`, `etiqueta`, `fecha_publicacion`, `visible`, `orden`, `fecha_creacion`) VALUES
+(1, 2, 'Disfrutamos Creciendo Contigo', 'Comunidad Educativa', 'Un espacio de formación, comunidad y aprendizaje.', 'uploads/carrusel/slide_1.jpg', NULL, 'Ver galería', '#', 'Nuestro equipo', '#', 'Comunidad Educativa', NULL, 'si', 1, '2026-04-19 18:43:44'),
+(2, 2, 'Educamos con Valores', 'Colegio San Pablo', 'Una propuesta educativa integral para cada etapa.', 'uploads/carrusel/slide_2.jpg', NULL, 'Conócenos', '#', 'Admisión', '#', 'Formación Integral', NULL, 'si', 2, '2026-04-19 18:43:44'),
+(3, 2, 'Aprender, Compartir y Avanzar', 'Vida Escolar', 'Proyectos, actividades y experiencias significativas.', 'uploads/carrusel/slide_3.jpg', NULL, 'Ver noticias', '#', 'Contacto', '#', 'Vida Escolar', NULL, 'si', 3, '2026-04-19 18:43:44'),
+(4, 3, 'Rugby del Prado', 'Últimas Noticias', 'Nuestros alumnos participaron en el torneo intercolegial de rugby con excelentes resultados.', 'uploads/noticias/noticia_1.jpg', NULL, 'Leer más', '#', NULL, NULL, 'DEPORTE', '2025-11-01', 'si', 1, '2026-04-19 18:43:44'),
+(5, 3, 'Certificaciones Inglés y Portugués', 'Últimas Noticias', 'Alumnos de bachillerato rindieron y aprobaron certificaciones internacionales de idiomas.', 'uploads/noticias/noticia_2.jpg', NULL, 'Leer más', '#', NULL, NULL, 'IDIOMAS', '2025-11-02', 'si', 2, '2026-04-19 18:43:44'),
+(6, 3, 'Jornada Orientate', 'Últimas Noticias', 'Jornada de orientación vocacional para estudiantes de 3er ciclo y bachillerato.', 'uploads/noticias/noticia_3.jpg', NULL, 'Leer más', '#', NULL, NULL, 'ORIENTACIÓN', '2025-10-15', 'si', 3, '2026-04-19 18:43:44'),
+(7, 3, 'Proyecto Reciclar Actitudes', 'Últimas Noticias', 'Proyecto de concientización ambiental que involucra a toda la comunidad escolar.', 'uploads/noticias/noticia_4.jpg', NULL, 'Leer más', '#', NULL, NULL, 'MEDIO AMBIENTE', '2025-10-10', 'si', 4, '2026-04-19 18:43:44');
 
 -- --------------------------------------------------------
 
@@ -225,6 +281,54 @@ INSERT INTO `sub_menus` (`id_sub_menu`, `id_menu`, `nombre`, `url`, `icono`, `or
 -- --------------------------------------------------------
 
 --
+-- Estructura de tabla para la tabla `tipo_institucion`
+--
+
+CREATE TABLE `tipo_institucion` (
+  `id_tipo_institucion` int(11) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `descripcion` varchar(255) DEFAULT NULL,
+  `estado` enum('activo','inactivo') NOT NULL DEFAULT 'activo',
+  `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Volcado de datos para la tabla `tipo_institucion`
+--
+
+INSERT INTO `tipo_institucion` (`id_tipo_institucion`, `nombre`, `descripcion`, `estado`, `fecha_creacion`) VALUES
+(1, 'Colegio', 'Institución educacional', 'activo', '2026-04-19 18:43:44'),
+(2, 'Hospital', 'Institución de salud', 'activo', '2026-04-19 18:43:44'),
+(3, 'Municipalidad', 'Institución pública comunal', 'activo', '2026-04-19 18:43:44');
+
+-- --------------------------------------------------------
+
+--
+-- Estructura de tabla para la tabla `usuario`
+--
+
+CREATE TABLE `usuario` (
+  `id_usuario` int(11) NOT NULL,
+  `id_institucion` int(11) NOT NULL,
+  `nombre` varchar(100) NOT NULL,
+  `apellido` varchar(100) DEFAULT NULL,
+  `email` varchar(150) NOT NULL,
+  `clave` varchar(255) NOT NULL,
+  `rol` enum('super_admin','admin_institucion','editor') NOT NULL DEFAULT 'admin_institucion',
+  `estado` enum('activo','inactivo') NOT NULL DEFAULT 'activo',
+  `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp()
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 COLLATE=latin1_swedish_ci;
+
+--
+-- Volcado de datos para la tabla `usuario`
+--
+
+INSERT INTO `usuario` (`id_usuario`, `id_institucion`, `nombre`, `apellido`, `email`, `clave`, `rol`, `estado`, `fecha_creacion`) VALUES
+(1, 1, 'Administrador', 'San Pablo', 'admin@sanpablo.edu.uy', '$2y$10$abcdefghijklmnopqrstuv', 'admin_institucion', 'activo', '2026-04-19 18:43:44');
+
+-- --------------------------------------------------------
+
+--
 -- Estructura de tabla para la tabla `usuarios`
 --
 
@@ -267,17 +371,17 @@ CREATE TABLE `usuario_perfil` (
 --
 
 --
+-- Indices de la tabla `institucion`
+--
+ALTER TABLE `institucion`
+  ADD PRIMARY KEY (`id_institucion`),
+  ADD KEY `fk_institucion_tipo` (`id_tipo_institucion`);
+
+--
 -- Indices de la tabla `menus`
 --
 ALTER TABLE `menus`
   ADD PRIMARY KEY (`id_menu`);
-
---
--- Indices de la tabla `menus_`
---
-ALTER TABLE `menus_`
-  ADD PRIMARY KEY (`id_menu`),
-  ADD KEY `fk_menu_padre` (`id_padre`);
 
 --
 -- Indices de la tabla `perfiles`
@@ -287,11 +391,46 @@ ALTER TABLE `perfiles`
   ADD UNIQUE KEY `nombre_perfil` (`nombre_perfil`);
 
 --
+-- Indices de la tabla `seccion`
+--
+ALTER TABLE `seccion`
+  ADD PRIMARY KEY (`id_seccion`),
+  ADD KEY `fk_seccion_institucion` (`id_institucion`);
+
+--
+-- Indices de la tabla `seccion_config`
+--
+ALTER TABLE `seccion_config`
+  ADD PRIMARY KEY (`id_config`),
+  ADD KEY `fk_config_seccion` (`id_seccion`);
+
+--
+-- Indices de la tabla `seccion_item`
+--
+ALTER TABLE `seccion_item`
+  ADD PRIMARY KEY (`id_item`),
+  ADD KEY `fk_item_seccion` (`id_seccion`);
+
+--
 -- Indices de la tabla `sub_menus`
 --
 ALTER TABLE `sub_menus`
   ADD PRIMARY KEY (`id_sub_menu`),
   ADD UNIQUE KEY `uq_menu_submenu` (`id_menu`,`nombre`);
+
+--
+-- Indices de la tabla `tipo_institucion`
+--
+ALTER TABLE `tipo_institucion`
+  ADD PRIMARY KEY (`id_tipo_institucion`);
+
+--
+-- Indices de la tabla `usuario`
+--
+ALTER TABLE `usuario`
+  ADD PRIMARY KEY (`id_usuario`),
+  ADD UNIQUE KEY `email` (`email`),
+  ADD KEY `fk_usuario_institucion` (`id_institucion`);
 
 --
 -- Indices de la tabla `usuarios`
@@ -313,16 +452,16 @@ ALTER TABLE `usuario_perfil`
 --
 
 --
+-- AUTO_INCREMENT de la tabla `institucion`
+--
+ALTER TABLE `institucion`
+  MODIFY `id_institucion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+
+--
 -- AUTO_INCREMENT de la tabla `menus`
 --
 ALTER TABLE `menus`
   MODIFY `id_menu` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
-
---
--- AUTO_INCREMENT de la tabla `menus_`
---
-ALTER TABLE `menus_`
-  MODIFY `id_menu` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
 -- AUTO_INCREMENT de la tabla `perfiles`
@@ -331,10 +470,40 @@ ALTER TABLE `perfiles`
   MODIFY `id_perfil` int(11) NOT NULL AUTO_INCREMENT;
 
 --
+-- AUTO_INCREMENT de la tabla `seccion`
+--
+ALTER TABLE `seccion`
+  MODIFY `id_seccion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT de la tabla `seccion_config`
+--
+ALTER TABLE `seccion_config`
+  MODIFY `id_config` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
+
+--
+-- AUTO_INCREMENT de la tabla `seccion_item`
+--
+ALTER TABLE `seccion_item`
+  MODIFY `id_item` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
 -- AUTO_INCREMENT de la tabla `sub_menus`
 --
 ALTER TABLE `sub_menus`
   MODIFY `id_sub_menu` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
+
+--
+-- AUTO_INCREMENT de la tabla `tipo_institucion`
+--
+ALTER TABLE `tipo_institucion`
+  MODIFY `id_tipo_institucion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+
+--
+-- AUTO_INCREMENT de la tabla `usuario`
+--
+ALTER TABLE `usuario`
+  MODIFY `id_usuario` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT de la tabla `usuarios`
@@ -345,12 +514,6 @@ ALTER TABLE `usuarios`
 --
 -- Restricciones para tablas volcadas
 --
-
---
--- Filtros para la tabla `menus_`
---
-ALTER TABLE `menus_`
-  ADD CONSTRAINT `fk_menu_padre` FOREIGN KEY (`id_padre`) REFERENCES `menus_` (`id_menu`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Filtros para la tabla `sub_menus`

@@ -39,7 +39,7 @@ if ($mostrarEmail && $email !== '') {
     ];
 }
 ?>
-<div class="sp-topbar d-none d-md-block" id="topbar" style=" background: var(--sp-negro);color: #e0e0e0;padding: 8px 0;font-size: 13px;">
+<div class="sp-topbar d-none d-md-block" id="topbar" style=" background: var(--sp-negro);color: #e0e0e0;padding: 8px 0;   font-size: 13px;">
     <div class="container-fluid px-4">
         <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
             <div class="d-flex align-items-center flex-wrap">
@@ -52,7 +52,7 @@ if ($mostrarEmail && $email !== '') {
             </div>
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <?php if ($mostrarBotonIngresar): ?>
-                    <a href="#" class="sp-login-btn" style="color: #e0e0e0;   text-decoration: none;" data-bs-toggle="modal" data-bs-target="#modalLogin" title="Ingresar al sistema">
+                    <a href="#" class="sp-login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin" title="Ingresar al sistema">
                         <i class="fas fa-sign-in-alt"></i>
                         <span><?= e($textoBotonIngresar) ?></span>
                     </a>
@@ -63,7 +63,7 @@ if ($mostrarEmail && $email !== '') {
                         <?php foreach ($redesTopbar as $red): ?>
                             <?php $urlRed = trim((string) ($red['descripcion'] ?? '')); ?>
                             <?php if ($urlRed === '') { continue; } ?>
-                            <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255, 253, 253, 0.14); color:#fff;">
+                            <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255,255,255,.14); color:#fff;">
                                 <i class="<?= e($red['icono'] ?: 'fas fa-link') ?>"></i>
                             </a>
                         <?php endforeach; ?>

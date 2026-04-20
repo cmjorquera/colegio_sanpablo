@@ -52,7 +52,7 @@ if ($mostrarEmail && $email !== '') {
             </div>
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <?php if ($mostrarBotonIngresar): ?>
-                    <a href="#" class="sp-login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin" title="Ingresar al sistema">
+                    <a href="#" class="sp-login-btn" style="color: #e0e0e0;   text-decoration: none;" data-bs-toggle="modal" data-bs-target="#modalLogin" title="Ingresar al sistema">
                         <i class="fas fa-sign-in-alt"></i>
                         <span><?= e($textoBotonIngresar) ?></span>
                     </a>

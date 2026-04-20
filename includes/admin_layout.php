@@ -401,6 +401,21 @@ function admin_render_layout_start(array $options = []): void
             border: none;
         }
         .btn-premium:hover { color: #fff; }
+        .btn-admin-action {
+            min-height: 44px;
+            padding: 10px 18px;
+            border-radius: 14px;
+            border: 1px solid rgba(53, 88, 213, 0.10);
+            background: linear-gradient(135deg, var(--sp-primary), #4d6fff);
+            color: #fff;
+            font-weight: 700;
+            box-shadow: 0 10px 24px rgba(53, 88, 213, 0.18);
+        }
+        .btn-admin-action:hover {
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 14px 28px rgba(53, 88, 213, 0.22);
+        }
         .form-control, .form-select {
             border-radius: 16px;
             border: 1px solid var(--sp-border);

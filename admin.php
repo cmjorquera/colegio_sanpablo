@@ -140,12 +140,10 @@ admin_render_layout_start([
                 <thead>
                     <tr>
                         <th>Orden</th>
-                        <th>Nombre interno</th>
-                        <th>Nombre admin</th>
+                        <th>Contenedor</th>
                         <th>Observación</th>
                         <th>Tipo</th>
                         <th>Visible</th>
-                        <th>Items</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -153,8 +151,9 @@ admin_render_layout_start([
                     <?php foreach ($sections as $section): ?>
                         <tr>
                             <td><?= (int) $section['orden'] ?></td>
-                            <td><code><?= cms_e($section['nombre_interno']) ?></code></td>
-                            <td><?= cms_e($section['titulo_admin']) ?></td>
+                            <td>
+                                <strong><?= cms_e($section['titulo_admin']) ?></strong>
+                            </td>
                             <td><div class="text-muted" style="min-width:280px; white-space:normal;"><?= cms_e($section['observacion'] ?? '') ?></div></td>
                             <td><span class="badge-soft dark"><?= cms_e($section['tipo_seccion']) ?></span></td>
                             <td>
@@ -167,12 +166,11 @@ admin_render_layout_start([
                                     </div>
                                 </form>
                             </td>
-                            <td><?= (int) $section['total_items'] ?></td>
                             <td>
-                                <div class="d-flex gap-2 flex-wrap">
-                                    <a class="btn btn-sm btn-soft" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>">Ver</a>
-                                    <a class="btn btn-sm btn-premium" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&modo=editar">Editar</a>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary js-preview-btn" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">Visualizar</button>
+                                <div class="d-flex">
+                                    <a class="btn btn-admin-action" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&modo=editar">
+                                        <i class="bi bi-pencil-square me-2"></i>Editar
+                                    </a>
                                 </div>
                             </td>
                         </tr>

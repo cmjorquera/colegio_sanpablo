@@ -296,13 +296,13 @@ HTML,
                         <input class="form-control" name="texto_boton_ingresar" value="<?= cms_e($topbarConfigs['texto_boton_ingresar']) ?>">
                         <div class="form-text">Solo cambia el texto. La acción del modal se conserva.</div>
                     </div>
-                    <div class="col-md-6">
+                    <!-- <div class="col-md-6">
                         <label class="form-label">Gradiente institucional</label>
                         <div class="form-control d-flex align-items-center" style="min-height:46px; background:linear-gradient(90deg, <?= cms_e($site['institution']['color_primario'] ?? '#2563EB') ?>, <?= cms_e($site['institution']['color_secundario'] ?? '#E9A629') ?>, <?= cms_e($site['institution']['color_terciario'] ?? '#222222') ?>); color:#fff;">
                             <?= cms_e(($site['institution']['color_primario'] ?? '#2563EB') . ' / ' . ($site['institution']['color_secundario'] ?? '#E9A629') . ' / ' . ($site['institution']['color_terciario'] ?? '#222222')) ?>
                         </div>
                         <div class="form-text">Los colores vienen de <code>institucion</code> y no se editan aquí.</div>
-                    </div>
+                    </div> -->
                     <div class="col-md-2">
                         <label class="form-label">Mostrar dirección</label>
                         <select class="form-select" name="mostrar_direccion">

@@ -168,7 +168,7 @@ admin_render_layout_start([
                                 <div class="d-flex gap-2 flex-wrap">
                                     <a class="btn btn-sm btn-soft" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>">Ver</a>
                                     <a class="btn btn-sm btn-premium" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&modo=editar">Editar</a>
-                                    <a class="btn btn-sm btn-outline-secondary" href="preview_contenedor.php?id=<?= (int) $section['id_seccion'] ?>">Visualizar</a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary js-preview-btn" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">Visualizar</button>
                                 </div>
                             </td>
                         </tr>
@@ -370,6 +370,20 @@ admin_render_layout_start([
     </section>
 <?php endif; ?>
 
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content" style="border-radius:24px; overflow:hidden; border:0;">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">Vista previa del contenedor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body p-0" style="background:#f8fafc;">
+                <iframe id="previewFrame" title="Vista previa del contenedor" style="width:100%; min-height:70vh; border:0; display:block;" loading="lazy"></iframe>
+            </div>
+        </div>
+    </div>
+</div>
+
 <?php
 admin_render_layout_end([
     'extra_scripts' => <<<'HTML'
@@ -424,6 +438,23 @@ admin_render_layout_end([
                     .finally(function () {
                         checkbox.disabled = false;
                     });
+            });
+
+            $('.js-preview-btn').on('click', function () {
+                var button = this;
+                var title = button.getAttribute('data-preview-title') || 'Vista previa del contenedor';
+                var url = button.getAttribute('data-preview-url');
+                var modalEl = document.getElementById('previewModal');
+                var titleEl = document.getElementById('previewModalLabel');
+                var frameEl = document.getElementById('previewFrame');
+
+                titleEl.textContent = 'Vista previa: ' + title;
+                frameEl.src = url;
+                bootstrap.Modal.getOrCreateInstance(modalEl).show();
+            });
+
+            document.getElementById('previewModal').addEventListener('hidden.bs.modal', function () {
+                document.getElementById('previewFrame').src = 'about:blank';
             });
         });
     </script>

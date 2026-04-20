@@ -12,6 +12,7 @@ require_once __DIR__ . '/includes/admin_layout.php';
 $db = cms_get_connection();
 $site = cms_get_site_data($db);
 $idSeccion = (int) ($_GET['id'] ?? 0);
+$embed = isset($_GET['embed']) && $_GET['embed'] === '1';
 $section = cms_find_section($site['sections'], $idSeccion);
 
 if (!$section) {
@@ -34,6 +35,57 @@ function e(?string $value): string
 function cfg(array $map, string $sectionName, string $key, string $default = ''): string
 {
     return cms_cfg($map, $sectionName, $key, $default);
+}
+
+if ($embed) {
+    $component = cms_get_component_path($section['nombre_interno']);
+    ?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+    <link rel="stylesheet" href="assets/css/meanmenu.css">
+    <link rel="stylesheet" href="assets/css/all.min.css">
+    <link rel="stylesheet" href="assets/css/swiper-bundle.min.css">
+    <link rel="stylesheet" href="assets/css/magnific-popup.css">
+    <link rel="stylesheet" href="assets/css/animate.css">
+    <link rel="stylesheet" href="assets/css/nice-select.css">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="stylesheet" href="assets/css/pages/colegiosanpablo.css">
+    <style>
+        body { margin: 0; background: #ffffff; }
+    </style>
+</head>
+<body>
+    <?php
+    if ($component) {
+        include $component;
+    } else {
+        echo '<div class="p-4"><div class="alert alert-warning mb-0">No existe componente para este contenedor todavía.</div></div>';
+    }
+    ?>
+    <script src="assets/js/jquery-3.7.1.min.js"></script>
+    <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/swiper-bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var carouselEl = document.getElementById('heroCarousel');
+            if (carouselEl) {
+                new bootstrap.Carousel(carouselEl, {
+                    interval: 5000,
+                    ride: 'carousel',
+                    pause: 'hover',
+                    wrap: true
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+<?php
+    exit;
 }
 
 admin_render_layout_start([

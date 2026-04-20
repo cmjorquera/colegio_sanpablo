@@ -101,7 +101,7 @@ function cms_default_sections(): array
             'tipo_seccion' => 'header',
             'variante' => 'branding',
             'orden' => 2,
-            'observacion' => 'Bloque visual de identidad con logo y base del encabezado.',
+            'observacion' => 'Bloque visual completo del encabezado. Incluye logo, identidad institucional, navegacion horizontal basada en menus y sub_menus, y boton principal.',
         ],
         [
             'nombre_interno' => 'menu_principal',
@@ -109,7 +109,7 @@ function cms_default_sections(): array
             'tipo_seccion' => 'menu',
             'variante' => 'navegacion_principal',
             'orden' => 3,
-            'observacion' => 'Contenedor visual del menú principal. Sus enlaces siguen saliendo de menus y sub_menus.',
+            'observacion' => 'Bloque de compatibilidad. La navegacion ya esta absorbida visualmente dentro de header_principal, pero sus enlaces siguen saliendo de menus y sub_menus.',
         ],
         [
             'nombre_interno' => 'hero_principal',

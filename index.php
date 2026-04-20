@@ -64,6 +64,11 @@ try {
     <?php foreach ($sections as $section): ?>
         <?php
         $sectionName = $section['nombre_interno'] ?? '';
+
+        if ($sectionName === 'menu_principal') {
+            continue;
+        }
+
         $component = cms_get_component_path($sectionName);
 
         if ($component) {

@@ -7,52 +7,123 @@ $escape = static function ($value): string {
     return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
 };
 
+$normalizeLabel = static function (?string $value): string {
+    $value = trim((string) $value);
+    if ($value === '') {
+        return '';
+    }
+
+    if (function_exists('iconv')) {
+        $converted = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $value);
+        if (is_string($converted) && $converted !== '') {
+            $value = $converted;
+        }
+    }
+
+    $value = strtolower($value);
+    $value = preg_replace('/[^a-z0-9]+/', ' ', $value);
+    return trim((string) $value);
+};
+
+$normalizeUrl = static function (?string $url): string {
+    $url = trim((string) $url);
+    if ($url === '' || $url === '#') {
+        return '#';
+    }
+
+    if (
+        preg_match('~^(https?:)?//~i', $url) === 1
+        || str_starts_with($url, 'mailto:')
+        || str_starts_with($url, 'tel:')
+        || str_starts_with($url, '#')
+        || str_starts_with($url, '/')
+        || preg_match('~^[a-z0-9_-]+\.php(\?.*)?$~i', $url) === 1
+    ) {
+        return $url;
+    }
+
+    return 'https://' . ltrim($url, '/');
+};
+
+$buildFooterMenuTree = static function (array $menus, array $subs): array {
+    $items = [];
+
+    foreach ($menus as $menu) {
+        $menuId = (int) ($menu['id_menu'] ?? 0);
+        if ($menuId < 1) {
+            continue;
+        }
+
+        $children = [];
+        foreach (($subs[$menuId] ?? []) as $subMenu) {
+            $children[] = [
+                'id' => (int) ($subMenu['id_sub_menu'] ?? 0),
+                'label' => trim((string) ($subMenu['nombre'] ?? '')),
+                'url' => trim((string) ($subMenu['url'] ?? '')) ?: '#',
+            ];
+        }
+
+        $items[] = [
+            'id' => $menuId,
+            'label' => trim((string) ($menu['nombre'] ?? '')),
+            'url' => trim((string) ($menu['url'] ?? '')) ?: '#',
+            'children' => $children,
+        ];
+    }
+
+    return $items;
+};
+
+$mapFooterSiteItem = static function (array $item): array {
+    $label = trim((string) ($item['titulo'] ?? ''));
+    $label = $label !== '' ? $label : trim((string) ($item['etiqueta'] ?? ''));
+
+    $address = trim((string) ($item['descripcion'] ?? ''));
+    if ($address === '') {
+        $address = trim((string) ($item['subtitulo'] ?? ''));
+    }
+
+    $phone = trim((string) ($item['boton_1_texto'] ?? ''));
+    if ($phone === '' && preg_match('/\d/', (string) ($item['subtitulo'] ?? ''))) {
+        $phone = trim((string) ($item['subtitulo'] ?? ''));
+    }
+    if ($phone === '' && preg_match('/\d/', (string) ($item['boton_2_texto'] ?? ''))) {
+        $phone = trim((string) ($item['boton_2_texto'] ?? ''));
+    }
+
+    $icon = trim((string) ($item['boton_1_url'] ?? ''));
+    if ($icon === '' || strpos($icon, 'fa') === false) {
+        $icon = 'fas fa-map-marker-alt';
+    }
+
+    return [
+        'title' => $label,
+        'address' => $address,
+        'phone' => $phone,
+        'icon' => $icon,
+    ];
+};
+
 $institutionData = is_array($institution ?? null) ? $institution : [];
 $footerSectionConfig = is_array($sectionConfigsMap['footer_principal'] ?? null) ? $sectionConfigsMap['footer_principal'] : [];
+$footerSectionItems = is_array($sectionItemsMap['footer_principal'] ?? null) ? $sectionItemsMap['footer_principal'] : [];
 
-/*
-|--------------------------------------------------------------------------
-| Fallbacks temporales para futura migracion a base de datos
-|--------------------------------------------------------------------------
-*/
 $footerQuickLinksFallback = [
-    ['label' => 'Inicio', 'url' => '#'],
-    ['label' => 'Institucional', 'url' => '#'],
-    ['label' => 'Noticias', 'url' => '#'],
-    ['label' => 'Comunicados', 'url' => '#'],
-    ['label' => 'Biblioteca', 'url' => '#'],
-    ['label' => 'Confesionalidad', 'url' => '#'],
-    ['label' => 'Matricula', 'url' => '#'],
+    ['id' => 0, 'label' => 'Inicio', 'url' => '#', 'children' => []],
+    ['id' => 0, 'label' => 'Institucional', 'url' => '#', 'children' => []],
+    ['id' => 0, 'label' => 'Noticias', 'url' => '#', 'children' => []],
 ];
 
 $footerLevelsFallback = [
-    ['label' => 'Maternal', 'url' => '#'],
-    ['label' => 'Inicial', 'url' => '#'],
-    ['label' => 'Primaria', 'url' => '#'],
-    ['label' => '3er Ciclo EBI', 'url' => '#'],
-    ['label' => 'Bachillerato', 'url' => '#'],
-    ['label' => 'Libre Asistido', 'url' => '#'],
+    ['id' => 0, 'label' => 'Maternal', 'url' => '#', 'children' => []],
+    ['id' => 0, 'label' => 'Inicial', 'url' => '#', 'children' => []],
+    ['id' => 0, 'label' => 'Primaria', 'url' => '#', 'children' => []],
 ];
 
 $footerSitesFallback = [
-    [
-        'title' => 'Administracion',
-        'address' => 'Venancio Benavidez 3612',
-        'phone' => '',
-        'icon' => 'fas fa-building',
-    ],
-    [
-        'title' => 'Inicial',
-        'address' => 'Joaquin Suarez 3596',
-        'phone' => '2336 6000',
-        'icon' => 'fas fa-school',
-    ],
-    [
-        'title' => 'Preuniversitario',
-        'address' => 'Av. Millan 3375',
-        'phone' => '2202 0000',
-        'icon' => 'fas fa-graduation-cap',
-    ],
+    ['title' => 'Administracion', 'address' => 'Venancio Benavidez 3612', 'phone' => '', 'icon' => 'fas fa-building'],
+    ['title' => 'Inicial', 'address' => 'Joaquin Suarez 3596', 'phone' => '2336 6000', 'icon' => 'fas fa-school'],
+    ['title' => 'Preuniversitario', 'address' => 'Av. Millan 3375', 'phone' => '2202 0000', 'icon' => 'fas fa-graduation-cap'],
 ];
 
 $footerLegalLinksFallback = [
@@ -68,195 +139,167 @@ $footerDescription = $footerDescription !== ''
     ? $footerDescription
     : $institutionName . ' acompana a su comunidad con una propuesta educativa integral, cercana e inspirada en una formacion academica, humana y valorial.';
 
-$currentYear = '2026';
 $copyrightText = trim((string) ($footerSectionConfig['copyright_text'] ?? ''));
 $copyrightText = $copyrightText !== ''
     ? $copyrightText
-    : '© ' . $currentYear . ' ' . $institutionName . '. Todos los derechos reservados.';
+    : '© 2026 ' . $institutionName . '. Todos los derechos reservados.';
 
-$normalizeUrl = static function (?string $url): string {
-    $url = trim((string) $url);
-    if ($url === '' || $url === '#') {
-        return '#';
-    }
-
-    if (preg_match('~^(https?:)?//~i', $url) === 1 || str_starts_with($url, 'mailto:') || str_starts_with($url, 'tel:') || str_starts_with($url, '#')) {
-        return $url;
-    }
-
-    return 'https://' . ltrim($url, '/');
-};
-
-$db = null;
-if (function_exists('cms_get_connection')) {
-    try {
-        $db = cms_get_connection();
-    } catch (Throwable $exception) {
-        $db = null;
-    }
-}
-
-$institutionId = (int) ($institutionData['id_institucion'] ?? 0);
-
-$loadFooterRows = static function (?mysqli $dbConnection, string $table, array $requiredColumns, string $orderSql = '') use ($institutionId): array {
-    if (!$dbConnection || !function_exists('cms_table_exists') || !function_exists('cms_column_exists')) {
-        return [];
-    }
-
-    if (!cms_table_exists($dbConnection, $table)) {
-        return [];
-    }
-
-    foreach ($requiredColumns as $column) {
-        if (!cms_column_exists($dbConnection, $table, $column)) {
-            return [];
-        }
-    }
-
-    $columnsSql = implode(', ', array_map(static fn($column) => '`' . $column . '`', $requiredColumns));
-    $whereParts = [];
-
-    if (cms_column_exists($dbConnection, $table, 'activo')) {
-        $whereParts[] = '`activo` = 1';
-    }
-
-    if ($institutionId > 0 && cms_column_exists($dbConnection, $table, 'id_institucion')) {
-        $whereParts[] = '`id_institucion` = ' . $institutionId;
-    }
-
-    $sql = 'SELECT ' . $columnsSql . ' FROM `' . $table . '`';
-    if ($whereParts !== []) {
-        $sql .= ' WHERE ' . implode(' AND ', $whereParts);
-    }
-    if ($orderSql !== '') {
-        $sql .= ' ORDER BY ' . $orderSql;
-    }
-
-    $result = $dbConnection->query($sql);
-    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
-};
-
-$footerConfigRows = $loadFooterRows(
-    $db,
-    'footer_configuracion',
-    ['descripcion_institucional', 'copyright_text', 'telefono_general', 'correo_general', 'sitio_url', 'sitio_label', 'politica_url', 'terminos_url', 'admisiones_url'],
-    ''
+$allFooterMenus = $buildFooterMenuTree(
+    is_array($arrMenus ?? null) ? $arrMenus : [],
+    is_array($arrSubs ?? null) ? $arrSubs : []
 );
-$footerConfigDb = $footerConfigRows[0] ?? [];
 
-if (!empty($footerConfigDb['descripcion_institucional'])) {
-    $footerDescription = trim((string) $footerConfigDb['descripcion_institucional']);
-}
+$levelNames = [
+    'maternal',
+    'inicial',
+    'primaria',
+    '3er ciclo ebi',
+    'tercer ciclo ebi',
+    'bachillerato',
+    'libre asistido',
+];
 
-if (!empty($footerConfigDb['copyright_text'])) {
-    $copyrightText = trim((string) $footerConfigDb['copyright_text']);
-}
+$footerLevels = [];
+$footerQuickLinks = [];
 
-$footerQuickLinks = $loadFooterRows($db, 'footer_enlaces_rapidos', ['label', 'url', 'orden'], '`orden` ASC');
-$footerQuickLinks = array_map(static function (array $row): array {
-    return [
-        'label' => trim((string) ($row['label'] ?? '')),
-        'url' => trim((string) ($row['url'] ?? '#')) ?: '#',
-    ];
-}, $footerQuickLinks);
-
-if ($footerQuickLinks === []) {
-    if (!empty($arrMenus) && is_array($arrMenus)) {
-        foreach (array_slice($arrMenus, 0, 7) as $menuItem) {
-            $footerQuickLinks[] = [
-                'label' => trim((string) ($menuItem['nombre'] ?? '')),
-                'url' => trim((string) ($menuItem['url'] ?? '#')) ?: '#',
-            ];
-        }
+foreach ($allFooterMenus as $menuItem) {
+    $normalizedName = $normalizeLabel($menuItem['label'] ?? '');
+    if ($normalizedName === '') {
+        continue;
     }
+
+    if (in_array($normalizedName, $levelNames, true)) {
+        $footerLevels[] = $menuItem;
+        continue;
+    }
+
+    $footerQuickLinks[] = $menuItem;
 }
 
 if ($footerQuickLinks === []) {
     $footerQuickLinks = $footerQuickLinksFallback;
 }
 
-$footerLevels = $loadFooterRows($db, 'footer_niveles', ['nombre', 'url', 'orden'], '`orden` ASC');
-$footerLevels = array_map(static function (array $row): array {
-    return [
-        'label' => trim((string) ($row['nombre'] ?? '')),
-        'url' => trim((string) ($row['url'] ?? '#')) ?: '#',
-    ];
-}, $footerLevels);
-
 if ($footerLevels === []) {
     $footerLevels = $footerLevelsFallback;
 }
 
-$footerSocial = $loadFooterRows($db, 'footer_redes_sociales', ['nombre', 'url', 'icono', 'orden'], '`orden` ASC');
-$footerSocial = array_map(static function (array $row): array {
-    return [
-        'name' => trim((string) ($row['nombre'] ?? '')),
-        'url' => trim((string) ($row['url'] ?? '')),
-        'icon' => trim((string) ($row['icono'] ?? '')),
-    ];
-}, $footerSocial);
+$footerSocial = [];
+$socialMap = [
+    'instagram' => ['label' => 'Instagram', 'url' => $institutionData['instagram'] ?? '', 'icon' => 'fab fa-instagram'],
+    'facebook' => ['label' => 'Facebook', 'url' => $institutionData['facebook'] ?? '', 'icon' => 'fab fa-facebook-f'],
+    'youtube' => ['label' => 'YouTube', 'url' => $institutionData['youtube'] ?? ($footerSectionConfig['youtube'] ?? ''), 'icon' => 'fab fa-youtube'],
+    'twitter' => ['label' => 'Twitter', 'url' => $institutionData['twitter'] ?? $institutionData['x'] ?? ($footerSectionConfig['twitter'] ?? $footerSectionConfig['x'] ?? ''), 'icon' => 'fab fa-twitter'],
+];
 
-if ($footerSocial === []) {
-    $socialMap = [
-        'instagram' => ['label' => 'Instagram', 'url' => $institutionData['instagram'] ?? '', 'icon' => 'fab fa-instagram'],
-        'facebook' => ['label' => 'Facebook', 'url' => $institutionData['facebook'] ?? '', 'icon' => 'fab fa-facebook-f'],
-        'youtube' => ['label' => 'YouTube', 'url' => $institutionData['youtube'] ?? ($footerSectionConfig['youtube'] ?? ''), 'icon' => 'fab fa-youtube'],
-        'twitter' => ['label' => 'Twitter', 'url' => $institutionData['twitter'] ?? $institutionData['x'] ?? ($footerSectionConfig['twitter'] ?? $footerSectionConfig['x'] ?? ''), 'icon' => 'fab fa-twitter'],
-    ];
-
-    foreach ($socialMap as $socialItem) {
-        if (trim((string) $socialItem['url']) === '') {
-            continue;
-        }
-
-        $footerSocial[] = [
-            'name' => $socialItem['label'],
-            'url' => trim((string) $socialItem['url']),
-            'icon' => $socialItem['icon'],
-        ];
+foreach ($socialMap as $socialItem) {
+    if (trim((string) $socialItem['url']) === '') {
+        continue;
     }
+
+    $footerSocial[] = [
+        'name' => $socialItem['label'],
+        'url' => trim((string) $socialItem['url']),
+        'icon' => $socialItem['icon'],
+    ];
 }
 
-$footerSites = $loadFooterRows($db, 'footer_sedes_contacto', ['titulo', 'direccion', 'telefono', 'icono', 'tipo', 'orden'], '`orden` ASC');
-$footerSites = array_map(static function (array $row): array {
-    return [
-        'title' => trim((string) ($row['titulo'] ?? '')),
-        'address' => trim((string) ($row['direccion'] ?? '')),
-        'phone' => trim((string) ($row['telefono'] ?? '')),
-        'icon' => trim((string) ($row['icono'] ?? '')) ?: 'fas fa-map-marker-alt',
-        'type' => trim((string) ($row['tipo'] ?? 'sede')),
-    ];
-}, $footerSites);
+$footerSites = [];
+foreach ($footerSectionItems as $item) {
+    $mappedItem = $mapFooterSiteItem($item);
+    if ($mappedItem['title'] === '' && $mappedItem['address'] === '') {
+        continue;
+    }
+    $footerSites[] = $mappedItem;
+}
 
 if ($footerSites === []) {
     $footerSites = $footerSitesFallback;
 }
 
-$websiteUrl = trim((string) ($footerConfigDb['sitio_url'] ?? $footerSectionConfig['sitio_url'] ?? $institutionData['dominio'] ?? ''));
+$websiteUrl = trim((string) ($footerSectionConfig['sitio_url'] ?? $institutionData['dominio'] ?? ''));
 if ($websiteUrl === '' && !empty($_SERVER['HTTP_HOST'])) {
     $websiteUrl = (string) $_SERVER['HTTP_HOST'];
 }
 $websiteUrl = $normalizeUrl($websiteUrl);
 $websiteLabel = $websiteUrl !== '#'
     ? preg_replace('~^https?://~i', '', $websiteUrl)
-    : trim((string) ($footerConfigDb['sitio_label'] ?? $footerSectionConfig['sitio_label'] ?? ''));
+    : trim((string) ($footerSectionConfig['sitio_label'] ?? ''));
 $websiteLabel = rtrim((string) $websiteLabel, '/');
 
-$generalPhone = trim((string) ($footerConfigDb['telefono_general'] ?? $footerSectionConfig['telefono_general'] ?? $institutionData['telefono'] ?? ''));
-$generalEmail = trim((string) ($footerConfigDb['correo_general'] ?? $footerSectionConfig['correo_general'] ?? $institutionData['email'] ?? ''));
+$generalPhone = trim((string) ($footerSectionConfig['telefono_general'] ?? $institutionData['telefono'] ?? ''));
+$generalEmail = trim((string) ($footerSectionConfig['correo_general'] ?? $institutionData['email'] ?? ''));
 
 $footerLegalLinks = [];
-if ($footerConfigDb !== []) {
+if (
+    !empty($footerSectionConfig['politica_url'])
+    || !empty($footerSectionConfig['terminos_url'])
+    || !empty($footerSectionConfig['admisiones_url'])
+) {
     $footerLegalLinks = [
-        ['label' => 'Politica de privacidad', 'url' => trim((string) ($footerConfigDb['politica_url'] ?? '#')) ?: '#'],
-        ['label' => 'Terminos legales', 'url' => trim((string) ($footerConfigDb['terminos_url'] ?? '#')) ?: '#'],
-        ['label' => 'Admisiones', 'url' => trim((string) ($footerConfigDb['admisiones_url'] ?? '#')) ?: '#'],
+        ['label' => 'Politica de privacidad', 'url' => trim((string) ($footerSectionConfig['politica_url'] ?? '#')) ?: '#'],
+        ['label' => 'Terminos legales', 'url' => trim((string) ($footerSectionConfig['terminos_url'] ?? '#')) ?: '#'],
+        ['label' => 'Admisiones', 'url' => trim((string) ($footerSectionConfig['admisiones_url'] ?? '#')) ?: '#'],
     ];
 }
 
 if ($footerLegalLinks === []) {
     $footerLegalLinks = $footerLegalLinksFallback;
 }
+
+$renderFooterMenuList = static function (array $items, string $listIdPrefix) use ($escape, $normalizeUrl): void {
+    ?>
+    <ul class="footer-links footer-menu-list">
+        <?php foreach ($items as $index => $item): ?>
+            <?php
+            $label = trim((string) ($item['label'] ?? ''));
+            if ($label === '') {
+                continue;
+            }
+
+            $url = trim((string) ($item['url'] ?? '')) ?: '#';
+            $children = is_array($item['children'] ?? null) ? $item['children'] : [];
+            $hasChildren = $children !== [];
+            $submenuId = $listIdPrefix . '-' . ((int) ($item['id'] ?? 0)) . '-' . $index;
+            ?>
+            <li class="footer-menu-item<?= $hasChildren ? ' has-children' : '' ?>">
+                <?php if ($hasChildren): ?>
+                    <button
+                        class="footer-menu-toggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="<?= $escape($submenuId) ?>"
+                        data-target="<?= $escape($submenuId) ?>"
+                        data-url="<?= $escape($normalizeUrl($url)) ?>"
+                    >
+                        <span class="footer-menu-toggle__label">
+                            <i class="fas fa-chevron-right footer-menu-item__bullet"></i>
+                            <span><?= $escape($label) ?></span>
+                        </span>
+                        <i class="fas fa-chevron-down footer-menu-toggle__arrow" aria-hidden="true"></i>
+                    </button>
+                    <ul class="footer-submenu" id="<?= $escape($submenuId) ?>" hidden>
+                        <?php foreach ($children as $child): ?>
+                            <?php if (trim((string) ($child['label'] ?? '')) === '') { continue; } ?>
+                            <li>
+                                <a href="<?= $escape($normalizeUrl($child['url'] ?? '#')) ?>">
+                                    <i class="fas fa-angle-right"></i>
+                                    <span><?= $escape($child['label']) ?></span>
+                                </a>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php else: ?>
+                    <a href="<?= $escape($normalizeUrl($url)) ?>">
+                        <i class="fas fa-chevron-right footer-menu-item__bullet"></i>
+                        <span><?= $escape($label) ?></span>
+                    </a>
+                <?php endif; ?>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+    <?php
+};
 ?>
 <style>
     .footer-principal {
@@ -409,19 +452,79 @@ if ($footerLegalLinks === []) {
         color: var(--footer-accent);
     }
 
-    .footer-links a {
-        display: inline-flex;
+    .footer-menu-item > a,
+    .footer-menu-toggle,
+    .footer-submenu a {
+        width: 100%;
+        display: flex;
         align-items: center;
-        gap: 10px;
+        justify-content: space-between;
+        gap: 12px;
         line-height: 1.65;
     }
 
-    .footer-links i,
+    .footer-menu-item > a,
+    .footer-submenu a {
+        color: var(--footer-text);
+    }
+
+    .footer-menu-toggle {
+        border: 0;
+        background: transparent;
+        color: var(--footer-text);
+        padding: 0;
+        text-align: left;
+    }
+
+    .footer-menu-toggle:hover {
+        color: var(--footer-accent);
+    }
+
+    .footer-menu-toggle__label {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .footer-menu-item__bullet,
+    .footer-submenu i,
     .footer-contacto i {
         color: var(--footer-accent);
         width: 18px;
         text-align: center;
         flex: 0 0 18px;
+    }
+
+    .footer-menu-toggle__arrow {
+        color: var(--footer-accent);
+        transition: transform 0.25s ease;
+        flex: 0 0 auto;
+    }
+
+    .footer-menu-item.is-open .footer-menu-toggle__arrow {
+        transform: rotate(180deg);
+    }
+
+    .footer-submenu {
+        list-style: none;
+        margin: 12px 0 0;
+        padding: 0 0 0 28px;
+    }
+
+    .footer-submenu li + li {
+        margin-top: 10px;
+    }
+
+    .footer-submenu a {
+        justify-content: flex-start;
+        gap: 10px;
+        color: var(--footer-muted);
+        font-size: 0.93rem;
+    }
+
+    .footer-submenu a:hover {
+        color: var(--footer-accent);
     }
 
     .footer-contacto li {
@@ -580,13 +683,7 @@ if ($footerLegalLinks === []) {
                     <?php if ($footerSocial !== []): ?>
                         <div class="footer-social" aria-label="Redes sociales institucionales">
                             <?php foreach ($footerSocial as $socialItem): ?>
-                                <?php
-                                $socialUrl = trim((string) ($socialItem['url'] ?? ''));
-                                if ($socialUrl === '') {
-                                    continue;
-                                }
-                                ?>
-                                <a href="<?= $escape($normalizeUrl($socialUrl)) ?>" target="_blank" rel="noopener" aria-label="<?= $escape($socialItem['name'] ?? 'Red social') ?>">
+                                <a href="<?= $escape($normalizeUrl($socialItem['url'] ?? '#')) ?>" target="_blank" rel="noopener" aria-label="<?= $escape($socialItem['name'] ?? 'Red social') ?>">
                                     <i class="<?= $escape($socialItem['icon'] ?? 'fas fa-share-alt') ?>"></i>
                                 </a>
                             <?php endforeach; ?>
@@ -597,32 +694,12 @@ if ($footerLegalLinks === []) {
 
             <div class="col-xl-2 col-md-6">
                 <h5 class="footer-title">Menu Rapido</h5>
-                <ul class="footer-links">
-                    <?php foreach ($footerQuickLinks as $linkItem): ?>
-                        <?php if (trim((string) ($linkItem['label'] ?? '')) === '') { continue; } ?>
-                        <li>
-                            <a href="<?= $escape($normalizeUrl($linkItem['url'] ?? '#')) ?>">
-                                <i class="fas fa-chevron-right"></i>
-                                <span><?= $escape($linkItem['label']) ?></span>
-                            </a>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+                <?php $renderFooterMenuList($footerQuickLinks, 'footer-quick'); ?>
             </div>
 
             <div class="col-xl-2 col-md-6">
                 <h5 class="footer-title">Niveles</h5>
-                <ul class="footer-links">
-                    <?php foreach ($footerLevels as $levelItem): ?>
-                        <?php if (trim((string) ($levelItem['label'] ?? '')) === '') { continue; } ?>
-                        <li>
-                            <a href="<?= $escape($normalizeUrl($levelItem['url'] ?? '#')) ?>">
-                                <i class="fas fa-chevron-right"></i>
-                                <span><?= $escape($levelItem['label']) ?></span>
-                            </a>
-                        </li>
-                    <?php endforeach; ?>
-                </ul>
+                <?php $renderFooterMenuList($footerLevels, 'footer-levels'); ?>
             </div>
 
             <div class="col-xl-4 col-md-6">
@@ -704,3 +781,5 @@ if ($footerLegalLinks === []) {
         </div>
     </div>
 </footer>
+
+<script src="assets/js/footer_principal.js"></script>

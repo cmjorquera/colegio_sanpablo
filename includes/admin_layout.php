@@ -51,9 +51,11 @@ function admin_render_layout_start(array $options = []): void
             --sp-shadow-soft: 0 12px 30px rgba(18, 35, 68, 0.08);
         }
         * { box-sizing: border-box; }
-        body {
+        body,
+        body.admin-panel {
             margin: 0;
             font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
             background:
                 radial-gradient(circle at top left, rgba(53, 88, 213, 0.10), transparent 24%),
                 radial-gradient(circle at top right, rgba(46, 197, 161, 0.08), transparent 22%),
@@ -89,7 +91,7 @@ function admin_render_layout_start(array $options = []): void
         .admin-content {
             flex: 1;
             min-width: 0;
-            padding: 22px 24px 30px;
+            padding: 18px 20px 24px;
             transition: .25s ease;
         }
         .brand-box {
@@ -254,34 +256,34 @@ function admin_render_layout_start(array $options = []): void
             border-radius: 28px;
         }
         .admin-topbar {
-            padding: 16px 20px;
-            margin-bottom: 24px;
+            padding: 14px 18px;
+            margin-bottom: 18px;
             border-radius: 24px;
         }
-        .admin-topbar h2 { margin: 0; font-size: 1.55rem; font-weight: 700; color: var(--sp-dark); }
-        .crumb { color: var(--sp-muted); font-size: 0.92rem; }
+        .admin-topbar h2 { margin: 0; font-size: 1.35rem; font-weight: 700; color: var(--sp-dark); }
+        .crumb { color: var(--sp-muted); font-size: 0.84rem; }
         .topbar-search {
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 10px;
             min-width: 320px;
             max-width: 420px;
             flex: 1;
-            padding: 0 16px;
-            min-height: 52px;
-            border-radius: 16px;
+            padding: 0 14px;
+            min-height: 46px;
+            border-radius: 14px;
             border: 1px solid var(--sp-border);
             background: #f8fbff;
             box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
         }
-        .topbar-search i { color: var(--sp-primary); font-size: 1.1rem; }
+        .topbar-search i { color: var(--sp-primary); font-size: 1rem; }
         .topbar-search input {
             border: 0;
             outline: none;
             background: transparent;
             width: 100%;
             color: var(--sp-secondary);
-            font-size: 1rem;
+            font-size: 0.95rem;
         }
         .topbar-right {
             display: flex;
@@ -290,9 +292,9 @@ function admin_render_layout_start(array $options = []): void
             margin-left: auto;
         }
         .topbar-icon-btn {
-            width: 42px;
-            height: 42px;
-            border-radius: 14px;
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
             border: 1px solid transparent;
             display: inline-flex;
             align-items: center;
@@ -315,8 +317,8 @@ function admin_render_layout_start(array $options = []): void
             min-width: 0;
         }
         .topbar-avatar {
-            width: 46px;
-            height: 46px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
             background: linear-gradient(135deg, var(--sp-primary), #53a4ff);
             color: #fff;
@@ -341,54 +343,59 @@ function admin_render_layout_start(array $options = []): void
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
-            font-size: 0.98rem;
+            font-size: 0.92rem;
             color: var(--sp-primary-strong);
         }
         .topbar-profile-copy span {
             display: block;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--sp-muted);
             max-width: 160px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
         }
-        .section-card { padding: 22px; margin-bottom: 24px; }
-        .section-head { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 18px; flex-wrap: wrap; }
-        .section-head h3 { font-size: 1.2rem; margin: 0; color: var(--sp-dark); font-weight: 700; }
-        .section-head p { margin: 6px 0 0; color: var(--sp-muted); }
+        .section-card { padding: 16px; margin-bottom: 18px; }
+        .section-head { display: flex; justify-content: space-between; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+        .section-head h3 { font-size: 1.05rem; margin: 0; color: var(--sp-dark); font-weight: 700; }
+        .section-head p { margin: 4px 0 0; color: var(--sp-muted); font-size: 0.9rem; }
         .metric-card {
             position: relative;
             overflow: hidden;
-            min-height: 170px;
-            border-radius: 22px;
-            padding: 22px;
+            min-height: 148px;
+            border-radius: 20px;
+            padding: 18px;
             color: #fff;
             box-shadow: var(--sp-shadow);
         }
         .metric-green { background: linear-gradient(135deg, #1b6d88, #3bbfb7); }
         .metric-blue { background: linear-gradient(135deg, #3558d5, #5b89ff); }
         .metric-gold { background: linear-gradient(135deg, #1b8777, #35c28d); }
-        .metric-card .big-number { font-size: 2rem; font-weight: 800; line-height: 1; margin-bottom: 8px; }
+        .metric-card .big-number { font-size: 1.7rem; font-weight: 800; line-height: 1; margin-bottom: 8px; }
         .table-modern thead th {
             background: #f7f9fc;
             color: var(--sp-secondary);
             border-bottom: 1px solid var(--sp-border);
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             text-transform: uppercase;
             letter-spacing: 0.04em;
-            padding: 16px 14px;
+            padding: 12px 12px;
             white-space: nowrap;
         }
-        .table-modern tbody td { vertical-align: middle; padding: 16px 14px; border-color: #edf2f7; }
+        .table-modern tbody td { vertical-align: middle; padding: 12px 12px; border-color: #edf2f7; }
         .badge-soft {
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 12px;
+            padding: 6px 10px;
             border-radius: 999px;
-            font-size: 0.84rem;
+            font-size: 0.78rem;
             font-weight: 600;
+        }
+        .btn {
+            padding: 6px 12px;
+            font-size: 14px;
+            border-radius: 12px;
         }
         .badge-soft.success { background: #e8fbf2; color: #1b8f67; }
         .badge-soft.warning { background: #fff6e0; color: #b7791f; }
@@ -402,9 +409,9 @@ function admin_render_layout_start(array $options = []): void
         }
         .btn-premium:hover { color: #fff; }
         .btn-admin-action {
-            min-height: 44px;
-            padding: 10px 18px;
-            border-radius: 14px;
+            min-height: 38px;
+            padding: 6px 14px;
+            border-radius: 12px;
             border: 1px solid rgba(53, 88, 213, 0.10);
             background: linear-gradient(135deg, var(--sp-primary), #4d6fff);
             color: #fff;
@@ -417,10 +424,12 @@ function admin_render_layout_start(array $options = []): void
             box-shadow: 0 14px 28px rgba(53, 88, 213, 0.22);
         }
         .form-control, .form-select {
-            border-radius: 16px;
+            border-radius: 12px;
             border: 1px solid var(--sp-border);
-            min-height: 48px;
-            padding: 12px 14px;
+            min-height: 0;
+            height: auto;
+            font-size: 14px;
+            padding: 6px 10px;
             color: var(--sp-secondary);
             box-shadow: none;
         }
@@ -428,7 +437,48 @@ function admin_render_layout_start(array $options = []): void
             border-color: rgba(53, 88, 213, 0.38);
             box-shadow: 0 0 0 0.25rem rgba(53, 88, 213, 0.12);
         }
-        textarea.form-control { min-height: 120px; }
+        textarea.form-control { min-height: 96px; }
+        .form-label { margin-bottom: 0.35rem; font-size: 0.9rem; }
+        .card,
+        .modal-body { padding: 16px; }
+        .modal-title { font-size: 18px; }
+        .modal-dialog { max-width: 900px; }
+        .modal-body .row { margin-bottom: 10px; }
+        .modal-body .col-md-6 { padding-bottom: 10px; }
+        .modal-body input,
+        .modal-body textarea,
+        .modal-body select { font-size: 14px; }
+        .modal-content {
+            border-radius: 20px;
+            border: 1px solid rgba(53, 88, 213, 0.08);
+            box-shadow: var(--sp-shadow);
+        }
+        .modal-header { padding: 14px 16px; }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 14px 16px;
+        }
+        .modal-footer .btn {
+            width: auto;
+            margin: 0;
+        }
+        .botones-modal {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+        .botones-modal .btn { width: auto; }
+        .d-flex.gap-2.flex-wrap > .btn,
+        .d-flex.gap-2.flex-wrap > a.btn,
+        .d-flex.gap-2 > .btn,
+        .d-flex.gap-2 > a.btn {
+            width: auto;
+            flex: 0 0 auto;
+        }
         .mobile-sidebar-toggle { display: inline-flex; }
         @media (max-width: 1199px) {
             .admin-sidebar {
@@ -443,7 +493,7 @@ function admin_render_layout_start(array $options = []): void
                 opacity: 1;
                 visibility: visible;
             }
-            .admin-content { width: 100%; padding: 18px; }
+            .admin-content { width: 100%; padding: 16px; }
             .admin-topbar > .d-flex { align-items: stretch !important; }
             .topbar-search { order: 3; min-width: 100%; max-width: none; }
             .topbar-right { width: 100%; justify-content: flex-end; }
@@ -455,6 +505,8 @@ function admin_render_layout_start(array $options = []): void
         }
         @media (max-width: 767px) {
             .admin-topbar h2 { font-size: 1.25rem; }
+            .section-card { padding: 14px; }
+            .modal-dialog { margin: 0.65rem; }
             .topbar-right {
                 gap: 6px;
                 flex-wrap: wrap;
@@ -469,7 +521,7 @@ function admin_render_layout_start(array $options = []): void
     </style>
     <?= $extraHead ?>
 </head>
-<body>
+<body class="admin-panel">
     <div class="admin-shell" id="adminShell">
         <div class="admin-sidebar-overlay" id="adminSidebarOverlay"></div>
         <aside class="admin-sidebar" id="adminSidebar">

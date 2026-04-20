@@ -39,7 +39,7 @@ if ($mostrarEmail && $email !== '') {
     ];
 }
 ?>
-<div class="sp-topbar d-none d-md-block" id="topbar" style="background: <?= e($topbarGradient) ?>;">
+<div class="sp-topbar d-none d-md-block" id="topbar" style=" background: var(--sp-negro);color: #e0e0e0;padding: 8px 0;font-size: 13px;">
     <div class="container-fluid px-4">
         <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
             <div class="d-flex align-items-center flex-wrap">

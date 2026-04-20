@@ -36,6 +36,12 @@ function get_flash(): ?array
     return $flash;
 }
 
+function redirect_admin(string $query = ''): void
+{
+    header('Location: admin.php' . $query);
+    exit;
+}
+
 function table_exists(mysqli $db, string $table): bool
 {
     $stmt = $db->prepare('SHOW TABLES LIKE ?');
@@ -134,13 +140,65 @@ function obtener_item(mysqli $db, int $idItem): ?array
     return $row ?: null;
 }
 
+function obtener_institucion(mysqli $db, int $idInstitucion): ?array
+{
+    $stmt = $db->prepare('SELECT * FROM institucion WHERE id_institucion = ? LIMIT 1');
+    $stmt->bind_param('i', $idInstitucion);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+
+    return $row ?: null;
+}
+
+function listar_menus(mysqli $db): array
+{
+    $result = $db->query('SELECT * FROM menus ORDER BY orden ASC, id_menu ASC');
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+function listar_submenus(mysqli $db): array
+{
+    $sql = 'SELECT sm.*, m.nombre AS menu_padre
+            FROM sub_menus sm
+            INNER JOIN menus m ON m.id_menu = sm.id_menu
+            ORDER BY m.orden ASC, sm.orden ASC, sm.id_sub_menu ASC';
+    $result = $db->query($sql);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+function obtener_menu(mysqli $db, int $idMenu): ?array
+{
+    $stmt = $db->prepare('SELECT * FROM menus WHERE id_menu = ? LIMIT 1');
+    $stmt->bind_param('i', $idMenu);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+
+    return $row ?: null;
+}
+
+function obtener_submenu(mysqli $db, int $idSubmenu): ?array
+{
+    $stmt = $db->prepare('SELECT * FROM sub_menus WHERE id_sub_menu = ? LIMIT 1');
+    $stmt->bind_param('i', $idSubmenu);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+
+    return $row ?: null;
+}
+
 function obtener_categorias_noticia(mysqli $db): array
 {
     if (!table_exists($db, 'categoria_noticia')) {
         return [];
     }
 
-    $result = $db->query('SELECT * FROM categoria_noticia ORDER BY 1 ASC');
+    $result = $db->query('SELECT * FROM categoria_noticia ORDER BY nombre ASC, id_categoria ASC');
     if (!$result) {
         return [];
     }
@@ -217,27 +275,6 @@ function subir_imagen(string $fieldName, string $folder, ?string $current = null
     return $relativePath;
 }
 
-function separar_titulo_hero(?string $titulo): array
-{
-    $parts = preg_split('/\R/', (string) $titulo) ?: [];
-    $parts = array_values(array_filter(array_map('trim', $parts), static fn($value) => $value !== ''));
-
-    return [
-        $parts[0] ?? '',
-        $parts[1] ?? '',
-        $parts[2] ?? '',
-    ];
-}
-
-function unir_titulo_hero(array $lineas): string
-{
-    $lineas = array_values(array_filter(array_map(static function ($value) {
-        return trim((string) $value);
-    }, $lineas), static fn($value) => $value !== ''));
-
-    return implode("\n", $lineas);
-}
-
 function editar_seccion(mysqli $db, int $idSeccion, array $post): void
 {
     $visible = (($post['visible'] ?? 'no') === 'si') ? 'si' : 'no';
@@ -271,6 +308,122 @@ function editar_seccion(mysqli $db, int $idSeccion, array $post): void
     $insertStmt->close();
 }
 
+function toggle_visible_seccion(mysqli $db, int $idSeccion): void
+{
+    $stmt = $db->prepare("UPDATE seccion SET visible = IF(visible = 'si', 'no', 'si') WHERE id_seccion = ?");
+    $stmt->bind_param('i', $idSeccion);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function guardar_menu(mysqli $db, array $post): void
+{
+    $idMenu = (int) ($post['id_menu'] ?? 0);
+    $nombre = trim((string) ($post['nombre'] ?? ''));
+    $url = trim((string) ($post['url'] ?? ''));
+    $icono = trim((string) ($post['icono'] ?? ''));
+    $orden = max(0, (int) ($post['orden'] ?? 0));
+    $estado = isset($post['estado']) ? 1 : 0;
+
+    if ($nombre === '') {
+        throw new RuntimeException('El nombre del menu es obligatorio.');
+    }
+
+    if ($idMenu > 0) {
+        $stmt = $db->prepare('UPDATE menus SET nombre = ?, url = ?, icono = ?, orden = ?, estado = ? WHERE id_menu = ?');
+        $stmt->bind_param('sssiii', $nombre, $url, $icono, $orden, $estado, $idMenu);
+    } else {
+        $stmt = $db->prepare('INSERT INTO menus (nombre, url, icono, orden, estado) VALUES (?, ?, ?, ?, ?)');
+        $stmt->bind_param('sssii', $nombre, $url, $icono, $orden, $estado);
+    }
+
+    $stmt->execute();
+    $stmt->close();
+}
+
+function toggle_menu(mysqli $db, int $idMenu): void
+{
+    $stmt = $db->prepare('UPDATE menus SET estado = IF(estado = 1, 0, 1) WHERE id_menu = ?');
+    $stmt->bind_param('i', $idMenu);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function guardar_submenu(mysqli $db, array $post): void
+{
+    $idSubmenu = (int) ($post['id_sub_menu'] ?? 0);
+    $idMenu = (int) ($post['id_menu'] ?? 0);
+    $nombre = trim((string) ($post['nombre'] ?? ''));
+    $url = trim((string) ($post['url'] ?? ''));
+    $icono = trim((string) ($post['icono'] ?? ''));
+    $orden = max(0, (int) ($post['orden'] ?? 0));
+    $estado = isset($post['estado']) ? 1 : 0;
+
+    if ($idMenu < 1 || $nombre === '') {
+        throw new RuntimeException('El submenu debe tener menu padre y nombre.');
+    }
+
+    if ($idSubmenu > 0) {
+        $stmt = $db->prepare('UPDATE sub_menus SET id_menu = ?, nombre = ?, url = ?, icono = ?, orden = ?, estado = ? WHERE id_sub_menu = ?');
+        $stmt->bind_param('isssiii', $idMenu, $nombre, $url, $icono, $orden, $estado, $idSubmenu);
+    } else {
+        $stmt = $db->prepare('INSERT INTO sub_menus (id_menu, nombre, url, icono, orden, estado, fecha_creacion, hora_creacion, ip_creacion) VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURTIME(), ?)');
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $stmt->bind_param('isssiis', $idMenu, $nombre, $url, $icono, $orden, $estado, $ip);
+    }
+
+    $stmt->execute();
+    $stmt->close();
+}
+
+function toggle_submenu(mysqli $db, int $idSubmenu): void
+{
+    $stmt = $db->prepare('UPDATE sub_menus SET estado = IF(estado = 1, 0, 1) WHERE id_sub_menu = ?');
+    $stmt->bind_param('i', $idSubmenu);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function guardar_institucion(mysqli $db, int $idInstitucion, array $post): void
+{
+    $actual = obtener_institucion($db, $idInstitucion);
+    if (!$actual) {
+        throw new RuntimeException('No se encontro la institucion activa.');
+    }
+
+    $logoHeader = subir_imagen('logo_header', 'institucion', $actual['logo_header'] ?? null);
+    $favicon = subir_imagen('favicon', 'institucion', $actual['favicon'] ?? null);
+
+    $nombre = trim((string) ($post['nombre'] ?? ''));
+    $email = trim((string) ($post['email'] ?? ''));
+    $telefono = trim((string) ($post['telefono'] ?? ''));
+    $direccion = trim((string) ($post['direccion'] ?? ''));
+    $facebook = trim((string) ($post['facebook'] ?? ''));
+    $instagram = trim((string) ($post['instagram'] ?? ''));
+    $colorPrimario = trim((string) ($post['color_primario'] ?? ''));
+    $colorSecundario = trim((string) ($post['color_secundario'] ?? ''));
+
+    $stmt = $db->prepare('UPDATE institucion
+        SET nombre = ?, email = ?, telefono = ?, direccion = ?, logo_header = ?, favicon = ?, facebook = ?, instagram = ?, color_primario = ?, color_secundario = ?
+        WHERE id_institucion = ?');
+    $stmt->bind_param(
+        'ssssssssssi',
+        $nombre,
+        $email,
+        $telefono,
+        $direccion,
+        $logoHeader,
+        $favicon,
+        $facebook,
+        $instagram,
+        $colorPrimario,
+        $colorSecundario,
+        $idInstitucion
+    );
+    $stmt->execute();
+    $stmt->close();
+}
+
 function editar_item(mysqli $db, array $section, array $post): int
 {
     $idSeccion = (int) $section['id_seccion'];
@@ -287,19 +440,15 @@ function editar_item(mysqli $db, array $section, array $post): int
     $boton2Texto = trim((string) ($post['boton_2_texto'] ?? ''));
     $boton2Url = trim((string) ($post['boton_2_url'] ?? ''));
     $fechaPublicacion = trim((string) ($post['fecha_publicacion'] ?? ''));
+    $idCategoria = !empty($post['id_categoria']) ? (int) $post['id_categoria'] : null;
     $visible = (($post['visible'] ?? 'no') === 'si') ? 'si' : 'no';
     $orden = max(1, (int) ($post['orden'] ?? 1));
-
-    if (in_array($tipoSeccion, ['hero', 'carousel'], true)) {
-        $titulo = unir_titulo_hero([
-            $post['titulo_linea_1'] ?? '',
-            $post['titulo_linea_2'] ?? '',
-            $post['titulo_linea_3'] ?? '',
-        ]);
-    }
+    $tituloLinea1 = trim((string) ($post['titulo_linea_1'] ?? ''));
+    $tituloLinea2 = trim((string) ($post['titulo_linea_2'] ?? ''));
+    $tituloLinea3 = trim((string) ($post['titulo_linea_3'] ?? ''));
 
     if ($tipoSeccion === 'news') {
-        $etiqueta = trim((string) ($post['categoria'] ?? $etiqueta));
+        $etiqueta = trim((string) ($post['etiqueta'] ?? $etiqueta));
         $subtitulo = trim((string) ($post['subtitulo'] ?? 'Últimas Noticias'));
         $fechaPublicacion = $fechaPublicacion !== '' ? $fechaPublicacion : null;
         if ($boton1Texto === '') {
@@ -315,17 +464,23 @@ function editar_item(mysqli $db, array $section, array $post): int
 
     if ($idItem > 0) {
         $sql = 'UPDATE seccion_item
-                SET titulo = ?, subtitulo = ?, descripcion = ?, imagen = ?, imagen_mobile = ?,
+                SET id_categoria = ?, etiqueta = ?, titulo = ?, titulo_linea_1 = ?, titulo_linea_2 = ?, titulo_linea_3 = ?,
+                    subtitulo = ?, descripcion = ?, imagen = ?, imagen_mobile = ?,
                     boton_1_texto = ?, boton_1_url = ?, boton_2_texto = ?, boton_2_url = ?,
-                    etiqueta = ?, fecha_publicacion = ?, visible = ?, orden = ?
+                    fecha_publicacion = ?, visible = ?, orden = ?
                 WHERE id_item = ? AND id_seccion = ?';
         $stmt = $db->prepare($sql);
         if (!$stmt) {
             throw new RuntimeException('No fue posible preparar la actualizacion del item.');
         }
         $stmt->bind_param(
-            'ssssssssssssiii',
+            'isssssssssssssssiii',
+            $idCategoria,
+            $etiqueta,
             $titulo,
+            $tituloLinea1,
+            $tituloLinea2,
+            $tituloLinea3,
             $subtitulo,
             $descripcion,
             $imagen,
@@ -334,7 +489,6 @@ function editar_item(mysqli $db, array $section, array $post): int
             $boton1Url,
             $boton2Texto,
             $boton2Url,
-            $etiqueta,
             $fechaPublicacion,
             $visible,
             $orden,
@@ -343,18 +497,24 @@ function editar_item(mysqli $db, array $section, array $post): int
         );
     } else {
         $sql = 'INSERT INTO seccion_item
-                (id_seccion, titulo, subtitulo, descripcion, imagen, imagen_mobile,
-                 boton_1_texto, boton_1_url, boton_2_texto, boton_2_url, etiqueta,
+                (id_seccion, id_categoria, etiqueta, titulo, titulo_linea_1, titulo_linea_2, titulo_linea_3,
+                 subtitulo, descripcion, imagen, imagen_mobile,
+                 boton_1_texto, boton_1_url, boton_2_texto, boton_2_url,
                  fecha_publicacion, visible, orden)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         $stmt = $db->prepare($sql);
         if (!$stmt) {
             throw new RuntimeException('No fue posible preparar la creacion del item.');
         }
         $stmt->bind_param(
-            'issssssssssssi',
+            'iisssssssssssssssi',
             $idSeccion,
+            $idCategoria,
+            $etiqueta,
             $titulo,
+            $tituloLinea1,
+            $tituloLinea2,
+            $tituloLinea3,
             $subtitulo,
             $descripcion,
             $imagen,
@@ -363,7 +523,6 @@ function editar_item(mysqli $db, array $section, array $post): int
             $boton1Url,
             $boton2Texto,
             $boton2Url,
-            $etiqueta,
             $fechaPublicacion,
             $visible,
             $orden
@@ -394,11 +553,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $sectionId = (int) ($_POST['id_seccion'] ?? 0);
 
     try {
+        if ($accion === 'toggle_seccion' && $sectionId > 0) {
+            toggle_visible_seccion($db, $sectionId);
+            set_flash('success', 'La visibilidad de la seccion fue actualizada correctamente.');
+            redirect_admin('?section=' . $sectionId);
+        }
+
         if ($accion === 'guardar_seccion' && $sectionId > 0) {
             editar_seccion($db, $sectionId, $_POST);
             set_flash('success', 'La seccion fue actualizada correctamente.');
-            header('Location: admin.php?section=' . $sectionId);
-            exit;
+            redirect_admin('?section=' . $sectionId);
         }
 
         if ($accion === 'guardar_item' && $sectionId > 0) {
@@ -409,26 +573,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             editar_item($db, $section, $_POST);
             set_flash('success', 'El item fue guardado correctamente.');
-            header('Location: admin.php?section=' . $sectionId . '&tab=items');
-            exit;
+            redirect_admin('?section=' . $sectionId . '&tab=items');
         }
 
         if ($accion === 'eliminar_item') {
             $idItem = (int) ($_POST['id_item'] ?? 0);
             eliminar_item($db, $idItem);
             set_flash('success', 'El item fue eliminado correctamente.');
-            header('Location: admin.php?section=' . $sectionId . '&tab=items');
-            exit;
+            redirect_admin('?section=' . $sectionId . '&tab=items');
+        }
+
+        if ($accion === 'guardar_menu') {
+            guardar_menu($db, $_POST);
+            set_flash('success', 'El menu fue guardado correctamente.');
+            redirect_admin('?section=' . $sectionId . '&admin_tab=menus');
+        }
+
+        if ($accion === 'toggle_menu') {
+            $idMenu = (int) ($_POST['id_menu'] ?? 0);
+            toggle_menu($db, $idMenu);
+            set_flash('success', 'El estado del menu fue actualizado.');
+            redirect_admin('?section=' . $sectionId . '&admin_tab=menus');
+        }
+
+        if ($accion === 'guardar_submenu') {
+            guardar_submenu($db, $_POST);
+            set_flash('success', 'El submenu fue guardado correctamente.');
+            redirect_admin('?section=' . $sectionId . '&admin_tab=submenus');
+        }
+
+        if ($accion === 'toggle_submenu') {
+            $idSubmenu = (int) ($_POST['id_sub_menu'] ?? 0);
+            toggle_submenu($db, $idSubmenu);
+            set_flash('success', 'El estado del submenu fue actualizado.');
+            redirect_admin('?section=' . $sectionId . '&admin_tab=submenus');
+        }
+
+        if ($accion === 'guardar_institucion') {
+            guardar_institucion($db, $idInstitucion, $_POST);
+            set_flash('success', 'La configuracion institucional fue actualizada.');
+            redirect_admin('?section=' . $sectionId . '&admin_tab=configuracion');
         }
     } catch (Throwable $e) {
         set_flash('danger', $e->getMessage());
-        header('Location: admin.php' . ($sectionId > 0 ? '?section=' . $sectionId : ''));
-        exit;
+        redirect_admin($sectionId > 0 ? '?section=' . $sectionId : '');
     }
 }
 
 $flash = get_flash();
 $sections = listar_secciones($db, $idInstitucion);
+$institution = obtener_institucion($db, $idInstitucion);
+$menuRows = listar_menus($db);
+$submenuRows = listar_submenus($db);
 $selectedSectionId = isset($_GET['section']) ? (int) $_GET['section'] : (isset($sections[0]['id_seccion']) ? (int) $sections[0]['id_seccion'] : 0);
 $selectedSection = $selectedSectionId > 0 ? obtener_seccion($db, $selectedSectionId) : null;
 $sectionConfigs = $selectedSection ? obtener_configs_seccion($db, (int) $selectedSection['id_seccion']) : [];
@@ -438,8 +634,17 @@ $categoryFallback = $selectedSection ? obtener_categorias_fallback($db, (int) $s
 $openModal = $_GET['modal'] ?? '';
 $editingItemId = isset($_GET['item']) ? (int) $_GET['item'] : 0;
 $editingItem = $editingItemId > 0 ? obtener_item($db, $editingItemId) : null;
-$heroLines = separar_titulo_hero($editingItem['titulo'] ?? '');
+$editingMenuId = isset($_GET['menu']) ? (int) $_GET['menu'] : 0;
+$editingSubmenuId = isset($_GET['submenu']) ? (int) $_GET['submenu'] : 0;
+$editingMenu = $editingMenuId > 0 ? obtener_menu($db, $editingMenuId) : null;
+$editingSubmenu = $editingSubmenuId > 0 ? obtener_submenu($db, $editingSubmenuId) : null;
+$heroLines = [
+    $editingItem['titulo_linea_1'] ?? '',
+    $editingItem['titulo_linea_2'] ?? '',
+    $editingItem['titulo_linea_3'] ?? '',
+];
 $activeTab = $_GET['tab'] ?? 'secciones';
+$adminTab = $_GET['admin_tab'] ?? 'secciones';
 
 if ($selectedSection && !$editingItem && $openModal === 'item') {
     $heroLines = ['', '', ''];
@@ -718,10 +923,13 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
                 <a class="nav-link active" href="#secciones"><i class="bi bi-grid me-2"></i> Secciones del sitio</a>
                 <a class="nav-link" href="#editor"><i class="bi bi-sliders me-2"></i> Configurar bloque</a>
                 <a class="nav-link" href="#items"><i class="bi bi-collection me-2"></i> Administrar items</a>
+                <a class="nav-link" href="#menus"><i class="bi bi-list-nested me-2"></i> Menus</a>
+                <a class="nav-link" href="#submenus"><i class="bi bi-diagram-3 me-2"></i> Submenus</a>
+                <a class="nav-link" href="#configuracion"><i class="bi bi-building-gear me-2"></i> Configuracion institucional</a>
             </nav>
 
             <div class="mt-4 pt-3 border-top border-light border-opacity-10">
-                <small>No se modifica la logica de menus ni submenus. Este panel trabaja solo con bloques definidos en <code>seccion</code>.</small>
+                <small>Los menus y submenus se administran desde sus tablas reales. Los bloques del home usan <code>seccion</code>, <code>seccion_config</code> y <code>seccion_item</code>.</small>
             </div>
         </aside>
 
@@ -802,9 +1010,21 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
                                     <td><?= e($section['titulo_admin']) ?></td>
                                     <td><span class="badge-soft dark"><?= e($section['tipo_seccion']) ?></span></td>
                                     <td>
-                                        <span class="badge-soft <?= $section['visible'] === 'si' ? 'success' : 'warning' ?>">
-                                            <?= $section['visible'] === 'si' ? 'Si' : 'No' ?>
-                                        </span>
+                                        <form method="post" class="m-0">
+                                            <input type="hidden" name="accion" value="toggle_seccion">
+                                            <input type="hidden" name="id_seccion" value="<?= (int) $section['id_seccion'] ?>">
+                                            <div class="form-check form-switch d-inline-flex align-items-center gap-2">
+                                                <input
+                                                    class="form-check-input"
+                                                    type="checkbox"
+                                                    role="switch"
+                                                    <?= $section['visible'] === 'si' ? 'checked' : '' ?>
+                                                    onchange="this.form.submit()">
+                                                <label class="form-check-label small fw-semibold">
+                                                    <?= $section['visible'] === 'si' ? 'Visible' : 'Oculto' ?>
+                                                </label>
+                                            </div>
+                                        </form>
                                     </td>
                                     <td><?= (int) $section['total_items'] ?></td>
                                     <td>
@@ -894,6 +1114,39 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
                         </a>
                     </div>
 
+                    <?php if (in_array($selectedSection['tipo_seccion'], ['hero', 'carousel'], true)): ?>
+                        <div class="row g-4 mb-4">
+                            <?php foreach ($sectionItems as $item): ?>
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="card h-100 border-0 shadow-sm" style="border-radius:20px; overflow:hidden;">
+                                        <div style="height:180px; background:url('<?= e($item['imagen'] ?: 'assets/images/portada_1.jpg') ?>') center/cover no-repeat;"></div>
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                                <div>
+                                                    <span class="badge-soft <?= $item['visible'] === 'si' ? 'success' : 'warning' ?>">
+                                                        <?= $item['visible'] === 'si' ? 'Activo' : 'Oculto' ?>
+                                                    </span>
+                                                    <h5 class="mt-3 mb-1"><?= e(trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? ''))) ?></h5>
+                                                    <small class="text-muted">Orden <?= (int) $item['orden'] ?></small>
+                                                </div>
+                                            </div>
+                                            <p class="text-muted mb-2"><?= e($item['etiqueta']) ?></p>
+                                            <div class="d-flex gap-2">
+                                                <a href="admin.php?section=<?= (int) $selectedSection['id_seccion'] ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                                <form method="post" onsubmit="return confirm('¿Eliminar este slide?');">
+                                                    <input type="hidden" name="accion" value="eliminar_item">
+                                                    <input type="hidden" name="id_seccion" value="<?= (int) $selectedSection['id_seccion'] ?>">
+                                                    <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+
                     <div class="table-responsive">
                         <table class="table table-hover align-middle" id="itemsTable">
                             <thead class="table-light">
@@ -930,9 +1183,20 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
 
                                         <?php if (in_array($selectedSection['tipo_seccion'], ['hero', 'carousel'], true)): ?>
                                             <td><?= e($item['etiqueta']) ?></td>
-                                            <td><?= nl2br(e($item['titulo'])) ?></td>
+                                            <td><?= e(trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? ''))) ?></td>
                                         <?php elseif ($selectedSection['tipo_seccion'] === 'news'): ?>
-                                            <td><?= e($item['etiqueta']) ?></td>
+                                            <td>
+                                                <?php
+                                                $nombreCategoria = $item['etiqueta'] ?? '';
+                                                foreach ($categoriesTable as $categoria) {
+                                                    if ((int) ($categoria['id_categoria'] ?? 0) === (int) ($item['id_categoria'] ?? 0)) {
+                                                        $nombreCategoria = $categoria['nombre'];
+                                                        break;
+                                                    }
+                                                }
+                                                ?>
+                                                <?= e($nombreCategoria) ?>
+                                            </td>
                                             <td><?= e($item['titulo']) ?></td>
                                             <td><?= e($item['fecha_publicacion']) ?></td>
                                         <?php else: ?>
@@ -966,6 +1230,281 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
                     </div>
                 </section>
             <?php endif; ?>
+
+            <section class="card-panel" id="menus">
+                <div class="section-head">
+                    <div>
+                        <h3>Menus del sitio</h3>
+                        <p>Administracion directa sobre la tabla <code>menus</code>.</p>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-xl-8">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="menusTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Orden</th>
+                                        <th>Nombre</th>
+                                        <th>URL</th>
+                                        <th>Icono</th>
+                                        <th>Activo</th>
+                                        <th>Editar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($menuRows as $menu): ?>
+                                        <tr>
+                                            <td><?= (int) $menu['orden'] ?></td>
+                                            <td><strong><?= e($menu['nombre']) ?></strong></td>
+                                            <td><code><?= e($menu['url']) ?></code></td>
+                                            <td><?= e($menu['icono']) ?></td>
+                                            <td>
+                                                <form method="post" class="m-0">
+                                                    <input type="hidden" name="accion" value="toggle_menu">
+                                                    <input type="hidden" name="id_menu" value="<?= (int) $menu['id_menu'] ?>">
+                                                    <input type="hidden" name="id_seccion" value="<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>">
+                                                    <div class="form-check form-switch d-inline-flex align-items-center gap-2">
+                                                        <input class="form-check-input" type="checkbox" role="switch" <?= (int) $menu['estado'] === 1 ? 'checked' : '' ?> onchange="this.form.submit()">
+                                                        <label class="form-check-label small fw-semibold"><?= (int) $menu['estado'] === 1 ? 'Activo' : 'Inactivo' ?></label>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                <a href="admin.php?section=<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>&admin_tab=menus&menu=<?= (int) $menu['id_menu'] ?>#menus" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="config-row h-100">
+                            <h5 class="mb-3"><?= $editingMenu ? 'Editar menu' : 'Nuevo menu' ?></h5>
+                            <form method="post">
+                                <input type="hidden" name="accion" value="guardar_menu">
+                                <input type="hidden" name="id_seccion" value="<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>">
+                                <input type="hidden" name="id_menu" value="<?= (int) ($editingMenu['id_menu'] ?? 0) ?>">
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre</label>
+                                    <input class="form-control" type="text" name="nombre" value="<?= e($editingMenu['nombre'] ?? '') ?>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">URL</label>
+                                    <input class="form-control" type="text" name="url" value="<?= e($editingMenu['url'] ?? '') ?>">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Icono</label>
+                                    <input class="form-control" type="text" name="icono" value="<?= e($editingMenu['icono'] ?? '') ?>" placeholder="bi bi-house">
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Orden</label>
+                                        <input class="form-control" type="number" name="orden" min="0" value="<?= (int) ($editingMenu['orden'] ?? (count($menuRows) + 1)) ?>">
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" name="estado" <?= !isset($editingMenu['estado']) || (int) $editingMenu['estado'] === 1 ? 'checked' : '' ?>>
+                                            <label class="form-check-label">Activo</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary flex-fill">Guardar menu</button>
+                                    <?php if ($editingMenu): ?>
+                                        <a href="admin.php?section=<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>&admin_tab=menus#menus" class="btn btn-outline-secondary">Cancelar</a>
+                                    <?php endif; ?>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card-panel" id="submenus">
+                <div class="section-head">
+                    <div>
+                        <h3>Submenus del sitio</h3>
+                        <p>Administracion directa sobre la tabla <code>sub_menus</code>.</p>
+                    </div>
+                </div>
+                <div class="row g-4">
+                    <div class="col-xl-8">
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle" id="submenusTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Orden</th>
+                                        <th>Nombre</th>
+                                        <th>Menu padre</th>
+                                        <th>URL</th>
+                                        <th>Activo</th>
+                                        <th>Editar</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($submenuRows as $submenu): ?>
+                                        <tr>
+                                            <td><?= (int) $submenu['orden'] ?></td>
+                                            <td><strong><?= e($submenu['nombre']) ?></strong></td>
+                                            <td><?= e($submenu['menu_padre']) ?></td>
+                                            <td><code><?= e($submenu['url']) ?></code></td>
+                                            <td>
+                                                <form method="post" class="m-0">
+                                                    <input type="hidden" name="accion" value="toggle_submenu">
+                                                    <input type="hidden" name="id_sub_menu" value="<?= (int) $submenu['id_sub_menu'] ?>">
+                                                    <input type="hidden" name="id_seccion" value="<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>">
+                                                    <div class="form-check form-switch d-inline-flex align-items-center gap-2">
+                                                        <input class="form-check-input" type="checkbox" role="switch" <?= (int) $submenu['estado'] === 1 ? 'checked' : '' ?> onchange="this.form.submit()">
+                                                        <label class="form-check-label small fw-semibold"><?= (int) $submenu['estado'] === 1 ? 'Activo' : 'Inactivo' ?></label>
+                                                    </div>
+                                                </form>
+                                            </td>
+                                            <td>
+                                                <a href="admin.php?section=<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>&admin_tab=submenus&submenu=<?= (int) $submenu['id_sub_menu'] ?>#submenus" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="config-row h-100">
+                            <h5 class="mb-3"><?= $editingSubmenu ? 'Editar submenu' : 'Nuevo submenu' ?></h5>
+                            <form method="post">
+                                <input type="hidden" name="accion" value="guardar_submenu">
+                                <input type="hidden" name="id_seccion" value="<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>">
+                                <input type="hidden" name="id_sub_menu" value="<?= (int) ($editingSubmenu['id_sub_menu'] ?? 0) ?>">
+                                <div class="mb-3">
+                                    <label class="form-label">Menu padre</label>
+                                    <select class="form-select" name="id_menu" required>
+                                        <option value="">Seleccione</option>
+                                        <?php foreach ($menuRows as $menu): ?>
+                                            <option value="<?= (int) $menu['id_menu'] ?>" <?= ((int) ($editingSubmenu['id_menu'] ?? 0) === (int) $menu['id_menu']) ? 'selected' : '' ?>>
+                                                <?= e($menu['nombre']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Nombre</label>
+                                    <input class="form-control" type="text" name="nombre" value="<?= e($editingSubmenu['nombre'] ?? '') ?>" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">URL</label>
+                                    <input class="form-control" type="text" name="url" value="<?= e($editingSubmenu['url'] ?? '') ?>">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">Icono</label>
+                                    <input class="form-control" type="text" name="icono" value="<?= e($editingSubmenu['icono'] ?? '') ?>">
+                                </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Orden</label>
+                                        <input class="form-control" type="number" name="orden" min="0" value="<?= (int) ($editingSubmenu['orden'] ?? 1) ?>">
+                                    </div>
+                                    <div class="col-md-6 d-flex align-items-end">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" role="switch" name="estado" <?= !isset($editingSubmenu['estado']) || (int) $editingSubmenu['estado'] === 1 ? 'checked' : '' ?>>
+                                            <label class="form-check-label">Activo</label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-4 d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary flex-fill">Guardar submenu</button>
+                                    <?php if ($editingSubmenu): ?>
+                                        <a href="admin.php?section=<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>&admin_tab=submenus#submenus" class="btn btn-outline-secondary">Cancelar</a>
+                                    <?php endif; ?>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="card-panel" id="configuracion">
+                <div class="section-head">
+                    <div>
+                        <h3>Configuracion general del sitio</h3>
+                        <p>Datos institucionales desde la tabla <code>institucion</code>.</p>
+                    </div>
+                </div>
+                <?php if ($institution): ?>
+                    <form method="post" enctype="multipart/form-data">
+                        <input type="hidden" name="accion" value="guardar_institucion">
+                        <input type="hidden" name="id_seccion" value="<?= (int) ($selectedSection['id_seccion'] ?? 0) ?>">
+                        <div class="row g-4">
+                            <div class="col-xl-8">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombre del sitio</label>
+                                        <input class="form-control" type="text" name="nombre" value="<?= e($institution['nombre'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Correo contacto</label>
+                                        <input class="form-control" type="email" name="email" value="<?= e($institution['email'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Telefono</label>
+                                        <input class="form-control" type="text" name="telefono" value="<?= e($institution['telefono'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Direccion</label>
+                                        <input class="form-control" type="text" name="direccion" value="<?= e($institution['direccion'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Color principal</label>
+                                        <input class="form-control" type="text" name="color_primario" value="<?= e($institution['color_primario'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Color secundario</label>
+                                        <input class="form-control" type="text" name="color_secundario" value="<?= e($institution['color_secundario'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Facebook</label>
+                                        <input class="form-control" type="text" name="facebook" value="<?= e($institution['facebook'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Instagram</label>
+                                        <input class="form-control" type="text" name="instagram" value="<?= e($institution['instagram'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Logo</label>
+                                        <input class="form-control" type="file" name="logo_header" accept="image/*">
+                                        <?php if (!empty($institution['logo_header'])): ?>
+                                            <div class="helper mt-2">Actual: <a target="_blank" href="<?= e($institution['logo_header']) ?>"><?= e($institution['logo_header']) ?></a></div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Favicon</label>
+                                        <input class="form-control" type="file" name="favicon" accept="image/*,.ico">
+                                        <?php if (!empty($institution['favicon'])): ?>
+                                            <div class="helper mt-2">Actual: <a target="_blank" href="<?= e($institution['favicon']) ?>"><?= e($institution['favicon']) ?></a></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-4">
+                                <div class="config-row h-100">
+                                    <h5 class="mb-3">Vista rapida institucional</h5>
+                                    <div class="mb-3">
+                                        <strong><?= e($institution['nombre'] ?? '') ?></strong>
+                                        <div class="helper"><?= e($institution['email'] ?? '') ?></div>
+                                        <div class="helper"><?= e($institution['telefono'] ?? '') ?></div>
+                                    </div>
+                                    <div class="d-flex gap-3 mb-4">
+                                        <div style="width:54px;height:54px;border-radius:16px;background:<?= e($institution['color_primario'] ?? '#2563EB') ?>;"></div>
+                                        <div style="width:54px;height:54px;border-radius:16px;background:<?= e($institution['color_secundario'] ?? '#E9A629') ?>;"></div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary w-100">Guardar configuracion</button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                <?php endif; ?>
+            </section>
         </main>
     </div>
 
@@ -1124,26 +1663,16 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
                                     <div class="col-md-4">
                                         <label class="form-label">Categoria</label>
                                         <?php if ($categoriesTable): ?>
-                                            <select class="form-select" name="categoria">
+                                            <select class="form-select" name="id_categoria">
                                                 <option value="">Seleccione una categoria</option>
                                                 <?php foreach ($categoriesTable as $category): ?>
-                                                    <?php
-                                                    $categoryName = '';
-                                                    foreach ($category as $column => $value) {
-                                                        if (stripos((string) $column, 'nombre') !== false || stripos((string) $column, 'titulo') !== false || stripos((string) $column, 'categoria') !== false) {
-                                                            $categoryName = (string) $value;
-                                                            break;
-                                                        }
-                                                    }
-                                                    $categoryName = $categoryName !== '' ? $categoryName : (string) reset($category);
-                                                    ?>
-                                                    <option value="<?= e($categoryName) ?>" <?= ($editingItem['etiqueta'] ?? '') === $categoryName ? 'selected' : '' ?>>
-                                                        <?= e($categoryName) ?>
+                                                    <option value="<?= (int) $category['id_categoria'] ?>" <?= ((int) ($editingItem['id_categoria'] ?? 0) === (int) $category['id_categoria']) ? 'selected' : '' ?>>
+                                                        <?= e($category['nombre']) ?>
                                                     </option>
                                                 <?php endforeach; ?>
                                             </select>
                                         <?php else: ?>
-                                            <input list="newsCategories" type="text" class="form-control" name="categoria" value="<?= e($editingItem['etiqueta'] ?? '') ?>" placeholder="DEPORTE">
+                                            <input list="newsCategories" type="text" class="form-control" name="etiqueta" value="<?= e($editingItem['etiqueta'] ?? '') ?>" placeholder="DEPORTE">
                                             <datalist id="newsCategories">
                                                 <?php foreach ($categoryFallback as $category): ?>
                                                     <option value="<?= e($category) ?>"></option>
@@ -1155,6 +1684,10 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
                                     <div class="col-md-8">
                                         <label class="form-label">Titulo</label>
                                         <input type="text" class="form-control" name="titulo" value="<?= e($editingItem['titulo'] ?? '') ?>">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">Etiqueta visual</label>
+                                        <input type="text" class="form-control" name="etiqueta" value="<?= e($editingItem['etiqueta'] ?? '') ?>" placeholder="DEPORTE">
                                     </div>
                                     <div class="col-md-8">
                                         <label class="form-label">Descripcion</label>
@@ -1276,6 +1809,26 @@ if ($selectedSection && !$editingItem && $openModal === 'item') {
                 $('#itemsTable').DataTable({
                     pageLength: 10,
                     order: [[4, 'asc']],
+                    language: {
+                        url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json'
+                    }
+                });
+            }
+
+            if ($('#menusTable').length) {
+                $('#menusTable').DataTable({
+                    pageLength: 10,
+                    order: [[0, 'asc']],
+                    language: {
+                        url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json'
+                    }
+                });
+            }
+
+            if ($('#submenusTable').length) {
+                $('#submenusTable').DataTable({
+                    pageLength: 10,
+                    order: [[0, 'asc']],
                     language: {
                         url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json'
                     }

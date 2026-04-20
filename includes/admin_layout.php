@@ -383,6 +383,46 @@ function admin_render_layout_start(array $options = []): void
             white-space: nowrap;
         }
         .table-modern tbody td { vertical-align: middle; padding: 12px 12px; border-color: #edf2f7; }
+        .table-modern tbody tr {
+            height: auto;
+        }
+        .table-modern td strong {
+            font-size: 1rem;
+            line-height: 1.25;
+        }
+        .table-modern .text-muted {
+            font-size: 0.92rem;
+            line-height: 1.45;
+        }
+        .table-modern td .text-muted {
+            max-width: 760px;
+        }
+        .cell-actions {
+            white-space: nowrap;
+            width: 1%;
+        }
+        .table-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: nowrap;
+        }
+        .table-actions .btn,
+        .table-actions a.btn {
+            width: 44px;
+            min-width: 44px;
+            height: 38px;
+            padding: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+        .table-actions .btn i,
+        .table-actions a.btn i {
+            margin: 0;
+            font-size: 0.95rem;
+        }
         .badge-soft {
             display: inline-flex;
             align-items: center;
@@ -543,6 +583,9 @@ function admin_render_layout_start(array $options = []): void
             .admin-topbar h2 { font-size: 1.25rem; }
             .section-card { padding: 14px; }
             .modal-dialog { margin: 0.65rem; }
+            .table-modern td .text-muted {
+                max-width: none;
+            }
             .topbar-right {
                 gap: 6px;
                 flex-wrap: wrap;

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: localhost:3306
--- Tiempo de generación: 20-04-2026 a las 08:59:47
+-- Tiempo de generación: 20-04-2026 a las 15:34:54
 -- Versión del servidor: 10.6.19-MariaDB
 -- Versión de PHP: 8.1.34
 
@@ -146,6 +146,13 @@ CREATE TABLE `seccion` (
   `tipo_seccion` varchar(50) NOT NULL,
   `variante` varchar(100) DEFAULT NULL,
   `visible` enum('si','no') NOT NULL DEFAULT 'si',
+  `estado` enum('activo','inactivo','borrador') DEFAULT 'activo',
+  `editable` enum('si','no') DEFAULT 'si',
+  `usa_config` enum('si','no') DEFAULT 'si',
+  `usa_items` enum('si','no') DEFAULT 'no',
+  `archivo_componente` varchar(150) DEFAULT NULL,
+  `icono_admin` varchar(100) DEFAULT NULL,
+  `clase_css` varchar(255) DEFAULT NULL,
   `orden` int(11) NOT NULL DEFAULT 1,
   `fecha_creacion` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -154,15 +161,16 @@ CREATE TABLE `seccion` (
 -- Volcado de datos para la tabla `seccion`
 --
 
-INSERT INTO `seccion` (`id_seccion`, `id_institucion`, `nombre_interno`, `titulo_admin`, `observacion`, `tipo_seccion`, `variante`, `visible`, `orden`, `fecha_creacion`) VALUES
-(1, 1, 'topbar', 'Topbar superior', 'Franja superior con direccion, telefono, correo y redes institucionales.', 'topbar', 'clasico', 'si', 1, '2026-04-19 19:39:21'),
-(3, 1, 'hero_principal', 'Carrusel principal', 'Carrusel destacado del home con slides, imagenes y botones principales.', 'carousel', 'texto_izquierda', 'si', 4, '2026-04-19 19:39:21'),
-(4, 1, 'noticias_home', 'Noticias home', 'Bloque de noticias destacadas del home con categoria, imagen y fecha.', 'news', 'cards_4', 'si', 5, '2026-04-19 19:39:21'),
-(5, 1, 'faq_home', 'Preguntas frecuentes', 'Contenedor de preguntas frecuentes con acordeon e imagen lateral.', 'faq', 'imagen_lateral', 'si', 6, '2026-04-19 19:39:21'),
-(6, 1, 'about_home', 'Sobre nosotros', 'Bloque institucional de presentacion con imagen principal, video y descripcion.', 'content', 'imagen_texto', 'si', 7, '2026-04-19 19:39:21'),
-(7, 1, 'footer_principal', 'Footer principal', 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.', 'footer', 'institucional', 'si', 8, '2026-04-19 20:56:57'),
-(8, 1, 'menu_principal', 'Menú principal', 'Bloque de compatibilidad. La navegacion ya esta absorbida visualmente dentro de header_principal, pero sus enlaces siguen saliendo de menus y sub_menus.', 'menu', 'navegacion_principal', 'si', 3, '2026-04-19 21:10:27'),
-(11, 1, 'header_principal', 'Header principal', 'Bloque visual completo del encabezado. Incluye logo, identidad institucional, navegacion horizontal basada en menus y sub_menus, y boton principal.', 'header', 'branding', 'si', 2, '2026-04-19 21:46:37');
+INSERT INTO `seccion` (`id_seccion`, `id_institucion`, `nombre_interno`, `titulo_admin`, `observacion`, `tipo_seccion`, `variante`, `visible`, `estado`, `editable`, `usa_config`, `usa_items`, `archivo_componente`, `icono_admin`, `clase_css`, `orden`, `fecha_creacion`) VALUES
+(1, 1, 'topbar', 'Topbar superior', 'Franja superior con direccion, telefono, correo y redes institucionales.', 'topbar', 'clasico', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 1, '2026-04-19 19:39:21'),
+(3, 1, 'hero_principal', 'Carrusel principal', 'Carrusel destacado del home con slides, imagenes y botones principales.', 'carousel', 'texto_izquierda', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 4, '2026-04-19 19:39:21'),
+(4, 1, 'noticias_home', 'Noticias home', 'Bloque de noticias destacadas del home con categoria, imagen y fecha.', 'news', 'cards_4', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 5, '2026-04-19 19:39:21'),
+(5, 1, 'faq_home', 'Preguntas frecuentes', 'Contenedor de preguntas frecuentes con acordeon e imagen lateral.', 'faq', 'imagen_lateral', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 6, '2026-04-19 19:39:21'),
+(6, 1, 'about_home', 'Sobre nosotros', 'Bloque institucional de presentacion con imagen principal, video y descripcion.', 'content', 'imagen_texto', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 7, '2026-04-19 19:39:21'),
+(7, 1, 'footer_principal', 'Footer principal', 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.', 'footer', 'institucional', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 8, '2026-04-19 20:56:57'),
+(11, 1, 'header_principal', 'Header principal', 'Bloque visual completo del encabezado. Incluye logo, identidad institucional, navegacion horizontal basada en menus y sub_menus, y boton principal.', 'header', 'branding', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 2, '2026-04-19 21:46:37'),
+(13, 1, 'footer_principal', 'Footer principal', 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.', 'footer', 'institucional', 'no', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 8, '2026-04-20 12:09:40'),
+(16, 1, 'menu_principal', 'Menú principal', 'Bloque de compatibilidad. La navegacion ya esta absorbida visualmente dentro de header_principal, pero sus enlaces siguen saliendo de menus y sub_menus.', 'menu', 'navegacion_principal', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 3, '2026-04-20 15:31:33');
 
 -- --------------------------------------------------------
 
@@ -198,15 +206,23 @@ INSERT INTO `seccion_config` (`id_config`, `id_seccion`, `clave`, `valor`) VALUE
 (24, 3, 'mostrar_flechas', 'si'),
 (25, 3, 'mostrar_indicadores', 'si'),
 (26, 3, 'overlay', 'oscuro'),
-(27, 7, 'titulo_footer', 'Colegio San Pabloxxxxxx'),
-(28, 7, 'descripcion_footer', 'Colegio San Pabloxxxxx acompaña a su comunidad con una propuesta educativa integral, cercana e inspirada en una formación académica, humana y valórica.'),
-(29, 7, 'titulo_menu_rapido', 'Menú Rápido'),
-(30, 7, 'titulo_niveles', 'Niveles'),
-(31, 7, 'titulo_contacto', 'Contacto y Sedes'),
-(32, 7, 'mostrar_redes', 'si'),
-(33, 7, 'mostrar_menu_rapido', 'si'),
-(34, 7, 'mostrar_niveles', 'si'),
-(35, 7, 'mostrar_contacto', 'si');
+(63, 7, 'descripcion_footer', 'Colegio San Pablo acompaña a su comunidad con una propuesta educativa integral, cercana e inspirada en una formación académica, humana y valórica.'),
+(64, 7, 'mostrar_contacto', 'si'),
+(65, 7, 'mostrar_menu_rapido', 'si'),
+(66, 7, 'mostrar_niveles', 'si'),
+(67, 7, 'mostrar_redes', 'si'),
+(68, 7, 'titulo_contacto', 'Contacto y Sedes'),
+(69, 7, 'titulo_footer', 'Colegio San Pablo'),
+(70, 7, 'titulo_menu_rapido', 'Menú Rápido'),
+(71, 7, 'titulo_niveles', 'Niveles'),
+(78, 1, 'usar_gradiente_colores', 'si'),
+(79, 1, 'max_redes', '4'),
+(104, 1, 'texto_boton_ingresar', 'Ingresar'),
+(105, 1, 'mostrar_direccion', 'si'),
+(106, 1, 'mostrar_telefono', 'si'),
+(107, 1, 'mostrar_email', 'si'),
+(108, 1, 'mostrar_redes', 'si'),
+(109, 1, 'mostrar_boton_ingresar', 'si');
 
 -- --------------------------------------------------------
 
@@ -232,6 +248,7 @@ CREATE TABLE `seccion_item` (
   `boton_1_url` varchar(255) DEFAULT NULL,
   `boton_2_texto` varchar(150) DEFAULT NULL,
   `boton_2_url` varchar(255) DEFAULT NULL,
+  `url` varchar(255) DEFAULT NULL,
   `fecha_publicacion` date DEFAULT NULL,
   `visible` enum('si','no') NOT NULL DEFAULT 'si',
   `orden` int(11) NOT NULL DEFAULT 1,
@@ -242,21 +259,27 @@ CREATE TABLE `seccion_item` (
 -- Volcado de datos para la tabla `seccion_item`
 --
 
-INSERT INTO `seccion_item` (`id_item`, `id_seccion`, `id_categoria`, `etiqueta`, `icono`, `titulo`, `titulo_linea_1`, `titulo_linea_2`, `titulo_linea_3`, `subtitulo`, `descripcion`, `imagen`, `imagen_mobile`, `boton_1_texto`, `boton_1_url`, `boton_2_texto`, `boton_2_url`, `fecha_publicacion`, `visible`, `orden`, `fecha_creacion`) VALUES
-(1, 3, NULL, 'Comunidad Educativa', NULL, NULL, 'Disfrutamos', 'Creciendo', 'Contigo', NULL, NULL, 'assets/images/portada_3.jpg', NULL, 'Ver galería', '#galeria', 'Nuestro equipo', '#equipo', NULL, 'si', 1, '2026-04-19 19:39:21'),
-(2, 3, NULL, 'Nuestra Misión', NULL, '', 'Caminamos', 'Juntos', 'Hacia el Futuro', '', '', 'assets/images/portada_1.jpg', 'uploads/secciones/hero_principal/lupe-y-papa-20260420084202-2b38c7.jpg', 'Ver novedades', '#noticias', 'Acceso Mi San Pablo', '#portal', NULL, 'si', 2, '2026-04-19 19:39:21'),
-(3, 4, NULL, '', NULL, 'Rugby del Prado', '', '', '', '', 'Nuestros alumnos participaron en el torneo intercolegial de rugby con excelentes resultados.', 'assets/images/frontis_01.jpg', NULL, 'Leer más', '#', '', '', '2025-11-01', 'si', 1, '2026-04-19 19:39:21'),
-(4, 4, 2, NULL, NULL, 'Certificaciones Inglés y Portugués', NULL, NULL, NULL, NULL, 'Alumnos de bachillerato rindieron y aprobaron certificaciones internacionales de idiomas.', 'assets/images/frontis_02.jpg', NULL, NULL, NULL, NULL, NULL, '2025-11-01', 'si', 2, '2026-04-19 19:39:21'),
-(6, 4, 2, NULL, NULL, 'Certificaciones Inglés y Portugués', NULL, NULL, NULL, NULL, 'Alumnos de bachillerato rindieron y aprobaron certificaciones internacionales de idiomas.', 'assets/images/frontis_02.jpg', NULL, NULL, NULL, NULL, NULL, '2025-11-01', 'si', 2, '2026-04-19 19:39:21'),
-(7, 5, NULL, NULL, NULL, '¿Cuánto dura el proceso de admisión?', NULL, NULL, NULL, NULL, 'Nuestro equipo acompaña a las familias con información clara, apoyo cercano y un proceso educativo pensado para el desarrollo integral de cada estudiante.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 1, '2026-04-19 19:39:21'),
-(8, 5, NULL, NULL, NULL, '¿Qué incluye la propuesta educativa?', NULL, NULL, NULL, NULL, 'Incluye acompañamiento cercano, formación en valores y una propuesta académica integral para cada etapa.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 2, '2026-04-19 19:39:21'),
-(9, 3, NULL, '', NULL, '', 'Guadalupe', 'jorquera', 'qweqwe', '', 'contenedor de prueba', 'uploads/secciones/hero_principal/win-20230820-18-40-43-pro-1-20260419194428-4e46ec.jpg', 'uploads/secciones/hero_principal/imagen-caballo-1-20260420085409-b549ea.png', '', '', '', '', NULL, 'si', 3, '2026-04-19 19:44:28'),
-(10, 4, NULL, '', NULL, 'Ejemplo', '', '', '', '', 'contenedor de ejemplo', 'uploads/noticias/portada-3-20260419221051-6bab8d.jpg', NULL, 'Leer más', '#', '', '', '2026-04-27', 'si', 4, '2026-04-19 22:10:51'),
-(11, 4, NULL, '', NULL, 'otro ejemplo', '', '', '', '', 'wqeqweqwe', NULL, NULL, 'Leer más', '#', '', '', '2026-04-24', 'si', 5, '2026-04-19 22:11:28'),
-(12, 7, NULL, '', 'bi bi-building', 'eeee', '', '', '', '', 'eeee', NULL, NULL, '', '', '', '', NULL, 'si', 1, '2026-04-20 08:47:28'),
-(13, 7, NULL, 'administracion', 'bi bi-building', 'Administracion', NULL, NULL, NULL, '', 'Venancio Benavidez 3612', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 1, '2026-04-20 08:59:35'),
-(14, 7, NULL, 'inicial', 'bi bi-house-door-fill', 'Inicial', NULL, NULL, NULL, 'Tel. 2336 6000', 'Joaquin Suarez 3596', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 2, '2026-04-20 08:59:35'),
-(15, 7, NULL, 'preuniversitario', 'bi bi-mortarboard-fill', 'Preuniversitario', NULL, NULL, NULL, 'Tel. 2202 0000', 'Av. Millan 3375', NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 3, '2026-04-20 08:59:35');
+INSERT INTO `seccion_item` (`id_item`, `id_seccion`, `id_categoria`, `etiqueta`, `icono`, `titulo`, `titulo_linea_1`, `titulo_linea_2`, `titulo_linea_3`, `subtitulo`, `descripcion`, `imagen`, `imagen_mobile`, `boton_1_texto`, `boton_1_url`, `boton_2_texto`, `boton_2_url`, `url`, `fecha_publicacion`, `visible`, `orden`, `fecha_creacion`) VALUES
+(1, 3, NULL, 'Comunidad Educativa', NULL, NULL, 'Disfrutamos', 'Creciendo', 'Contigo', NULL, NULL, 'assets/images/portada_3.jpg', NULL, 'Ver galería', '#galeria', 'Nuestro equipo', '#equipo', NULL, NULL, 'si', 1, '2026-04-19 19:39:21'),
+(2, 3, NULL, 'Nuestra Misión', NULL, '', 'Caminamos', 'Juntos', 'Hacia el Futuro', '', '', 'assets/images/portada_1.jpg', 'uploads/secciones/hero_principal/lupe-y-papa-20260420084202-2b38c7.jpg', 'Ver novedades', '#noticias', 'Acceso Mi San Pablo', '#portal', NULL, NULL, 'si', 2, '2026-04-19 19:39:21'),
+(3, 4, NULL, '', NULL, 'Rugby del Prado', '', '', '', '', 'Nuestros alumnos participaron en el torneo intercolegial de rugby con excelentes resultados.', 'assets/images/frontis_01.jpg', NULL, 'Leer más', '#', '', '', NULL, '2025-11-01', 'si', 1, '2026-04-19 19:39:21'),
+(4, 4, 2, NULL, NULL, 'Certificaciones Inglés y Portugués', NULL, NULL, NULL, NULL, 'Alumnos de bachillerato rindieron y aprobaron certificaciones internacionales de idiomas.', 'assets/images/frontis_02.jpg', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-01', 'si', 2, '2026-04-19 19:39:21'),
+(6, 4, 2, NULL, NULL, 'Certificaciones Inglés y Portugués', NULL, NULL, NULL, NULL, 'Alumnos de bachillerato rindieron y aprobaron certificaciones internacionales de idiomas.', 'assets/images/frontis_02.jpg', NULL, NULL, NULL, NULL, NULL, NULL, '2025-11-01', 'si', 2, '2026-04-19 19:39:21'),
+(7, 5, NULL, NULL, NULL, '¿Cuánto dura el proceso de admisión?', NULL, NULL, NULL, NULL, 'Nuestro equipo acompaña a las familias con información clara, apoyo cercano y un proceso educativo pensado para el desarrollo integral de cada estudiante.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 1, '2026-04-19 19:39:21'),
+(8, 5, NULL, NULL, NULL, '¿Qué incluye la propuesta educativa?', NULL, NULL, NULL, NULL, 'Incluye acompañamiento cercano, formación en valores y una propuesta académica integral para cada etapa.', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 2, '2026-04-19 19:39:21'),
+(9, 3, NULL, '', NULL, '', 'Guadalupe', 'jorquera', 'qweqwe', '', 'contenedor de prueba', 'uploads/secciones/hero_principal/img-6939-20260420150930-ee68cc.jpg', 'uploads/secciones/hero_principal/imagen-caballo-1-20260420085409-b549ea.png', '', '', '', '', NULL, NULL, 'si', 3, '2026-04-19 19:44:28'),
+(10, 4, NULL, '', NULL, 'Ejemplo', '', '', '', '', 'contenedor de ejemplo', 'uploads/noticias/portada-3-20260419221051-6bab8d.jpg', NULL, 'Leer más', '#', '', '', NULL, '2026-04-27', 'si', 4, '2026-04-19 22:10:51'),
+(11, 4, NULL, '', NULL, 'otro ejemplo', '', '', '', '', 'wqeqweqwe', NULL, NULL, 'Leer más', '#', '', '', NULL, '2026-04-24', 'si', 5, '2026-04-19 22:11:28'),
+(12, 7, NULL, '', 'bi bi-building', 'eeee', '', '', '', 'probando', 'eeee', NULL, NULL, '', '', '', '', NULL, NULL, 'si', 1, '2026-04-20 08:47:28'),
+(13, 7, NULL, '', 'bi bi-building', 'Administracion', '', '', '', 'hola', 'Venancio Benavidez 3612  xxxx', NULL, NULL, '', '', '', '', NULL, NULL, 'si', 1, '2026-04-20 08:59:35'),
+(14, 7, NULL, 'inicial', 'bi bi-house-door-fill', 'Inicial', NULL, NULL, NULL, 'Tel. 2336 6000', 'Joaquin Suarez 3596', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 2, '2026-04-20 08:59:35'),
+(15, 7, NULL, 'preuniversitario', 'bi bi-mortarboard-fill', 'Preuniversitario', NULL, NULL, NULL, 'Tel. 2202 0000', 'Av. Millan 3375', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 3, '2026-04-20 08:59:35'),
+(16, 1, NULL, 'red_social', 'fab fa-instagram', 'Instagram', NULL, NULL, NULL, NULL, 'https://instagram.com/', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 1, '2026-04-20 10:04:26'),
+(17, 1, NULL, 'red_social', 'fab fa-facebook me-1', 'Facebook', NULL, NULL, NULL, NULL, 'https://facebook.com/', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 2, '2026-04-20 10:04:26'),
+(18, 1, NULL, 'red_social', 'fab fa-youtube', 'YouTube', NULL, NULL, NULL, NULL, 'https://youtube.com/', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 3, '2026-04-20 10:04:26'),
+(19, 1, NULL, 'red_social', 'fa fa-linkedin', 'LinkedIn', NULL, NULL, NULL, NULL, 'https://linkedin.com/', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'si', 4, '2026-04-20 10:04:26'),
+(20, 3, NULL, 'eticketa ej', NULL, '', 'titulo 1 ejemplo', 'titulo 2 ejemplo', 'titulo 3 ejemplo', '', 'descripcion ejemplo', 'uploads/secciones/hero_principal/portada-2-20260420150941-20969a.jpg', 'uploads/secciones/hero_principal/lupe-04-20260420113602-ee9305.jpg', 'botón 1', 'botón url', 'botón  2', 'botón url', NULL, NULL, 'si', 4, '2026-04-20 11:30:02'),
+(21, 3, NULL, '', NULL, '', '', '', '', '', '', 'uploads/secciones/hero_principal/img-6939-20260420115220-a8df9b.jpg', NULL, '', '', '', '', NULL, NULL, 'si', 5, '2026-04-20 11:52:20');
 
 -- --------------------------------------------------------
 
@@ -532,19 +555,19 @@ ALTER TABLE `perfiles`
 -- AUTO_INCREMENT de la tabla `seccion`
 --
 ALTER TABLE `seccion`
-  MODIFY `id_seccion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `id_seccion` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT de la tabla `seccion_config`
 --
 ALTER TABLE `seccion_config`
-  MODIFY `id_config` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `id_config` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=110;
 
 --
 -- AUTO_INCREMENT de la tabla `seccion_item`
 --
 ALTER TABLE `seccion_item`
-  MODIFY `id_item` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
+  MODIFY `id_item` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT de la tabla `sub_menus`

@@ -3,7 +3,7 @@ $email = $institution['email'] ?? '';
 $telefono = $institution['telefono'] ?? '';
 $direccion = $institution['direccion'] ?? '';
 ?>
-<div class="sp-topbar d-none d-md-block">
+<div class="sp-topbar d-none d-md-block" id="topbar">
     <div class="container-fluid px-4">
         <div class="d-flex justify-content-between align-items-center">
             <div>

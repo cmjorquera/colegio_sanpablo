@@ -1,14 +1,14 @@
 <?php
-require_once __DIR__ . '/class/conexion.php';
+require_once __DIR__ . '/includes/cms_helpers.php';
 
 function e(?string $value): string
 {
-    return htmlspecialchars((string) $value, ENT_QUOTES, 'UTF-8');
+    return cms_e($value);
 }
 
 function cfg(array $configMap, string $sectionName, string $key, string $default = ''): string
 {
-    return $configMap[$sectionName][$key] ?? $default;
+    return cms_cfg($configMap, $sectionName, $key, $default);
 }
 
 $institution = null;
@@ -20,65 +20,23 @@ $arrMenus = [];
 $arrSubs = [];
 
 try {
-    $db = (new Conexion())->getConexion();
+    $db = cms_get_connection();
+    $site = cms_get_site_data($db);
 
-    $resInstitution = $db->query("SELECT * FROM institucion WHERE estado = 'activo' ORDER BY id_institucion ASC LIMIT 1");
-    if ($resInstitution) {
-        $institution = $resInstitution->fetch_assoc();
-    }
+    $institution = $site['institution'];
+    $sectionConfigsMap = $site['configs'];
+    $sectionItemsMap = $site['items'];
+    $categoriesById = $site['categories'];
+    $arrMenus = $site['menus'];
+    $arrSubs = $site['subs'];
 
-    $resMenus = $db->query("SELECT id_menu, nombre, url, icono, orden FROM menus WHERE estado = 1 ORDER BY orden ASC, id_menu ASC");
-    if ($resMenus) {
-        $arrMenus = $resMenus->fetch_all(MYSQLI_ASSOC);
-        $resMenus->free();
-    }
-
-    $resSubs = $db->query("SELECT id_sub_menu, id_menu, nombre, url, icono, orden FROM sub_menus WHERE estado = 1 ORDER BY id_menu ASC, orden ASC, id_sub_menu ASC");
-    if ($resSubs) {
-        while ($row = $resSubs->fetch_assoc()) {
-            $arrSubs[(int) $row['id_menu']][] = $row;
-        }
-        $resSubs->free();
-    }
-
-    $resSections = $db->query("SELECT * FROM seccion WHERE visible = 'si' ORDER BY orden ASC, id_seccion ASC");
-    if ($resSections) {
-        $sections = $resSections->fetch_all(MYSQLI_ASSOC);
-        $resSections->free();
-    }
-
-    $resConfigs = $db->query("SELECT sc.*, s.nombre_interno FROM seccion_config sc INNER JOIN seccion s ON s.id_seccion = sc.id_seccion");
-    if ($resConfigs) {
-        while ($row = $resConfigs->fetch_assoc()) {
-            $sectionConfigsMap[$row['nombre_interno']][$row['clave']] = $row['valor'];
-        }
-        $resConfigs->free();
-    }
-
-    $resItems = $db->query("SELECT si.*, s.nombre_interno
-        FROM seccion_item si
-        INNER JOIN seccion s ON s.id_seccion = si.id_seccion
-        WHERE si.visible = 'si'
-        ORDER BY s.orden ASC, si.orden ASC, si.id_item ASC");
-    if ($resItems) {
-        while ($row = $resItems->fetch_assoc()) {
-            $sectionItemsMap[$row['nombre_interno']][] = $row;
-        }
-        $resItems->free();
-    }
-
-    $resTableCheck = $db->query("SHOW TABLES LIKE 'categoria_noticia'");
-    if ($resTableCheck && $resTableCheck->num_rows > 0) {
-        $resCategories = $db->query("SELECT * FROM categoria_noticia ORDER BY nombre ASC");
-        if ($resCategories) {
-            while ($row = $resCategories->fetch_assoc()) {
-                $categoriesById[(int) $row['id_categoria']] = $row;
-            }
-            $resCategories->free();
+    foreach ($site['sections'] as $section) {
+        if (($section['visible'] ?? 'no') === 'si') {
+            $sections[] = $section;
         }
     }
-} catch (RuntimeException $e) {
-    error_log('index.php: ' . $e->getMessage());
+} catch (Throwable $exception) {
+    error_log('index.php: ' . $exception->getMessage());
 }
 ?>
 <!DOCTYPE html>
@@ -105,65 +63,14 @@ try {
 
     <?php foreach ($sections as $section): ?>
         <?php
-        $sectionName = $section['nombre_interno'];
-        switch ($sectionName) {
-            case 'topbar':
-                include __DIR__ . '/componentes/topbar.php';
-                break;
-            case 'header_principal':
-                include __DIR__ . '/componentes/header_principal.php';
-                break;
-            case 'hero_principal':
-                include __DIR__ . '/componentes/hero_principal.php';
-                break;
-            case 'noticias_home':
-                include __DIR__ . '/componentes/noticias_home.php';
-                break;
-            case 'faq_home':
-                include __DIR__ . '/componentes/faq_home.php';
-                break;
-            case 'about_home':
-                include __DIR__ . '/componentes/about_home.php';
-                break;
+        $sectionName = $section['nombre_interno'] ?? '';
+        $component = cms_get_component_path($sectionName);
+
+        if ($component) {
+            include $component;
         }
         ?>
     <?php endforeach; ?>
-
-    <footer class="sp-footer">
-        <div class="container">
-            <div class="row g-5">
-                <div class="col-lg-4">
-                    <div class="logo-footer mb-3">
-                        <img src="<?= e($institution['logo_footer'] ?? $institution['logo_header'] ?? 'assets/images/logo/logo-light.svg') ?>" alt="<?= e($institution['nombre'] ?? 'Colegio San Pablo') ?>" onerror="this.src='assets/images/logo/logo-light.svg'">
-                    </div>
-                    <p><?= e($institution['nombre'] ?? 'Colegio San Pablo') ?> acompaña a su comunidad con una propuesta educativa integral y cercana.</p>
-                    <div class="social-links mt-3">
-                        <?php if (!empty($institution['instagram'])): ?><a href="<?= e($institution['instagram']) ?>" target="_blank" rel="noopener"><i class="fab fa-instagram"></i></a><?php endif; ?>
-                        <?php if (!empty($institution['facebook'])): ?><a href="<?= e($institution['facebook']) ?>" target="_blank" rel="noopener"><i class="fab fa-facebook-f"></i></a><?php endif; ?>
-                        <?php if (!empty($institution['youtube'])): ?><a href="<?= e($institution['youtube']) ?>" target="_blank" rel="noopener"><i class="fab fa-youtube"></i></a><?php endif; ?>
-                    </div>
-                </div>
-                <div class="col-lg-4">
-                    <h5>Menú rápido</h5>
-                    <ul class="list-unstyled mt-3">
-                        <?php foreach ($arrMenus as $menu): ?>
-                            <li class="mb-2"><a href="<?= e($menu['url'] ?: '#') ?>"><i class="fas fa-chevron-right me-2"></i><?= e($menu['nombre']) ?></a></li>
-                        <?php endforeach; ?>
-                    </ul>
-                </div>
-                <div class="col-lg-4">
-                    <h5>Contacto</h5>
-                    <ul class="list-unstyled mt-3">
-                        <?php if (!empty($institution['direccion'])): ?><li class="mb-2"><i class="fas fa-map-marker-alt me-2"></i><?= e($institution['direccion']) ?></li><?php endif; ?>
-                        <?php if (!empty($institution['telefono'])): ?><li class="mb-2"><i class="fas fa-phone me-2"></i><?= e($institution['telefono']) ?></li><?php endif; ?>
-                        <?php if (!empty($institution['email'])): ?><li class="mb-2"><i class="fas fa-envelope me-2"></i><a href="mailto:<?= e($institution['email']) ?>"><?= e($institution['email']) ?></a></li><?php endif; ?>
-                        <?php if (!empty($institution['dominio'])): ?><li class="mb-2"><i class="fas fa-globe me-2"></i><?= e($institution['dominio']) ?></li><?php endif; ?>
-                    </ul>
-                </div>
-            </div>
-        </div>
-        <div class="sp-footer-colorband"></div>
-    </footer>
 
     <script src="assets/js/jquery-3.7.1.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
@@ -189,14 +96,15 @@ try {
             }
 
             document.querySelectorAll('a[href^="#"]').forEach(function (anchor) {
-                anchor.addEventListener('click', function (e) {
+                anchor.addEventListener('click', function (event) {
                     var selector = this.getAttribute('href');
                     if (!selector || selector === '#') {
                         return;
                     }
+
                     var target = document.querySelector(selector);
                     if (target) {
-                        e.preventDefault();
+                        event.preventDefault();
                         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     }
                 });

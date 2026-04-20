@@ -4,7 +4,7 @@ $mostrarIndicadores = cfg($sectionConfigsMap, 'hero_principal', 'mostrar_indicad
 $mostrarFlechas = cfg($sectionConfigsMap, 'hero_principal', 'mostrar_flechas', 'si') === 'si';
 ?>
 <?php if ($heroItems): ?>
-<section class="sp-carousel-hero">
+<section class="sp-carousel-hero" id="hero-principal">
     <div id="heroCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="5000">
         <?php if ($mostrarIndicadores): ?>
             <div class="carousel-indicators">

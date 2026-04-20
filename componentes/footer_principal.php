@@ -31,5 +31,5 @@
             </div>
         </div>
     </div>
-    <div class="sp-footer-colorband"></div>
+    <div class="sp-footer-colorband">***********</div>
 </footer>

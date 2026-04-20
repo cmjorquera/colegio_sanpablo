@@ -536,8 +536,15 @@ function cms_save_item(mysqli $db, array $section, array $post): int
         ? 'noticias'
         : 'secciones/' . preg_replace('/[^a-z0-9_-]+/i', '-', $section['nombre_interno']);
 
-    $imagen = cms_upload_image('imagen', $folder, $itemActual['imagen'] ?? null);
-    $imagenMobile = cms_upload_image('imagen_mobile', $folder, $itemActual['imagen_mobile'] ?? null);
+    $clearImagen = isset($post['clear_imagen']) && (string) $post['clear_imagen'] === '1';
+    $clearImagenMobile = isset($post['clear_imagen_mobile']) && (string) $post['clear_imagen_mobile'] === '1';
+
+    $imagen = $clearImagen
+        ? null
+        : cms_upload_image('imagen', $folder, $itemActual['imagen'] ?? null);
+    $imagenMobile = $clearImagenMobile
+        ? null
+        : cms_upload_image('imagen_mobile', $folder, $itemActual['imagen_mobile'] ?? null);
 
     $fechaPublicacion = $fechaPublicacion !== '' ? $fechaPublicacion : null;
 

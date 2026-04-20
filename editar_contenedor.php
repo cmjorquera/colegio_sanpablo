@@ -144,6 +144,60 @@ function topbar_save_item(mysqli $db, array $section, array $post): int
     return $newId;
 }
 
+function admin_modal_help_image_path(string $context, string $fieldKey): string
+{
+    $context = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower($context));
+    $fieldKey = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower($fieldKey));
+
+    return 'assets/images/admin-help/' . trim($context, '-') . '/' . trim($fieldKey, '-') . '.png';
+}
+
+function admin_modal_help_content(string $context, string $fieldKey, string $label): string
+{
+    $path = admin_modal_help_image_path($context, $fieldKey);
+    $html = '<div class="field-help-popover">'
+        . '<div class="field-help-title">' . cms_e($label) . '</div>'
+        . '<img src="' . cms_e($path) . '" alt="' . cms_e($label) . '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'
+        . '<div class="field-help-empty" style="display:none;">Sube una imagen de referencia en <code>' . cms_e($path) . '</code></div>'
+        . '</div>';
+
+    return htmlspecialchars($html, ENT_QUOTES, 'UTF-8');
+}
+
+function admin_modal_field_head(string $label, string $inputId, string $context, string $fieldKey, bool $blockable = true, string $clearName = ''): void
+{
+    ?>
+    <div class="field-head">
+        <label class="form-label" for="<?= cms_e($inputId) ?>"><?= cms_e($label) ?></label>
+        <div class="field-tools">
+            <?php if ($blockable): ?>
+                <label class="field-lock">
+                    <input
+                        class="form-check-input js-field-block-toggle"
+                        type="checkbox"
+                        data-target="#<?= cms_e($inputId) ?>"
+                        <?= $clearName !== '' ? 'name="' . cms_e($clearName) . '" value="1"' : '' ?>
+                    >
+                    <span>Bloquear</span>
+                </label>
+            <?php endif; ?>
+            <button
+                type="button"
+                class="field-help-btn"
+                data-bs-toggle="popover"
+                data-bs-trigger="focus"
+                data-bs-placement="left"
+                data-bs-html="true"
+                data-bs-content="<?= admin_modal_help_content($context, $fieldKey, $label) ?>"
+                title="Referencia"
+            >
+                <i class="bi bi-info-circle"></i>
+            </button>
+        </div>
+    </div>
+    <?php
+}
+
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $action = $_POST['accion'] ?? '';
@@ -219,6 +273,119 @@ admin_render_layout_start([
         .hero-card { border: 1px solid #dbe4ef; border-radius: 22px; overflow: hidden; background: #fff; height: 100%; }
         .hero-thumb { height: 180px; background-size: cover; background-position: center; }
         .nav-pills .nav-link.active { background: linear-gradient(135deg, #1f8f6b, #27b785); }
+        .admin-modal .modal-content {
+            border: 0;
+            border-radius: 28px;
+            overflow: hidden;
+            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.18);
+        }
+        .admin-modal .modal-header {
+            padding: 22px 26px 18px;
+            border-bottom: 1px solid #e8edf6;
+            background: linear-gradient(135deg, rgba(53, 88, 213, 0.08), rgba(46, 197, 161, 0.08));
+        }
+        .admin-modal .modal-title {
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: #162338;
+        }
+        .admin-modal .modal-body { padding: 24px 26px; }
+        .admin-modal .modal-footer {
+            padding: 18px 26px 24px;
+            border-top: 1px solid #e8edf6;
+            background: rgba(255,255,255,0.78);
+        }
+        .field-card {
+            background: rgba(255,255,255,0.92);
+            border: 1px solid #e4ebf5;
+            border-radius: 20px;
+            padding: 14px 14px 12px;
+            box-shadow: 0 10px 24px rgba(18, 35, 68, 0.05);
+            height: 100%;
+        }
+        .field-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .field-head .form-label {
+            margin: 0;
+            font-weight: 700;
+            color: #162338;
+        }
+        .field-tools {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .field-lock {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            color: #72809a;
+            cursor: pointer;
+        }
+        .field-lock .form-check-input {
+            margin: 0;
+            cursor: pointer;
+        }
+        .field-help-btn {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #d9e2f0;
+            border-radius: 999px;
+            background: #f8fbff;
+            color: #3558d5;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: .2s ease;
+        }
+        .field-help-btn:hover {
+            background: #edf2ff;
+            color: #2847b5;
+        }
+        .field-help-popover { width: 220px; }
+        .field-help-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #162338;
+            margin-bottom: 8px;
+        }
+        .field-help-popover img {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid #dfe5f2;
+            background: #fff;
+        }
+        .field-help-empty {
+            font-size: 0.78rem;
+            color: #72809a;
+            line-height: 1.45;
+            background: #f8fbff;
+            border: 1px dashed #d7deed;
+            border-radius: 12px;
+            padding: 10px;
+        }
+        .field-card.is-blocked {
+            opacity: 0.72;
+            border-style: dashed;
+            background: #f7f9fc;
+        }
+        .field-card.is-blocked .form-control,
+        .field-card.is-blocked .form-select {
+            background: #eef2f7;
+        }
+        .field-note {
+            margin-top: 8px;
+            font-size: 0.76rem;
+            color: #72809a;
+        }
     </style>
 HTML,
 ]);
@@ -517,9 +684,9 @@ HTML,
 <?php endif; ?>
 
 <?php if ($isTopbar): ?>
-    <div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade admin-modal" id="itemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content" style="border-radius:24px; border:0;">
+            <div class="modal-content">
                 <form method="post">
                     <input type="hidden" name="accion" value="guardar_topbar_item">
                     <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
@@ -530,26 +697,52 @@ HTML,
                     </div>
                     <div class="modal-body">
                         <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Nombre de la red</label><input class="form-control" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>" placeholder="Instagram"></div>
-                            <div class="col-md-6"><label class="form-label">Clase del ícono</label><input class="form-control" name="icono" value="<?= cms_e($editingItem['icono'] ?? '') ?>" placeholder="fab fa-instagram"></div>
-                            <div class="col-12"><label class="form-label">URL</label><input class="form-control" name="descripcion" value="<?= cms_e($editingItem['descripcion'] ?? '') ?>" placeholder="https://instagram.com/..."></div>
-                            <div class="col-md-6"><label class="form-label">Visible</label><select class="form-select" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select></div>
-                            <div class="col-md-6"><label class="form-label">Orden</label><input class="form-control" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($topbarItems) + 1) ?>"></div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Nombre de la red', 'topbar_titulo', 'topbar', 'titulo'); ?>
+                                    <input class="form-control" id="topbar_titulo" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>" placeholder="Instagram">
+                                    <div class="field-note">Si se bloquea, la red se guardará sin nombre visible.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Clase del ícono', 'topbar_icono', 'topbar', 'icono'); ?>
+                                    <input class="form-control" id="topbar_icono" name="icono" value="<?= cms_e($editingItem['icono'] ?? '') ?>" placeholder="fab fa-instagram">
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('URL', 'topbar_descripcion', 'topbar', 'url'); ?>
+                                    <input class="form-control" id="topbar_descripcion" name="descripcion" value="<?= cms_e($editingItem['descripcion'] ?? '') ?>" placeholder="https://instagram.com/...">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card">
+                                    <?php admin_modal_field_head('Visible', 'topbar_visible', 'topbar', 'visible', false); ?>
+                                    <select class="form-select" id="topbar_visible" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card">
+                                    <?php admin_modal_field_head('Orden', 'topbar_orden', 'topbar', 'orden', false); ?>
+                                    <input class="form-control" id="topbar_orden" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($topbarItems) + 1) ?>">
+                                </div>
+                            </div>
                         </div>
                         <div class="form-text mt-3">El sitio mostrará como máximo 4 redes visibles ordenadas por este campo.</div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="submit" class="btn btn-premium">Guardar red social</button>
+                        <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-admin-action">Guardar red social</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 <?php else: ?>
-    <div class="modal fade" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade admin-modal" id="itemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
-            <div class="modal-content" style="border-radius:24px; border:0;">
+            <div class="modal-content">
                 <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="accion" value="guardar_item">
                     <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
@@ -561,56 +754,170 @@ HTML,
                     <div class="modal-body">
                         <?php if (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
                             <div class="row g-3">
-                                <div class="col-md-4"><label class="form-label">Etiqueta</label><input class="form-control" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>"></div>
-                                <div class="col-md-4"><label class="form-label">Título línea 1</label><input class="form-control" name="titulo_linea_1" value="<?= cms_e($editingItem['titulo_linea_1'] ?? '') ?>"></div>
-                                <div class="col-md-4"><label class="form-label">Título línea 2</label><input class="form-control" name="titulo_linea_2" value="<?= cms_e($editingItem['titulo_linea_2'] ?? '') ?>"></div>
-                                <div class="col-md-4"><label class="form-label">Título línea 3</label><input class="form-control" name="titulo_linea_3" value="<?= cms_e($editingItem['titulo_linea_3'] ?? '') ?>"></div>
-                                <div class="col-md-8"><label class="form-label">Descripción</label><textarea class="form-control" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea></div>
-                                <div class="col-md-3"><label class="form-label">Botón 1 texto</label><input class="form-control" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? '') ?>"></div>
-                                <div class="col-md-3"><label class="form-label">Botón 1 URL</label><input class="form-control" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>"></div>
-                                <div class="col-md-3"><label class="form-label">Botón 2 texto</label><input class="form-control" name="boton_2_texto" value="<?= cms_e($editingItem['boton_2_texto'] ?? '') ?>"></div>
-                                <div class="col-md-3"><label class="form-label">Botón 2 URL</label><input class="form-control" name="boton_2_url" value="<?= cms_e($editingItem['boton_2_url'] ?? '') ?>"></div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Etiqueta', 'item_etiqueta', $section['nombre_interno'], 'etiqueta'); ?>
+                                        <input class="form-control" id="item_etiqueta" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título línea 1', 'item_titulo_linea_1', $section['nombre_interno'], 'titulo-linea-1'); ?>
+                                        <input class="form-control" id="item_titulo_linea_1" name="titulo_linea_1" value="<?= cms_e($editingItem['titulo_linea_1'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título línea 2', 'item_titulo_linea_2', $section['nombre_interno'], 'titulo-linea-2'); ?>
+                                        <input class="form-control" id="item_titulo_linea_2" name="titulo_linea_2" value="<?= cms_e($editingItem['titulo_linea_2'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título línea 3', 'item_titulo_linea_3', $section['nombre_interno'], 'titulo-linea-3'); ?>
+                                        <input class="form-control" id="item_titulo_linea_3" name="titulo_linea_3" value="<?= cms_e($editingItem['titulo_linea_3'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Descripción', 'item_descripcion', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón 1 texto', 'item_boton_1_texto', $section['nombre_interno'], 'boton-1-texto'); ?>
+                                        <input class="form-control" id="item_boton_1_texto" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón 1 URL', 'item_boton_1_url', $section['nombre_interno'], 'boton-1-url'); ?>
+                                        <input class="form-control" id="item_boton_1_url" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón 2 texto', 'item_boton_2_texto', $section['nombre_interno'], 'boton-2-texto'); ?>
+                                        <input class="form-control" id="item_boton_2_texto" name="boton_2_texto" value="<?= cms_e($editingItem['boton_2_texto'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón 2 URL', 'item_boton_2_url', $section['nombre_interno'], 'boton-2-url'); ?>
+                                        <input class="form-control" id="item_boton_2_url" name="boton_2_url" value="<?= cms_e($editingItem['boton_2_url'] ?? '') ?>">
+                                    </div>
+                                </div>
                             </div>
                         <?php elseif ($section['tipo_seccion'] === 'news'): ?>
                             <div class="row g-3">
                                 <div class="col-md-4">
-                                    <label class="form-label">Categoría</label>
-                                    <select class="form-select" name="id_categoria">
-                                        <option value="">Seleccione</option>
-                                        <?php foreach ($categories as $category): ?>
-                                            <option value="<?= (int) $category['id_categoria'] ?>" <?= ((int) ($editingItem['id_categoria'] ?? 0) === (int) $category['id_categoria']) ? 'selected' : '' ?>><?= cms_e($category['nombre']) ?></option>
-                                        <?php endforeach; ?>
-                                    </select>
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Categoría', 'item_id_categoria', $section['nombre_interno'], 'categoria'); ?>
+                                        <select class="form-select" id="item_id_categoria" name="id_categoria">
+                                            <option value="">Seleccione</option>
+                                            <?php foreach ($categories as $category): ?>
+                                                <option value="<?= (int) $category['id_categoria'] ?>" <?= ((int) ($editingItem['id_categoria'] ?? 0) === (int) $category['id_categoria']) ? 'selected' : '' ?>><?= cms_e($category['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div class="col-md-8"><label class="form-label">Título</label><input class="form-control" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>"></div>
-                                <div class="col-md-4"><label class="form-label">Etiqueta visual</label><input class="form-control" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>"></div>
-                                <div class="col-md-8"><label class="form-label">Descripción</label><textarea class="form-control" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea></div>
-                                <div class="col-md-4"><label class="form-label">Fecha publicación</label><input class="form-control" type="date" name="fecha_publicacion" value="<?= cms_e($editingItem['fecha_publicacion'] ?? '') ?>"></div>
-                                <div class="col-md-4"><label class="form-label">Botón texto</label><input class="form-control" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Leer más') ?>"></div>
-                                <div class="col-md-4"><label class="form-label">Botón URL</label><input class="form-control" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '#') ?>"></div>
+                                <div class="col-md-8">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título', 'item_titulo', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Etiqueta visual', 'item_etiqueta_news', $section['nombre_interno'], 'etiqueta'); ?>
+                                        <input class="form-control" id="item_etiqueta_news" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Descripción', 'item_descripcion_news', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_news" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Fecha publicación', 'item_fecha_publicacion', $section['nombre_interno'], 'fecha-publicacion'); ?>
+                                        <input class="form-control" id="item_fecha_publicacion" type="date" name="fecha_publicacion" value="<?= cms_e($editingItem['fecha_publicacion'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón texto', 'item_boton_1_texto_news', $section['nombre_interno'], 'boton-1-texto'); ?>
+                                        <input class="form-control" id="item_boton_1_texto_news" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Leer más') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón URL', 'item_boton_1_url_news', $section['nombre_interno'], 'boton-1-url'); ?>
+                                        <input class="form-control" id="item_boton_1_url_news" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '#') ?>">
+                                    </div>
+                                </div>
                             </div>
                         <?php else: ?>
                             <div class="row g-3">
-                                <div class="col-md-6"><label class="form-label">Título</label><input class="form-control" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>"></div>
-                                <div class="col-md-6"><label class="form-label">Subtítulo</label><input class="form-control" name="subtitulo" value="<?= cms_e($editingItem['subtitulo'] ?? '') ?>"></div>
-                                <div class="col-12"><label class="form-label">Descripción</label><textarea class="form-control" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea></div>
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título', 'item_titulo_generic', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_generic" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Subtítulo', 'item_subtitulo', $section['nombre_interno'], 'subtitulo'); ?>
+                                        <input class="form-control" id="item_subtitulo" name="subtitulo" value="<?= cms_e($editingItem['subtitulo'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Descripción', 'item_descripcion_generic', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_generic" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
+                                    </div>
+                                </div>
                             </div>
                         <?php endif; ?>
 
                         <hr class="my-4">
 
                         <div class="row g-3">
-                            <div class="col-md-6"><label class="form-label">Imagen</label><input class="form-control" type="file" name="imagen" accept="image/*"></div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Imagen', 'item_imagen', $section['nombre_interno'], 'imagen', true, 'clear_imagen'); ?>
+                                    <input class="form-control" id="item_imagen" type="file" name="imagen" accept="image/*">
+                                    <div class="field-note">Si bloqueas este campo, la imagen se guardará vacía.</div>
+                                </div>
+                            </div>
                             <?php if (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
-                                <div class="col-md-6"><label class="form-label">Imagen mobile</label><input class="form-control" type="file" name="imagen_mobile" accept="image/*"></div>
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Imagen mobile', 'item_imagen_mobile', $section['nombre_interno'], 'imagen-mobile', true, 'clear_imagen_mobile'); ?>
+                                        <input class="form-control" id="item_imagen_mobile" type="file" name="imagen_mobile" accept="image/*">
+                                        <div class="field-note">Úsala si el diseño necesita una imagen distinta en móviles.</div>
+                                    </div>
+                                </div>
                             <?php endif; ?>
-                            <div class="col-md-3"><label class="form-label">Visible</label><select class="form-select" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select></div>
-                            <div class="col-md-3"><label class="form-label">Orden</label><input class="form-control" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>"></div>
+                            <div class="col-md-3">
+                                <div class="field-card">
+                                    <?php admin_modal_field_head('Visible', 'item_visible', $section['nombre_interno'], 'visible', false); ?>
+                                    <select class="form-select" id="item_visible" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card">
+                                    <?php admin_modal_field_head('Orden', 'item_orden', $section['nombre_interno'], 'orden', false); ?>
+                                    <input class="form-control" id="item_orden" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>">
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
-                        <button type="submit" class="btn btn-premium">Guardar item</button>
+                        <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-admin-action">Guardar item</button>
                     </div>
                 </form>
             </div>
@@ -634,6 +941,24 @@ admin_render_layout_end([
         <<<'HTML'
     <script>
         $(function () {
+            function syncBlockedField(toggle) {
+                var targetSelector = toggle.getAttribute('data-target');
+                if (!targetSelector) {
+                    return;
+                }
+
+                var target = document.querySelector(targetSelector);
+                if (!target) {
+                    return;
+                }
+
+                target.disabled = toggle.checked;
+                var shell = toggle.closest('[data-field-shell]');
+                if (shell) {
+                    shell.classList.toggle('is-blocked', toggle.checked);
+                }
+            }
+
             if ($('#itemsTable').length) {
                 $('#itemsTable').DataTable({
                     pageLength: 10,
@@ -654,6 +979,17 @@ admin_render_layout_end([
                     return;
                 }
                 this.closest('.config-row').remove();
+            });
+
+            document.querySelectorAll('.js-field-block-toggle').forEach(function (toggle) {
+                syncBlockedField(toggle);
+                toggle.addEventListener('change', function () {
+                    syncBlockedField(toggle);
+                });
+            });
+
+            document.querySelectorAll('[data-bs-toggle="popover"]').forEach(function (element) {
+                new bootstrap.Popover(element);
             });
 
             var openModal = OPEN_MODAL_PLACEHOLDER;

@@ -63,7 +63,8 @@ if ($mostrarEmail && $email !== '') {
                         <?php foreach ($redesTopbar as $red): ?>
                             <?php $urlRed = trim((string) ($red['descripcion'] ?? '')); ?>
                             <?php if ($urlRed === '') { continue; } ?>
-                            <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255,255,255,.14); color:#fff;">
+                            <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" 
+                            class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255,255,255,.14); color:#e0e0e0;;">
                                 <i class="<?= e($red['icono'] ?: 'fas fa-link') ?>"></i>
                             </a>
                         <?php endforeach; ?>

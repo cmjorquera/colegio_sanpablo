@@ -3,7 +3,7 @@
         <div class="row g-5">
             <div class="col-lg-4">
                 <div class="logo-footer mb-3">
-                    <img src="<?= e($institution['logo_footer'] ?? $institution['logo_header'] ?? 'assets/images/logo-sin-fondo-1.png') ?>" alt="<?= e($institution['nombre'] ?? 'Colegio San Pablo') ?>" onerror="this.src='assets/images/logo/logo-light.svg'">
+                    <img src="<?= e($institution['logo_footer'] ?? $institution['logo_header'] ?? 'assets/images/logo-sin-fondo-1.png') ?>" alt="<?= e($institution['nombre'] ?? 'Colegio San Pablo')?>" onerror="this.src='assets/images/logo-sin-fondo-1.png'">
                 </div>
                 <p><?= e($institution['nombre'] ?? 'Colegio San Pablo') ?> acompaña a su comunidad con una propuesta educativa integral y cercana.</p>
                 <div class="social-links mt-3">

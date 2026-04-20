@@ -274,59 +274,63 @@ admin_render_layout_start([
         .hero-thumb { height: 180px; background-size: cover; background-position: center; }
         .nav-pills .nav-link.active { background: linear-gradient(135deg, #1f8f6b, #27b785); }
         .admin-modal .modal-content {
-            border: 0;
-            border-radius: 28px;
+            border: 1px solid rgba(53, 88, 213, 0.08);
+            border-radius: 24px;
             overflow: hidden;
             background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.18);
+            box-shadow: 0 24px 54px rgba(15, 23, 42, 0.15);
         }
         .admin-modal .modal-header {
-            padding: 22px 26px 18px;
+            padding: 16px 18px 14px;
             border-bottom: 1px solid #e8edf6;
             background: linear-gradient(135deg, rgba(53, 88, 213, 0.08), rgba(46, 197, 161, 0.08));
         }
         .admin-modal .modal-title {
-            font-size: 1.2rem;
+            font-size: 1.05rem;
             font-weight: 800;
             color: #162338;
         }
-        .admin-modal .modal-body { padding: 24px 26px; }
+        .admin-modal .modal-body {
+            padding: 16px 18px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,255,0.98));
+        }
         .admin-modal .modal-footer {
-            padding: 18px 26px 24px;
+            padding: 14px 18px 16px;
             border-top: 1px solid #e8edf6;
-            background: rgba(255,255,255,0.78);
+            background: rgba(255,255,255,0.88);
         }
         .field-card {
             background: rgba(255,255,255,0.92);
             border: 1px solid #e4ebf5;
-            border-radius: 20px;
-            padding: 14px 14px 12px;
-            box-shadow: 0 10px 24px rgba(18, 35, 68, 0.05);
+            border-radius: 16px;
+            padding: 12px 12px 10px;
+            box-shadow: 0 8px 18px rgba(18, 35, 68, 0.04);
             height: 100%;
         }
         .field-head {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 8px;
         }
         .field-head .form-label {
             margin: 0;
             font-weight: 700;
             color: #162338;
+            font-size: 0.88rem;
         }
         .field-tools {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
         }
         .field-lock {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.82rem;
+            gap: 6px;
+            font-size: 0.76rem;
             color: #72809a;
             cursor: pointer;
         }
@@ -335,8 +339,8 @@ admin_render_layout_start([
             cursor: pointer;
         }
         .field-help-btn {
-            width: 30px;
-            height: 30px;
+            width: 28px;
+            height: 28px;
             border: 1px solid #d9e2f0;
             border-radius: 999px;
             background: #f8fbff;
@@ -352,25 +356,25 @@ admin_render_layout_start([
         }
         .field-help-popover { width: 220px; }
         .field-help-title {
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: #162338;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
         .field-help-popover img {
             width: 100%;
-            border-radius: 12px;
+            border-radius: 10px;
             border: 1px solid #dfe5f2;
             background: #fff;
         }
         .field-help-empty {
-            font-size: 0.78rem;
+            font-size: 0.74rem;
             color: #72809a;
             line-height: 1.45;
             background: #f8fbff;
             border: 1px dashed #d7deed;
-            border-radius: 12px;
-            padding: 10px;
+            border-radius: 10px;
+            padding: 9px;
         }
         .field-card.is-blocked {
             opacity: 0.72;
@@ -382,9 +386,47 @@ admin_render_layout_start([
             background: #eef2f7;
         }
         .field-note {
-            margin-top: 8px;
-            font-size: 0.76rem;
+            margin-top: 6px;
+            font-size: 0.72rem;
             color: #72809a;
+        }
+        .admin-modal .form-control,
+        .admin-modal .form-select {
+            border-radius: 10px;
+            min-height: 38px;
+            padding: 6px 10px;
+            font-size: 14px;
+        }
+        .admin-modal textarea.form-control {
+            min-height: 88px;
+        }
+        .admin-modal .modal-dialog.modal-xl {
+            max-width: 1040px;
+        }
+        .admin-modal .modal-dialog.modal-lg {
+            max-width: 760px;
+        }
+        .admin-modal .btn {
+            min-height: 38px;
+        }
+        .admin-modal .row.g-3 {
+            --bs-gutter-x: 0.9rem;
+            --bs-gutter-y: 0.9rem;
+        }
+        .admin-modal .form-text {
+            font-size: 0.76rem;
+            color: #6f7e97;
+        }
+        @media (max-width: 767px) {
+            .admin-modal .modal-header,
+            .admin-modal .modal-body,
+            .admin-modal .modal-footer {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+            .field-card {
+                border-radius: 14px;
+            }
         }
     </style>
 HTML,

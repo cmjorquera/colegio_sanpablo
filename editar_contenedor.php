@@ -209,6 +209,10 @@ admin_render_layout_start([
     'page_title' => $section['titulo_admin'] ?? 'Editar contenedor',
     'breadcrumb' => 'Contenedores del sitio / ' . ($section['nombre_interno'] ?? ''),
     'active_panel' => 'contenedores',
+    'institution_name' => $site['institution']['nombre'] ?? 'Institución activa',
+    'institution_short_name' => $site['institution']['nombre_corto'] ?? ($site['institution']['nombre'] ?? 'Institución'),
+    'institution_logo' => $site['institution']['logo_header'] ?? '',
+    'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
     'header_actions' => '<a href="admin.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver</a><a href="preview_contenedor.php?id=' . (int) $idSeccion . '" class="btn btn-premium"><i class="bi bi-eye me-2"></i>Visualizar</a>',
     'extra_head' => <<<'HTML'
     <style>

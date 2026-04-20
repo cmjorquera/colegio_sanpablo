@@ -93,6 +93,10 @@ admin_render_layout_start([
     'page_title' => 'Vista previa del contenedor',
     'breadcrumb' => 'Contenedores del sitio / ' . ($section['nombre_interno'] ?? ''),
     'active_panel' => 'contenedores',
+    'institution_name' => $institution['nombre'] ?? 'Institución activa',
+    'institution_short_name' => $institution['nombre_corto'] ?? ($institution['nombre'] ?? 'Institución'),
+    'institution_logo' => $institution['logo_header'] ?? '',
+    'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
     'header_actions' => '<a href="editar_contenedor.php?id=' . (int) $idSeccion . '" class="btn btn-soft"><i class="bi bi-pencil-square me-2"></i>Editar</a><a href="' . cms_e(cms_get_preview_target($section['nombre_interno'])) . '" target="_blank" class="btn btn-premium"><i class="bi bi-box-arrow-up-right me-2"></i>Ver en sitio</a>',
     'extra_head' => <<<'HTML'
     <link rel="stylesheet" href="assets/css/meanmenu.css">

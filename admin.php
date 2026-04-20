@@ -105,6 +105,10 @@ admin_render_layout_start([
     'page_title' => $pageMeta['title'],
     'breadcrumb' => $pageMeta['crumb'],
     'active_panel' => $panel,
+    'institution_name' => $institution['nombre'] ?? 'Institución activa',
+    'institution_short_name' => $institution['nombre_corto'] ?? ($institution['nombre'] ?? 'Institución'),
+    'institution_logo' => $institution['logo_header'] ?? '',
+    'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
     'header_actions' => '<a href="index.php" target="_blank" class="btn btn-soft"><i class="bi bi-eye me-2"></i>Ver sitio</a>',
 ]);
 ?>

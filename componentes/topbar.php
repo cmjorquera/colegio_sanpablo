@@ -1,36 +1,73 @@
 <?php
-$email = $institution['email'] ?? '';
-$telefono = $institution['telefono'] ?? '';
-$direccion = $institution['direccion'] ?? '';
+$email = trim((string) ($institution['email'] ?? ''));
+$telefono = trim((string) ($institution['telefono'] ?? ''));
+$direccion = trim((string) ($institution['direccion'] ?? ''));
+$mostrarDireccion = cfg($sectionConfigsMap, 'topbar', 'mostrar_direccion', 'si') === 'si';
+$mostrarTelefono = cfg($sectionConfigsMap, 'topbar', 'mostrar_telefono', 'si') === 'si';
+$mostrarEmail = cfg($sectionConfigsMap, 'topbar', 'mostrar_email', 'si') === 'si';
+$mostrarRedes = cfg($sectionConfigsMap, 'topbar', 'mostrar_redes', 'si') === 'si';
+$mostrarBotonIngresar = cfg($sectionConfigsMap, 'topbar', 'mostrar_boton_ingresar', 'si') === 'si';
+$textoBotonIngresar = trim(cfg($sectionConfigsMap, 'topbar', 'texto_boton_ingresar', 'Ingresar'));
+$textoBotonIngresar = $textoBotonIngresar !== '' ? $textoBotonIngresar : 'Ingresar';
+$colorPrimario = trim((string) ($institution['color_primario'] ?? '')) ?: '#2563EB';
+$colorSecundario = trim((string) ($institution['color_secundario'] ?? '')) ?: '#E9A629';
+$colorTerciario = trim((string) ($institution['color_terciario'] ?? '')) ?: '#222222';
+$topbarGradient = 'linear-gradient(90deg, ' . $colorPrimario . ', ' . $colorSecundario . ', ' . $colorTerciario . ')';
+$redesTopbar = array_values(array_filter(
+    $sectionItemsMap['topbar'] ?? [],
+    static fn(array $item): bool => ($item['etiqueta'] ?? '') === 'red_social'
+));
+$redesTopbar = array_slice($redesTopbar, 0, 4);
+
+$contactos = [];
+if ($mostrarDireccion && $direccion !== '') {
+    $contactos[] = [
+        'icono' => 'fas fa-map-marker-alt',
+        'contenido' => e($direccion),
+    ];
+}
+if ($mostrarTelefono && $telefono !== '') {
+    $contactos[] = [
+        'icono' => 'fas fa-phone',
+        'contenido' => e($telefono),
+    ];
+}
+if ($mostrarEmail && $email !== '') {
+    $contactos[] = [
+        'icono' => 'fas fa-envelope',
+        'contenido' => '<a href="mailto:' . e($email) . '">' . e($email) . '</a>',
+    ];
+}
 ?>
-<div class="sp-topbar d-none d-md-block" id="topbar">
+<div class="sp-topbar d-none d-md-block" id="topbar" style="background: <?= e($topbarGradient) ?>;">
     <div class="container-fluid px-4">
-        <div class="d-flex justify-content-between align-items-center">
-            <div>
-                <?php if ($direccion !== ''): ?>
-                    <i class="fas fa-map-marker-alt me-2" style="color:var(--sp-amarillo)"></i><?= e($direccion) ?>
-                <?php endif; ?>
-                <?php if ($telefono !== ''): ?>
-                    <span class="sep">|</span>
-                    <i class="fas fa-phone me-2" style="color:var(--sp-amarillo)"></i><?= e($telefono) ?>
-                <?php endif; ?>
-                <?php if ($email !== ''): ?>
-                    <span class="sep">|</span>
-                    <i class="fas fa-envelope me-2" style="color:var(--sp-amarillo)"></i>
-                    <a href="mailto:<?= e($email) ?>"><?= e($email) ?></a>
-                <?php endif; ?>
+        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <div class="d-flex align-items-center flex-wrap">
+                <?php foreach ($contactos as $index => $contacto): ?>
+                    <?php if ($index > 0): ?><span class="sep">|</span><?php endif; ?>
+                    <span class="d-inline-flex align-items-center">
+                        <i class="<?= e($contacto['icono']) ?> me-2" style="color:<?= e($colorSecundario) ?>"></i><?= $contacto['contenido'] ?>
+                    </span>
+                <?php endforeach; ?>
             </div>
-            <div class="d-flex align-items-center gap-3">
-                <a href="#" class="sp-login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin" title="Ingresar al sistema">
-                    <i class="fas fa-sign-in-alt"></i>
-                    <span>Ingresar</span>
-                </a>
-                <?php if (!empty($institution['instagram'])): ?>
-                    <span class="sep">|</span>
-                    <a href="<?= e($institution['instagram']) ?>" target="_blank" rel="noopener" class="me-1"><i class="fab fa-instagram me-1"></i>Instagram</a>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <?php if ($mostrarBotonIngresar): ?>
+                    <a href="#" class="sp-login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin" title="Ingresar al sistema">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span><?= e($textoBotonIngresar) ?></span>
+                    </a>
                 <?php endif; ?>
-                <?php if (!empty($institution['facebook'])): ?>
-                    <a href="<?= e($institution['facebook']) ?>" target="_blank" rel="noopener"><i class="fab fa-facebook me-1"></i>Facebook</a>
+                <?php if ($mostrarRedes && $redesTopbar): ?>
+                    <?php if ($mostrarBotonIngresar): ?><span class="sep">|</span><?php endif; ?>
+                    <div class="d-flex align-items-center gap-2">
+                        <?php foreach ($redesTopbar as $red): ?>
+                            <?php $urlRed = trim((string) ($red['descripcion'] ?? '')); ?>
+                            <?php if ($urlRed === '') { continue; } ?>
+                            <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255,255,255,.14); color:#fff;">
+                                <i class="<?= e($red['icono'] ?: 'fas fa-link') ?>"></i>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
                 <?php endif; ?>
             </div>
         </div>

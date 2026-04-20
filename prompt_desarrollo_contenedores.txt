@@ -1,0 +1,258 @@
+Voy a modificar el contenedor `topbar` de mi sistema.
+
+Antes de escribir o modificar código, debes entender completamente cómo funciona el sistema. Para eso debes revisar obligatoriamente estos archivos del proyecto:
+
+1. qaseduc_colegio_spablo.sql
+   → contiene la estructura real de la base de datos.
+
+2. mermaid-diagram.png
+   → muestra el diagrama de relaciones de las tablas.
+
+3. explicacion.txt
+   → explica la lógica de funcionamiento del sistema.
+
+Estos tres archivos son la fuente de verdad del sistema. No debes inventar tablas, columnas ni relaciones distintas a las definidas ahí.
+
+---
+
+# ARQUITECTURA DEL SISTEMA
+
+El sistema funciona como un CMS basado en contenedores.
+
+Cada bloque visual del sitio se define en la tabla:
+
+seccion
+
+Cada registro de esta tabla representa un contenedor del sitio.
+
+Ejemplos reales:
+
+topbar  
+hero_principal  
+noticias_home  
+faq_home  
+about_home  
+footer_principal  
+
+Cada contenedor tiene un archivo PHP correspondiente ubicado en:
+
+componentes/{nombre_interno}.php
+
+Ejemplo:
+
+topbar → componentes/topbar.php  
+hero_principal → componentes/hero_principal.php  
+footer_principal → componentes/footer_principal.php  
+
+---
+
+# ESTRUCTURA DE DATOS DEL SISTEMA
+
+El contenido se divide en tres niveles:
+
+## 1. Institución
+
+Tabla:
+
+institucion
+
+Contiene datos globales del sitio como:
+
+direccion  
+telefono  
+email  
+logo  
+color_primario  
+color_secundario  
+color_terciario  
+redes sociales institucionales  
+
+---
+
+## 2. Configuración del contenedor
+
+Tabla:
+
+seccion_config
+
+Guarda configuraciones específicas del contenedor.
+
+Ejemplo para topbar:
+
+texto_boton_ingresar  
+mostrar_direccion  
+mostrar_telefono  
+mostrar_email  
+mostrar_redes  
+mostrar_boton_ingresar  
+usar_gradiente_colores  
+max_redes  
+
+---
+
+## 3. Elementos internos del contenedor
+
+Tabla:
+
+seccion_item
+
+Contiene elementos repetibles dentro de una sección.
+
+Para el topbar se utilizará para redes sociales.
+
+Campos utilizados:
+
+id_seccion  
+etiqueta  
+titulo  
+descripcion  
+icono  
+visible  
+orden  
+
+---
+
+# OBJETIVO DE LA MODIFICACIÓN
+
+Quiero que el contenedor:
+
+topbar (id_seccion = 1)
+
+sea completamente administrable desde el panel.
+
+Los elementos editables del topbar serán:
+
+1 Dirección  
+2 Teléfono  
+3 Correo  
+4 Texto del botón "Ingresar"  
+5 Redes sociales (máximo 4)  
+6 Icono de cada red social  
+7 URL de cada red social  
+8 Orden de redes sociales  
+9 Activar o desactivar cada red  
+10 Mostrar u ocultar dirección, teléfono, correo y redes  
+
+---
+
+# REGLA DE ORIGEN DE DATOS
+
+Dirección → tabla institucion  
+Teléfono → tabla institucion  
+Correo → tabla institucion  
+
+Texto botón ingresar → seccion_config  
+
+Redes sociales → seccion_item  
+
+Colores institucionales → institucion
+
+---
+
+# GRADIENTE DE COLORES
+
+La franja superior del topbar debe usar un gradiente generado con:
+
+color_primario  
+color_secundario  
+color_terciario  
+
+Ejemplo CSS esperado:
+
+background: linear-gradient(
+90deg,
+color_primario,
+color_secundario,
+color_terciario
+);
+
+Estos colores provienen de la tabla institucion.
+
+No deben editarse desde el topbar.
+
+---
+
+# BOTÓN INGRESAR
+
+El botón "Ingresar":
+
+solo debe permitir cambiar el texto del botón.
+
+No debe modificar la acción del botón.
+
+El botón abre un modal existente y esa lógica no debe cambiarse.
+
+---
+
+# REDES SOCIALES
+
+Las redes sociales se almacenan en:
+
+seccion_item
+
+con:
+
+id_seccion = 1  
+etiqueta = 'red_social'
+
+Campos:
+
+titulo → nombre de la red  
+descripcion → URL  
+icono → clase del icono  
+visible → mostrar o no  
+orden → posición  
+
+Reglas:
+
+máximo 4 redes visibles  
+si existen más en BD, mostrar solo las primeras 4 según orden  
+
+---
+
+# ARCHIVOS QUE DEBEN MODIFICARSE
+
+Debes revisar y modificar solo si es necesario:
+
+componentes/topbar.php  
+admin.php  
+index.php  
+editar_contenedor.php  
+
+Si es necesario puedes crear:
+
+contenedores/topbar/editar.php  
+contenedores/topbar/guardar.php  
+assets/js/topbar_admin.js  
+
+Pero solo si el flujo del sistema lo requiere.
+
+---
+
+# REGLAS IMPORTANTES
+
+No crear nuevas tablas.
+
+No inventar columnas.
+
+No usar arrays hardcodeados si la información ya existe en la base de datos.
+
+No cambiar la arquitectura del sistema.
+
+No romper el layout actual del sitio.
+
+No modificar la lógica del modal del botón ingresar.
+
+---
+
+# VALIDACIÓN FINAL
+
+Antes de entregar la solución debes verificar:
+
+Que los nombres de tablas coincidan con qaseduc_colegio_spablo.sql.
+
+Que la arquitectura respete el diagrama mermaid-diagram.png.
+
+Que la lógica siga el comportamiento descrito en explicacion.txt.
+
+Que el código respete la estructura existente del proyecto.

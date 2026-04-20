@@ -167,7 +167,10 @@ admin_render_layout_start([
                                 </form>
                             </td>
                             <td>
-                                <div class="d-flex">
+                                <div class="d-flex gap-2 flex-wrap">
+                                    <button type="button" class="btn btn-soft js-preview-btn" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">
+                                        <i class="bi bi-eye me-2"></i>Visualizar
+                                    </button>
                                     <a class="btn btn-admin-action" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&modo=editar">
                                         <i class="bi bi-pencil-square me-2"></i>Editar
                                     </a>

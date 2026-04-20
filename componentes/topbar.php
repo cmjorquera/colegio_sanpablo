@@ -46,7 +46,7 @@ if ($mostrarEmail && $email !== '') {
                 <?php foreach ($contactos as $index => $contacto): ?>
                     <?php if ($index > 0): ?><span class="sep">|</span><?php endif; ?>
                     <span class="d-inline-flex align-items-center">
-                        <i class="<?= e($contacto['icono']) ?> me-2" style="color:<?= e($colorSecundario) ?>"></i><?= $contacto['contenido'] ?>
+                        <i class="<?= e($contacto['icono']) ?> me-2" style="color:black;>"></i><?= $contacto['contenido'] ?>
                     </span>
                 <?php endforeach; ?>
             </div>

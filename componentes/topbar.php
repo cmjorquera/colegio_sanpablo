@@ -46,7 +46,7 @@ if ($mostrarEmail && $email !== '') {
                 <?php foreach ($contactos as $index => $contacto): ?>
                     <?php if ($index > 0): ?><span class="sep">|</span><?php endif; ?>
                     <span class="d-inline-flex align-items-center">
-                        <i class="<?= e($contacto['icono']) ?> me-2" style="color:black;>"></i><?= $contacto['contenido'] ?>
+                        <i class="<?= e($contacto['icono']) ?> me-2" style="color:<?= e($colorSecundario) ?>"></i><?= $contacto['contenido'] ?>
                     </span>
                 <?php endforeach; ?>
             </div>
@@ -63,7 +63,7 @@ if ($mostrarEmail && $email !== '') {
                         <?php foreach ($redesTopbar as $red): ?>
                             <?php $urlRed = trim((string) ($red['descripcion'] ?? '')); ?>
                             <?php if ($urlRed === '') { continue; } ?>
-                            <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255,255,255,.14); color:#fff;">
+                            <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255, 253, 253, 0.14); color:#fff;">
                                 <i class="<?= e($red['icono'] ?: 'fas fa-link') ?>"></i>
                             </a>
                         <?php endforeach; ?>

@@ -168,9 +168,7 @@ INSERT INTO `seccion` (`id_seccion`, `id_institucion`, `nombre_interno`, `titulo
 (5, 1, 'faq_home', 'Preguntas frecuentes', 'Contenedor de preguntas frecuentes con acordeon e imagen lateral.', 'faq', 'imagen_lateral', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 6, '2026-04-19 19:39:21'),
 (6, 1, 'about_home', 'Sobre nosotros', 'Bloque institucional de presentacion con imagen principal, video y descripcion.', 'content', 'imagen_texto', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 7, '2026-04-19 19:39:21'),
 (7, 1, 'footer_principal', 'Footer principal', 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.', 'footer', 'institucional', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 8, '2026-04-19 20:56:57'),
-(11, 1, 'header_principal', 'Header principal', 'Bloque visual completo del encabezado. Incluye logo, identidad institucional, navegacion horizontal basada en menus y sub_menus, y boton principal.', 'header', 'branding', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 2, '2026-04-19 21:46:37'),
-(13, 1, 'footer_principal', 'Footer principal', 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.', 'footer', 'institucional', 'no', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 8, '2026-04-20 12:09:40'),
-(16, 1, 'menu_principal', 'Menú principal', 'Bloque de compatibilidad. La navegacion ya esta absorbida visualmente dentro de header_principal, pero sus enlaces siguen saliendo de menus y sub_menus.', 'menu', 'navegacion_principal', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 3, '2026-04-20 15:31:33');
+(11, 1, 'header_principal', 'Header principal', 'Bloque visual completo del encabezado. Incluye logo, identidad institucional, navegacion horizontal basada en menus y sub_menus, y boton principal.', 'header', 'branding', 'si', 'activo', 'si', 'si', 'no', NULL, NULL, NULL, 2, '2026-04-19 21:46:37');
 
 -- --------------------------------------------------------
 
@@ -470,6 +468,7 @@ ALTER TABLE `perfiles`
 --
 ALTER TABLE `seccion`
   ADD PRIMARY KEY (`id_seccion`),
+  ADD UNIQUE KEY `uq_seccion_institucion_nombre` (`id_institucion`,`nombre_interno`),
   ADD KEY `fk_seccion_institucion` (`id_institucion`);
 
 --

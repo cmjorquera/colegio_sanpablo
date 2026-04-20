@@ -104,19 +104,11 @@ function cms_default_sections(): array
             'observacion' => 'Bloque visual completo del encabezado. Incluye logo, identidad institucional, navegacion horizontal basada en menus y sub_menus, y boton principal.',
         ],
         [
-            'nombre_interno' => 'menu_principal',
-            'titulo_admin' => 'Menú principal',
-            'tipo_seccion' => 'menu',
-            'variante' => 'navegacion_principal',
-            'orden' => 3,
-            'observacion' => 'Bloque de compatibilidad. La navegacion ya esta absorbida visualmente dentro de header_principal, pero sus enlaces siguen saliendo de menus y sub_menus.',
-        ],
-        [
             'nombre_interno' => 'hero_principal',
             'titulo_admin' => 'Carrusel principal',
             'tipo_seccion' => 'carousel',
             'variante' => 'texto_izquierda',
-            'orden' => 4,
+            'orden' => 3,
             'observacion' => 'Carrusel destacado del home con slides, imagenes y botones principales.',
         ],
         [
@@ -124,7 +116,7 @@ function cms_default_sections(): array
             'titulo_admin' => 'Noticias home',
             'tipo_seccion' => 'news',
             'variante' => 'cards_4',
-            'orden' => 5,
+            'orden' => 4,
             'observacion' => 'Bloque de noticias destacadas del home con categoria, imagen y fecha.',
         ],
         [
@@ -132,7 +124,7 @@ function cms_default_sections(): array
             'titulo_admin' => 'Preguntas frecuentes',
             'tipo_seccion' => 'faq',
             'variante' => 'imagen_lateral',
-            'orden' => 6,
+            'orden' => 5,
             'observacion' => 'Contenedor de preguntas frecuentes con acordeon e imagen lateral.',
         ],
         [
@@ -140,7 +132,7 @@ function cms_default_sections(): array
             'titulo_admin' => 'Sobre nosotros',
             'tipo_seccion' => 'content',
             'variante' => 'imagen_texto',
-            'orden' => 7,
+            'orden' => 6,
             'observacion' => 'Bloque institucional de presentacion con imagen principal, video y descripcion.',
         ],
         [
@@ -148,7 +140,7 @@ function cms_default_sections(): array
             'titulo_admin' => 'Footer principal',
             'tipo_seccion' => 'footer',
             'variante' => 'institucional',
-            'orden' => 8,
+            'orden' => 7,
             'observacion' => 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.',
         ],
     ];
@@ -208,7 +200,8 @@ function cms_get_preview_target(string $name): string
     $anchors = [
         'topbar' => '#topbar',
         'header_principal' => '#header-principal',
-        'menu_principal' => '#menu-principal',
+        // Compatibilidad legacy: la navegación vive dentro de header_principal.
+        'menu_principal' => '#header-principal',
         'hero_principal' => '#hero-principal',
         'noticias_home' => '#noticias',
         'faq_home' => '#faq',
@@ -327,6 +320,7 @@ function cms_list_sections_admin(mysqli $db, int $institutionId): array
             FROM seccion s
             LEFT JOIN seccion_item si ON si.id_seccion = s.id_seccion
             WHERE s.id_institucion = ?
+              AND s.nombre_interno <> 'menu_principal'
             GROUP BY s.id_seccion
             ORDER BY s.orden ASC, s.id_seccion ASC";
     $stmt = $db->prepare($sql);

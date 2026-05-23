@@ -15,6 +15,107 @@ Estos tres archivos son la fuente de verdad del sistema. No debes inventar tabla
 
 ---
 
+# REGLA DE MEMORIA DEL PROYECTO
+
+Todo cambio realizado en contenedores, componentes, administración del CMS, integración pública, páginas de detalle, carga masiva o uso de base de datos debe quedar documentado en este archivo.
+
+Este archivo funciona como memoria permanente del sistema para no perder contexto entre cambios.
+
+Cuando se agregue o modifique un módulo se debe registrar:
+
+archivo o archivos modificados
+contenedor relacionado
+tablas usadas
+campos importantes
+flujo administrativo
+flujo público
+reglas de fallback o compatibilidad
+página pública donde se renderiza
+
+La página pública principal del sitio es:
+
+index_1.php
+
+No usar colegiosanpablo.php ni archivos HTML importados como destino principal de nuevas integraciones. Esos archivos pueden existir como referencia o legado, pero el render público oficial del CMS debe apuntar a index_1.php.
+
+Los previews del CMS deben usar:
+
+index_1.php#ID_DEL_CONTENEDOR
+
+El contenedor calendario_eventos_home se previsualiza en:
+
+index_1.php#calendario-eventos-home
+
+Las páginas de detalle o botones de volver deben regresar a index_1.php o a un ancla de index_1.php.
+
+---
+
+# AUTENTICACION DEL ADMINISTRADOR
+
+El acceso al panel administrativo se realiza desde el contenedor topbar, mediante el modal de ingreso del sitio publico.
+
+Archivo del endpoint de login:
+
+login_check.php
+
+Este archivo recibe peticiones AJAX por POST desde el formulario de administrador del topbar.
+
+Campos recibidos:
+
+usuario
+clave
+
+Tabla real usada:
+
+usuario
+
+No usar tabla usuarios en plural, porque la base qaseduc_colegio_spablo.sql define la tabla en singular.
+
+Campos usados de la tabla usuario:
+
+id_usuario
+id_institucion
+nombre
+apellido
+email
+usuario
+clave
+rol
+estado
+
+Reglas del login:
+
+solo acepta metodo POST
+responde JSON
+busca por usuario o email
+solo permite estado = activo
+valida claves guardadas con password_hash
+mantiene compatibilidad con claves MD5
+mantiene compatibilidad con claves en texto plano existentes en la base antigua
+
+Cuando el login es correcto se crean estas variables de sesion:
+
+admin_logged = true
+admin_id
+id_usuario
+id_institucion
+admin_usuario
+admin_email
+admin_nombre
+admin_rol
+
+El destino luego de iniciar sesion es:
+
+admin.php
+
+Si admin.php, editar_contenedor.php o preview_contenedor.php se abren sin sesion admin, deben redirigir a:
+
+index_1.php
+
+No redirigir accesos no autenticados a colegiosanpablo.php.
+
+---
+
 # ARQUITECTURA DEL SISTEMA
 
 El sistema funciona como un CMS basado en contenedores.
@@ -216,7 +317,7 @@ Debes revisar y modificar solo si es necesario:
 
 componentes/topbar.php  
 admin.php  
-index.php  
+index_1.php  
 editar_contenedor.php  
 
 Si es necesario puedes crear:
@@ -256,3 +357,117 @@ Que la arquitectura respete el diagrama mermaid-diagram.png.
 Que la lógica siga el comportamiento descrito en explicacion.txt.
 
 Que el código respete la estructura existente del proyecto.
+
+---
+
+# CONTENEDOR calendario_eventos_home
+
+Este contenedor pertenece al home y muestra una sección visual de calendario institucional junto con próximos eventos.
+
+Archivo del componente:
+
+componentes/calendario_eventos_home.php
+
+La sección se define en la tabla seccion con:
+
+nombre_interno = calendario_eventos_home
+tipo_seccion = events
+variante = calendario_lista
+
+Usa seccion_config para administrar textos y comportamiento general del bloque:
+
+titulo_bloque
+subtitulo_bloque
+texto_boton
+url_boton
+cantidad_items
+mes_titulo
+
+Los eventos reales se guardan en la tabla eventos. La tabla seccion_item queda como compatibilidad del CMS y como fallback visual cuando aun no existen eventos cargados en la tabla eventos.
+
+Campos legacy usados en seccion_item cuando se use el fallback:
+
+etiqueta representa la categoría del evento.
+titulo representa el título del evento.
+subtitulo representa la hora del evento.
+descripcion representa una descripción corta.
+imagen representa la imagen del evento.
+fecha_publicacion representa la fecha del evento.
+boton_1_texto representa el texto opcional del botón.
+boton_1_url o url pueden apuntar al detalle del evento.
+
+Regla de detalle legacy:
+
+Si boton_1_url tiene valor, se usa boton_1_url.
+Si boton_1_url está vacío y url tiene valor, se usa url.
+Si ambos están vacíos, se usa:
+
+evento_detalle.php?id_item=ID
+
+Para eventos reales de la tabla eventos, el detalle publico usa:
+
+evento_detalle.php?id_evento=ID
+
+---
+
+# ADMINISTRACIÓN DE EVENTOS Y CARGA MASIVA
+
+El contenedor calendario_eventos_home mantiene su definición visual dentro del CMS de contenedores, pero los eventos reales se administran desde la tabla eventos.
+
+La tabla seccion sigue definiendo el contenedor, seccion_config sigue guardando configuraciones del bloque y seccion_item queda solo como compatibilidad visual o fallback. El calendario público debe alimentarse preferentemente desde eventos.
+
+Los eventos pueden crearse manualmente desde la pestaña Items del contenedor calendario_eventos_home mediante el botón Agregar evento.
+
+También pueden cargarse masivamente desde Excel o CSV desde la misma pestaña Items.
+
+La plantilla se descarga desde el admin con el botón Descargar plantilla Excel. La carga masiva no incluye imágenes ni archivos adjuntos.
+
+Campos mínimos obligatorios para carga o creación:
+
+titulo
+fecha_inicio
+
+Campos de la plantilla:
+
+titulo
+descripcion_corta
+descripcion
+fecha_inicio
+fecha_termino
+hora_inicio
+hora_termino
+categoria
+ubicacion
+color
+destacado
+visible
+estado
+orden
+
+Reglas:
+
+fecha_inicio debe venir como yyyy-mm-dd.
+hora_inicio debe venir como HH:mm.
+estado permitido: borrador, publicado, oculto, cancelado.
+visible y destacado usan 1 o 0.
+Si fecha_termino viene vacía, se usa fecha_inicio.
+Si estado viene vacío, se usa publicado.
+Si color viene vacío, se asigna según categoría.
+
+Los eventos publicados y visibles se muestran en el calendario público del home.
+
+El calendario público debe renderizarse en la página principal:
+
+index_1.php#calendario-eventos-home
+
+No apuntar el calendario ni sus botones de retorno a colegiosanpablo.php.
+
+El detalle público se abre en:
+
+evento_detalle.php?id_evento=X
+
+Desde evento_detalle.php los enlaces de volver deben regresar a:
+
+index_1.php#calendario-eventos-home
+
+La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.

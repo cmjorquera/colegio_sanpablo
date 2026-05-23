@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: colegiosanpablo.php');
+    header('Location: index_1.php');
     exit;
 }
 
@@ -18,7 +18,7 @@ $section = $idSeccion > 0 ? cms_get_section($db, $idSeccion) : null;
 
 if (!$section) {
     cms_set_flash('danger', 'El contenedor solicitado no existe.');
-    cms_redirect('admin.php?panel=contenedores');
+    cms_redirect('admin_1.php?panel=contenedores');
 }
 
 function topbar_get_config_value(array $configs, string $key, string $default = ''): string
@@ -214,6 +214,24 @@ try {
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
 
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'guardar_evento') {
+            cms_save_event($db, $_POST);
+            cms_set_flash('success', 'El evento fue guardado correctamente.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'toggle_evento') {
+            cms_toggle_event_visible($db, (int) ($_POST['id_evento'] ?? 0));
+            cms_set_flash('success', 'La visibilidad del evento fue actualizada.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'cancelar_evento') {
+            cms_cancel_event($db, (int) ($_POST['id_evento'] ?? 0));
+            cms_set_flash('success', 'El evento fue cancelado correctamente.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
         if ($action === 'guardar_seccion') {
             cms_save_section($db, $idSeccion, $_POST);
             cms_set_flash('success', 'El contenedor fue actualizado correctamente.');
@@ -246,6 +264,9 @@ $editingItem = isset($_GET['item']) ? cms_get_item($db, (int) $_GET['item']) : n
 $openModal = $_GET['modal'] ?? '';
 $tab = $_GET['tab'] ?? 'general';
 $isTopbar = ($section['nombre_interno'] ?? '') === 'topbar';
+$isEventsCalendar = ($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events';
+$eventosCalendario = $isEventsCalendar ? cms_list_events($db, 300) : [];
+$editingEvent = ($isEventsCalendar && isset($_GET['evento'])) ? cms_get_event($db, (int) $_GET['evento']) : null;
 $topbarConfigs = [
     'texto_boton_ingresar' => topbar_get_config_value($configs, 'texto_boton_ingresar', 'Ingresar'),
     'mostrar_direccion' => topbar_get_config_value($configs, 'mostrar_direccion', 'si'),
@@ -267,7 +288,7 @@ admin_render_layout_start([
     'institution_short_name' => $site['institution']['nombre_corto'] ?? ($site['institution']['nombre'] ?? 'Institución'),
     'institution_logo' => $site['institution']['logo_header'] ?? '',
     'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
-    'header_actions' => '<a href="admin.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver</a><a href="preview_contenedor.php?id=' . (int) $idSeccion . '" class="btn btn-premium"><i class="bi bi-eye me-2"></i>Visualizar</a>',
+    'header_actions' => '<a href="admin_1.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver</a><a href="preview_contenedor_1.php?id=' . (int) $idSeccion . '" class="btn btn-premium"><i class="bi bi-eye me-2"></i>Visualizar</a>',
     'extra_head' => <<<'HTML'
     <style>
         .hero-card { border: 1px solid #dbe4ef; border-radius: 22px; overflow: hidden; background: #fff; height: 100%; }
@@ -408,6 +429,28 @@ admin_render_layout_start([
         }
         .admin-modal .btn {
             min-height: 38px;
+        }
+        .admin-event-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 16px;
+            border: 1px solid #e4ebf5;
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 8px 18px rgba(18, 35, 68, 0.04);
+            margin-bottom: 18px;
+        }
+        .event-import-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .event-import-form .form-control {
+            max-width: 260px;
         }
         .admin-modal .row.g-3 {
             --bs-gutter-x: 0.9rem;
@@ -612,13 +655,82 @@ HTML,
     <div class="section-card">
         <div class="section-head">
             <div>
-                <h3>Items del contenedor</h3>
-                <p>Administración específica del bloque.</p>
+                <h3><?= $isEventsCalendar ? 'Eventos del calendario' : 'Items del contenedor' ?></h3>
+                <p><?= $isEventsCalendar ? 'Carga individual y masiva de eventos reales desde la tabla eventos.' : 'Administración específica del bloque.' ?></p>
             </div>
-            <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar item</a>
+            <?php if (!$isEventsCalendar): ?>
+                <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar item</a>
+            <?php endif; ?>
         </div>
 
-        <?php if ($isTopbar): ?>
+        <?php if ($isEventsCalendar): ?>
+            <div class="admin-event-toolbar">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar evento</a>
+                    <a href="admin_eventos_descargar_plantilla.php?id=<?= (int) $idSeccion ?>" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Descargar plantilla Excel</a>
+                    <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-outline-secondary"><i class="bi bi-layers me-1"></i>Agregar item legacy</a>
+                </div>
+                <form class="event-import-form" method="post" action="admin_eventos_importar_excel.php" enctype="multipart/form-data">
+                    <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                    <input class="form-control" type="file" name="archivo_excel" accept=".xlsx,.csv" required>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Subir eventos desde Excel</button>
+                </form>
+            </div>
+
+            <div class="table-responsive">
+                <table class="table table-modern align-middle" id="itemsTable">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Título</th>
+                            <th>Categoría</th>
+                            <th>Ubicación</th>
+                            <th>Estado</th>
+                            <th>Visible</th>
+                            <th>Destacado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($eventosCalendario as $evento): ?>
+                            <?php
+                            $eventId = (int) ($evento['id_evento'] ?? ($evento['id'] ?? 0));
+                            $eventTitle = $evento['titulo'] ?? '';
+                            ?>
+                            <tr>
+                                <td><?= cms_e($evento['fecha_inicio'] ?? '') ?></td>
+                                <td><?= cms_e($evento['hora_inicio'] ?? '') ?></td>
+                                <td><?= cms_e($eventTitle) ?></td>
+                                <td><?= cms_e($evento['categoria'] ?? '') ?></td>
+                                <td><?= cms_e($evento['ubicacion'] ?? '') ?></td>
+                                <td><span class="badge-soft <?= ($evento['estado'] ?? '') === 'publicado' ? 'success' : 'warning' ?>"><?= cms_e($evento['estado'] ?? '') ?></span></td>
+                                <td><span class="badge-soft <?= (int) ($evento['visible'] ?? 1) === 1 ? 'success' : 'warning' ?>"><?= (int) ($evento['visible'] ?? 1) === 1 ? 'Si' : 'No' ?></span></td>
+                                <td><?= !empty($evento['destacado']) ? 'Si' : 'No' ?></td>
+                                <td>
+                                    <div class="d-flex gap-2 flex-wrap">
+                                        <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento&evento=<?= $eventId ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                        <form method="post">
+                                            <input type="hidden" name="accion" value="toggle_evento">
+                                            <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                            <input type="hidden" name="id_evento" value="<?= $eventId ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-warning"><?= (int) ($evento['visible'] ?? 1) === 1 ? 'Ocultar' : 'Mostrar' ?></button>
+                                        </form>
+                                        <form method="post" onsubmit="return confirm('¿Cancelar este evento?');">
+                                            <input type="hidden" name="accion" value="cancelar_evento">
+                                            <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                            <input type="hidden" name="id_evento" value="<?= $eventId ?>">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger">Cancelar</button>
+                                        </form>
+                                        <a href="evento_detalle.php?id_evento=<?= $eventId ?>" target="_blank" class="btn btn-sm btn-outline-primary">Ver</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php elseif ($isTopbar): ?>
             <div class="alert alert-info border-0" style="background:#eef8ff; color:#234;">
                 Las redes sociales del topbar se guardan en <code>seccion_item</code> con <code>etiqueta = 'red_social'</code>. En el sitio solo se muestran las primeras 4 visibles según <code>orden</code>.
             </div>
@@ -683,9 +795,34 @@ HTML,
                     </div>
                 <?php endforeach; ?>
             </div>
+        <?php elseif ($section['tipo_seccion'] === 'events'): ?>
+            <div class="row g-4 mb-4">
+                <?php foreach ($items as $item): ?>
+                    <div class="col-md-6 col-xl-4">
+                        <div class="hero-card">
+                            <div class="hero-thumb" style="background-image:url('<?= cms_e($item['imagen'] ?: 'assets/images/frontis_01.jpg') ?>')"></div>
+                            <div class="p-3">
+                                <span class="badge-soft <?= ($item['visible'] ?? '') === 'si' ? 'success' : 'warning' ?>"><?= ($item['visible'] ?? '') === 'si' ? 'Activo' : 'Oculto' ?></span>
+                                <h5 class="mt-3 mb-1"><?= cms_e($item['titulo'] ?? '') ?></h5>
+                                <small class="text-muted"><?= cms_e($item['fecha_publicacion'] ?? '') ?> · <?= cms_e($item['subtitulo'] ?? '') ?></small>
+                                <p class="text-muted mt-2 mb-3"><?= cms_e($item['etiqueta'] ?? '') ?></p>
+                                <div class="d-flex gap-2">
+                                    <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
+                                    <form method="post" onsubmit="return confirm('¿Eliminar este evento?');">
+                                        <input type="hidden" name="accion" value="eliminar_item">
+                                        <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                        <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
         <?php endif; ?>
 
-        <?php if (!$isTopbar): ?>
+        <?php if (!$isTopbar && !$isEventsCalendar): ?>
             <div class="table-responsive">
                 <table class="table table-modern align-middle" id="itemsTable">
                     <thead>
@@ -722,6 +859,146 @@ HTML,
                 </table>
             </div>
         <?php endif; ?>
+    </div>
+<?php endif; ?>
+
+<?php if ($isEventsCalendar): ?>
+    <?php
+    $eventForm = $editingEvent ?: [];
+    $eventIdValue = (int) ($eventForm['id_evento'] ?? ($eventForm['id'] ?? 0));
+    ?>
+    <div class="modal fade admin-modal" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="accion" value="guardar_evento">
+                    <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                    <input type="hidden" name="id_evento" value="<?= $eventIdValue ?>">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><?= $eventIdValue > 0 ? 'Editar evento' : 'Agregar evento' ?></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Título del evento', 'evento_titulo', 'calendario_eventos_home', 'titulo'); ?>
+                                    <input class="form-control" id="evento_titulo" name="titulo" value="<?= cms_e($eventForm['titulo'] ?? '') ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Categoría', 'evento_categoria', 'calendario_eventos_home', 'categoria'); ?>
+                                    <select class="form-select" id="evento_categoria" name="categoria">
+                                        <?php foreach (['Pastoral', 'Académico', 'Deportivo', 'Institucional'] as $categoryOption): ?>
+                                            <option value="<?= cms_e($categoryOption) ?>" <?= (($eventForm['categoria'] ?? '') === $categoryOption) ? 'selected' : '' ?>><?= cms_e($categoryOption) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Descripción corta', 'evento_descripcion_corta', 'calendario_eventos_home', 'descripcion-corta'); ?>
+                                    <textarea class="form-control" id="evento_descripcion_corta" name="descripcion_corta"><?= cms_e($eventForm['descripcion_corta'] ?? '') ?></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Descripción completa', 'evento_descripcion', 'calendario_eventos_home', 'descripcion'); ?>
+                                    <textarea class="form-control" id="evento_descripcion" name="descripcion"><?= cms_e($eventForm['descripcion'] ?? '') ?></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Fecha inicio', 'evento_fecha_inicio', 'calendario_eventos_home', 'fecha-inicio'); ?>
+                                    <input class="form-control" id="evento_fecha_inicio" type="date" name="fecha_inicio" value="<?= cms_e($eventForm['fecha_inicio'] ?? '') ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Fecha término', 'evento_fecha_termino', 'calendario_eventos_home', 'fecha-termino'); ?>
+                                    <input class="form-control" id="evento_fecha_termino" type="date" name="fecha_termino" value="<?= cms_e($eventForm['fecha_termino'] ?? '') ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Hora inicio', 'evento_hora_inicio', 'calendario_eventos_home', 'hora-inicio'); ?>
+                                    <input class="form-control" id="evento_hora_inicio" type="time" name="hora_inicio" value="<?= cms_e(substr((string) ($eventForm['hora_inicio'] ?? ''), 0, 5)) ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Hora término', 'evento_hora_termino', 'calendario_eventos_home', 'hora-termino'); ?>
+                                    <input class="form-control" id="evento_hora_termino" type="time" name="hora_termino" value="<?= cms_e(substr((string) ($eventForm['hora_termino'] ?? ''), 0, 5)) ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Ubicación', 'evento_ubicacion', 'calendario_eventos_home', 'ubicacion'); ?>
+                                    <input class="form-control" id="evento_ubicacion" name="ubicacion" value="<?= cms_e($eventForm['ubicacion'] ?? '') ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Color', 'evento_color', 'calendario_eventos_home', 'color'); ?>
+                                    <input class="form-control" id="evento_color" type="color" name="color" value="<?= cms_e($eventForm['color'] ?? '#fd7e14') ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="field-card">
+                                    <?php admin_modal_field_head('Estado', 'evento_estado', 'calendario_eventos_home', 'estado', false); ?>
+                                    <select class="form-select" id="evento_estado" name="estado">
+                                        <?php foreach (['borrador', 'publicado', 'oculto', 'cancelado'] as $stateOption): ?>
+                                            <option value="<?= cms_e($stateOption) ?>" <?= (($eventForm['estado'] ?? 'publicado') === $stateOption) ? 'selected' : '' ?>><?= cms_e($stateOption) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="field-card">
+                                    <?php admin_modal_field_head('Orden', 'evento_orden', 'calendario_eventos_home', 'orden', false); ?>
+                                    <input class="form-control" id="evento_orden" type="number" name="orden" min="0" value="<?= (int) ($eventForm['orden'] ?? 0) ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Imagen principal', 'evento_imagen', 'calendario_eventos_home', 'imagen'); ?>
+                                    <input class="form-control" id="evento_imagen" type="file" name="imagen" accept="image/*">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Archivo adjunto', 'evento_archivo_adjunto', 'calendario_eventos_home', 'archivo-adjunto'); ?>
+                                    <input class="form-control" id="evento_archivo_adjunto" type="file" name="archivo_adjunto">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card">
+                                    <label class="form-label d-block">Destacado</label>
+                                    <select class="form-select" name="destacado">
+                                        <option value="0" <?= empty($eventForm['destacado']) ? 'selected' : '' ?>>No</option>
+                                        <option value="1" <?= !empty($eventForm['destacado']) ? 'selected' : '' ?>>Si</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card">
+                                    <label class="form-label d-block">Visible</label>
+                                    <select class="form-select" name="visible">
+                                        <option value="1" <?= (int) ($eventForm['visible'] ?? 1) === 1 ? 'selected' : '' ?>>Si</option>
+                                        <option value="0" <?= (int) ($eventForm['visible'] ?? 1) === 0 ? 'selected' : '' ?>>No</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-admin-action">Guardar evento</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 <?php endif; ?>
 
@@ -848,6 +1125,84 @@ HTML,
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 2 URL', 'item_boton_2_url', $section['nombre_interno'], 'boton-2-url'); ?>
                                         <input class="form-control" id="item_boton_2_url" name="boton_2_url" value="<?= cms_e($editingItem['boton_2_url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif ($section['tipo_seccion'] === 'events'): ?>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Categoría', 'item_etiqueta_event', $section['nombre_interno'], 'etiqueta'); ?>
+                                        <input class="form-control" id="item_etiqueta_event" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>" placeholder="Pastoral, Deportivo, Institucional...">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título', 'item_titulo_event', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_event" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Fecha del evento', 'item_fecha_event', $section['nombre_interno'], 'fecha-publicacion'); ?>
+                                        <input class="form-control" id="item_fecha_event" type="date" name="fecha_publicacion" value="<?= cms_e($editingItem['fecha_publicacion'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Hora', 'item_subtitulo_event', $section['nombre_interno'], 'subtitulo'); ?>
+                                        <input class="form-control" id="item_subtitulo_event" name="subtitulo" value="<?= cms_e($editingItem['subtitulo'] ?? '') ?>" placeholder="09:00 hrs.">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Ubicación', 'item_boton_2_texto_event', $section['nombre_interno'], 'boton-2-texto'); ?>
+                                        <input class="form-control" id="item_boton_2_texto_event" name="boton_2_texto" value="<?= cms_e($editingItem['boton_2_texto'] ?? '') ?>" placeholder="Capilla del Colegio">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Descripción', 'item_descripcion_event', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_event" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón texto', 'item_boton_1_texto_event', $section['nombre_interno'], 'boton-1-texto'); ?>
+                                        <input class="form-control" id="item_boton_1_texto_event" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Ver detalle') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón URL', 'item_boton_1_url_event', $section['nombre_interno'], 'boton-1-url'); ?>
+                                        <input class="form-control" id="item_boton_1_url_event" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL alternativa', 'item_url_event', $section['nombre_interno'], 'url'); ?>
+                                        <input class="form-control" id="item_url_event" name="url" value="<?= cms_e($editingItem['url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif ($section['tipo_seccion'] === 'gallery'): ?>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título / alt', 'item_titulo_gallery', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_gallery" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL', 'item_url_gallery', $section['nombre_interno'], 'url'); ?>
+                                        <input class="form-control" id="item_url_gallery" name="url" value="<?= cms_e($editingItem['url'] ?? '') ?>" placeholder="#0 o enlace de Instagram">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Descripción interna', 'item_descripcion_gallery', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_gallery" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -1038,6 +1393,13 @@ admin_render_layout_end([
             if (openModal === 'item') {
                 var modal = new bootstrap.Modal(document.getElementById('itemModal'));
                 modal.show();
+            }
+            if (openModal === 'evento') {
+                var eventModalEl = document.getElementById('eventModal');
+                if (eventModalEl) {
+                    var eventModal = new bootstrap.Modal(eventModalEl);
+                    eventModal.show();
+                }
             }
         });
     </script>

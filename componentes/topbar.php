@@ -91,8 +91,8 @@ if ($mostrarEmail && $email !== '') {
                     <p>Elige el área a la que deseas ingresar:</p>
                 </div>
 
-                <div class="sp-modal-areas">
-                    <a href="admin.php" class="sp-area-btn sp-area-admin">
+                <div class="sp-modal-areas" id="loginAreaSelector">
+                    <a href="#" class="sp-area-btn sp-area-admin" id="showAdminLogin">
                         <i class="fas fa-lock"></i>
                         <span>Administrador</span>
                         <i class="fas fa-chevron-right sp-area-arrow"></i>
@@ -122,7 +122,171 @@ if ($mostrarEmail && $email !== '') {
                         <i class="fas fa-chevron-right sp-area-arrow"></i>
                     </a>
                 </div>
+
+                <form class="sp-login-form" id="adminLoginForm" style="display:none">
+                    <a href="#" class="sp-volver-link" id="backToLoginAreas"><i class="fas fa-arrow-left me-1"></i>Volver</a>
+                    <div id="loginAlert" class="sp-login-alert" style="display:none"></div>
+
+                    <div class="sp-field">
+                        <label for="loginUsuario"><i class="fas fa-user"></i>Usuario o email</label>
+                        <input type="text" id="loginUsuario" name="usuario" placeholder="nombre@dominio.cl" autocomplete="username" required>
+                    </div>
+
+                    <div class="sp-field">
+                        <label for="loginClave"><i class="fas fa-key"></i>Clave</label>
+                        <div class="sp-pass-wrap">
+                            <input type="password" id="loginClave" name="clave" placeholder="********" autocomplete="current-password" required>
+                            <button type="button" class="sp-toggle-pass" id="toggleLoginPass" aria-label="Mostrar clave">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btnLogin" class="sp-btn-login">
+                        <i class="fas fa-sign-in-alt me-1"></i>Ingresar al administrador
+                    </button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+
+<script>
+    (function () {
+        var modal = document.getElementById('modalLogin');
+        var areaSelector = document.getElementById('loginAreaSelector');
+        var showAdminLogin = document.getElementById('showAdminLogin');
+        var adminForm = document.getElementById('adminLoginForm');
+        var backButton = document.getElementById('backToLoginAreas');
+        var alertBox = document.getElementById('loginAlert');
+        var usuarioInput = document.getElementById('loginUsuario');
+        var claveInput = document.getElementById('loginClave');
+        var togglePass = document.getElementById('toggleLoginPass');
+        var submitButton = document.getElementById('btnLogin');
+
+        if (!modal || !areaSelector || !showAdminLogin || !adminForm) {
+            return;
+        }
+
+        function showAlert(message, type) {
+            if (!alertBox) {
+                return;
+            }
+            alertBox.innerHTML = '<i class="fas ' + (type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i>' + message;
+            alertBox.className = 'sp-login-alert ' + (type === 'success' ? 'success' : 'error');
+            alertBox.style.display = 'flex';
+        }
+
+        function clearAlert() {
+            if (alertBox) {
+                alertBox.style.display = 'none';
+                alertBox.className = 'sp-login-alert';
+                alertBox.textContent = '';
+            }
+            if (usuarioInput) {
+                usuarioInput.classList.remove('is-invalid');
+            }
+            if (claveInput) {
+                claveInput.classList.remove('is-invalid');
+            }
+        }
+
+        showAdminLogin.addEventListener('click', function (event) {
+            event.preventDefault();
+            areaSelector.style.display = 'none';
+            adminForm.style.display = 'flex';
+            clearAlert();
+            setTimeout(function () {
+                if (usuarioInput) {
+                    usuarioInput.focus();
+                }
+            }, 80);
+        });
+
+        if (backButton) {
+            backButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                adminForm.style.display = 'none';
+                areaSelector.style.display = '';
+                clearAlert();
+            });
+        }
+
+        if (togglePass && claveInput) {
+            togglePass.addEventListener('click', function () {
+                var isPassword = claveInput.type === 'password';
+                claveInput.type = isPassword ? 'text' : 'password';
+                togglePass.innerHTML = '<i class="fas ' + (isPassword ? 'fa-eye-slash' : 'fa-eye') + '"></i>';
+            });
+        }
+
+        adminForm.addEventListener('submit', function (event) {
+            event.preventDefault();
+            clearAlert();
+
+            var usuario = usuarioInput ? usuarioInput.value.trim() : '';
+            var clave = claveInput ? claveInput.value.trim() : '';
+
+            if (!usuario || !clave) {
+                if (!usuario && usuarioInput) {
+                    usuarioInput.classList.add('is-invalid');
+                }
+                if (!clave && claveInput) {
+                    claveInput.classList.add('is-invalid');
+                }
+                showAlert('Completa usuario y clave', 'error');
+                return;
+            }
+
+            if (submitButton) {
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Validando...';
+            }
+
+            fetch('login_check.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: 'usuario=' + encodeURIComponent(usuario) + '&clave=' + encodeURIComponent(clave)
+            })
+                .then(function (response) { return response.json(); })
+                .then(function (data) {
+                    if (data.ok) {
+                        showAlert('Acceso correcto. Redirigiendo...', 'success');
+                        window.location.href = data.redirect || 'admin.php';
+                        return;
+                    }
+
+                    showAlert(data.msg || 'Usuario o clave incorrectos', 'error');
+                    if (claveInput) {
+                        claveInput.classList.add('is-invalid');
+                        claveInput.focus();
+                    }
+                })
+                .catch(function () {
+                    showAlert('No fue posible validar el acceso. Intenta nuevamente.', 'error');
+                })
+                .finally(function () {
+                    if (submitButton) {
+                        submitButton.disabled = false;
+                        submitButton.innerHTML = '<i class="fas fa-sign-in-alt me-1"></i>Ingresar al administrador';
+                    }
+                });
+        });
+
+        modal.addEventListener('hidden.bs.modal', function () {
+            adminForm.reset();
+            adminForm.style.display = 'none';
+            areaSelector.style.display = '';
+            clearAlert();
+            if (claveInput) {
+                claveInput.type = 'password';
+            }
+            if (togglePass) {
+                togglePass.innerHTML = '<i class="fas fa-eye"></i>';
+            }
+        });
+    })();
+</script>

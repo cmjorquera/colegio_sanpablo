@@ -17,7 +17,7 @@ $section = cms_find_section($site['sections'], $idSeccion);
 
 if (!$section) {
     cms_set_flash('danger', 'No se encontró el contenedor solicitado.');
-    cms_redirect('admin.php?panel=contenedores');
+    cms_redirect('admin_1.php?panel=contenedores');
 }
 
 $institution = $site['institution'];

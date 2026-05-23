@@ -35,37 +35,37 @@ try {
                 exit;
             }
             cms_set_flash('success', 'La visibilidad del contenedor fue actualizada.');
-            cms_redirect('admin.php?panel=contenedores');
+            cms_redirect('admin_1.php?panel=contenedores');
         }
 
         if ($action === 'guardar_menu') {
             cms_save_menu($db, $_POST);
             cms_set_flash('success', 'El menú fue guardado correctamente.');
-            cms_redirect('admin.php?panel=menus');
+            cms_redirect('admin_1.php?panel=menus');
         }
 
         if ($action === 'toggle_menu') {
             cms_toggle_menu($db, (int) ($_POST['id_menu'] ?? 0));
             cms_set_flash('success', 'El estado del menú fue actualizado.');
-            cms_redirect('admin.php?panel=menus');
+            cms_redirect('admin_1.php?panel=menus');
         }
 
         if ($action === 'guardar_submenu') {
             cms_save_submenu($db, $_POST);
             cms_set_flash('success', 'El submenú fue guardado correctamente.');
-            cms_redirect('admin.php?panel=submenus');
+            cms_redirect('admin_1.php?panel=submenus');
         }
 
         if ($action === 'toggle_submenu') {
             cms_toggle_submenu($db, (int) ($_POST['id_sub_menu'] ?? 0));
             cms_set_flash('success', 'El estado del submenú fue actualizado.');
-            cms_redirect('admin.php?panel=submenus');
+            cms_redirect('admin_1.php?panel=submenus');
         }
 
         if ($action === 'guardar_institucion') {
             cms_save_institution($db, $institutionId, $_POST);
             cms_set_flash('success', 'La configuración institucional fue actualizada.');
-            cms_redirect('admin.php?panel=configuracion');
+            cms_redirect('admin_1.php?panel=configuracion');
         }
     }
 } catch (Throwable $e) {
@@ -79,7 +79,7 @@ try {
         exit;
     }
     cms_set_flash('danger', $e->getMessage());
-    cms_redirect('admin.php?panel=' . urlencode($panel));
+    cms_redirect('admin_1.php?panel=' . urlencode($panel));
 }
 
 $flash = cms_get_flash();
@@ -168,7 +168,7 @@ admin_render_layout_start([
                             </td>
                             <td class="cell-actions">
                                 <div class="table-actions">
-                                    <button type="button" class="btn btn-soft js-preview-btn" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">
+                                    <button type="button" class="btn btn-soft js-preview-btn" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor_1.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">
                                         <i class="bi bi-eye"></i>
                                     </button>
                                     <a class="btn btn-admin-action" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&modo=editar">
@@ -221,7 +221,7 @@ admin_render_layout_start([
                                             </div>
                                         </form>
                                     </td>
-                                    <td><a class="btn btn-sm btn-outline-secondary" href="admin.php?panel=menus&menu=<?= (int) $menu['id_menu'] ?>">Editar</a></td>
+                                    <td><a class="btn btn-sm btn-outline-secondary" href="admin_1.php?panel=menus&menu=<?= (int) $menu['id_menu'] ?>">Editar</a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -244,7 +244,7 @@ admin_render_layout_start([
                         </div>
                         <div class="mt-4 d-flex gap-2">
                             <button class="btn btn-premium flex-fill" type="submit">Guardar</button>
-                            <?php if ($editingMenu): ?><a class="btn btn-soft" href="admin.php?panel=menus">Cancelar</a><?php endif; ?>
+                            <?php if ($editingMenu): ?><a class="btn btn-soft" href="admin_1.php?panel=menus">Cancelar</a><?php endif; ?>
                         </div>
                     </form>
                 </div>
@@ -290,7 +290,7 @@ admin_render_layout_start([
                                             </div>
                                         </form>
                                     </td>
-                                    <td><a class="btn btn-sm btn-outline-secondary" href="admin.php?panel=submenus&submenu=<?= (int) $submenu['id_sub_menu'] ?>">Editar</a></td>
+                                    <td><a class="btn btn-sm btn-outline-secondary" href="admin_1.php?panel=submenus&submenu=<?= (int) $submenu['id_sub_menu'] ?>">Editar</a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -322,7 +322,7 @@ admin_render_layout_start([
                         </div>
                         <div class="mt-4 d-flex gap-2">
                             <button class="btn btn-premium flex-fill" type="submit">Guardar</button>
-                            <?php if ($editingSubmenu): ?><a class="btn btn-soft" href="admin.php?panel=submenus">Cancelar</a><?php endif; ?>
+                            <?php if ($editingSubmenu): ?><a class="btn btn-soft" href="admin_1.php?panel=submenus">Cancelar</a><?php endif; ?>
                         </div>
                     </form>
                 </div>
@@ -415,7 +415,7 @@ admin_render_layout_end([
 
                 checkbox.disabled = true;
 
-                fetch('admin.php?panel=contenedores', {
+                fetch('admin_1.php?panel=contenedores', {
                     method: 'POST',
                     body: formData,
                     headers: {

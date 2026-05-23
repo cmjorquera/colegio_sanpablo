@@ -3,6 +3,7 @@
  * Colegio San Pablo â€” PÃ¡gina principal con menÃº dinÃ¡mico desde BD
  */
 require_once __DIR__ . '/class/conexion.php';
+require_once __DIR__ . '/includes/cms_helpers.php';
 
 if (!function_exists('sp_normalizar_salida')) {
     function sp_normalizar_salida($html)
@@ -107,39 +108,38 @@ ob_start('sp_normalizar_salida');
 
 $arrMenus = [];
 $arrSubs  = [];
+$institution = null;
+$sectionConfigsMap = [];
+$sectionItemsMap = [];
+$categoriesById = [];
 
 try {
-    $db = (new Conexion())->getConexion();
-
-    // â”€â”€ MenÃºs principales activos ordenados por campo "orden" â”€â”€
-    $resMenus = $db->query(
-        "SELECT id_menu, nombre, url, icono, orden
-           FROM menus
-          WHERE estado = 1
-          ORDER BY orden ASC"
-    );
-    if ($resMenus) {
-        $arrMenus = $resMenus->fetch_all(MYSQLI_ASSOC);
-        $resMenus->free();
-    }
-
-    // â”€â”€ Sub-menÃºs activos agrupados por id_menu â”€â”€
-    $resSubs = $db->query(
-        "SELECT id_sub_menu, id_menu, nombre, url, icono, orden
-           FROM sub_menus
-          WHERE estado = 1
-          ORDER BY id_menu ASC, orden ASC"
-    );
-    if ($resSubs) {
-        while ($row = $resSubs->fetch_assoc()) {
-            $arrSubs[(int)$row['id_menu']][] = $row;
-        }
-        $resSubs->free();
-    }
+    $db = cms_get_connection();
+    $siteData = cms_get_site_data($db);
+    $institution = $siteData['institution'];
+    $sectionConfigsMap = $siteData['configs'];
+    $sectionItemsMap = $siteData['items'];
+    $categoriesById = $siteData['categories'];
+    $arrMenus = $siteData['menus'];
+    $arrSubs = $siteData['subs'];
 
 } catch (RuntimeException $e) {
     // Si falla la BD se muestra la pÃ¡gina sin menÃº dinÃ¡mico
     error_log('MenÃº dinÃ¡mico: ' . $e->getMessage());
+}
+
+if (!function_exists('e')) {
+    function e(?string $value): string
+    {
+        return cms_e($value);
+    }
+}
+
+if (!function_exists('cfg')) {
+    function cfg(array $map, string $sectionName, string $key, string $default = ''): string
+    {
+        return cms_cfg($map, $sectionName, $key, $default);
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -527,6 +527,13 @@ try {
         </div>
     </section>
 
+    <?php
+    $component = __DIR__ . '/componentes/calendario_eventos_home.php';
+    if (is_file($component)) {
+        include $component;
+    }
+    ?>
+
     <!-- ===================== COMUNICADOS ===================== -->
     <section class="sp-comunicados" id="comunicados">
         <div class="container">
@@ -589,65 +596,17 @@ try {
         </div>
     </section>
 
-    <!-- ===================== VIDEO INSTITUCIONAL ===================== -->
-    <section class="sp-video">
-        <div class="container">
-            <div class="text-center mb-5">
-                <span class="section-label">ConÃ³cenos</span>
-                <h2 class="section-title">Video <span>Institucional</span></h2>
-                <div class="divider-line mx-auto"></div>
-            </div>
-            <div class="row justify-content-center">
-                <div class="col-lg-10">
-                    <div class="video-wrapper">
-                        <iframe src="https://www.youtube.com/embed/df-gbYjvElg"
-                            title="Colegio San Pablo - Video Institucional"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowfullscreen>
-                        </iframe>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+    <?php
+    $component = __DIR__ . '/componentes/video_destacado_home.php';
+    if (is_file($component)) {
+        include $component;
+    }
 
-    <!-- ===================== GALERÃA ===================== -->
-    <section class="sp-galeria" id="galeria">
-        <div class="container">
-            <div class="text-center mb-5">
-                <span class="section-label">Vida Escolar</span>
-                <h2 class="section-title">Galeria <span>Fotografica</span></h2>
-                <div class="divider-line mx-auto"></div>
-                <p class="section-desc mx-auto">Momentos icos de nuestra comunidad educativa a lo largo del año.</p>
-            </div>
-            <div class="gallery-grid">
-                <div class="g-item large">
-                    <img src="assets/images/20251107131854222.png" alt="Actividad escolar">
-                    <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                </div>
-                <div class="g-item">
-                    <img src="assets/images/IMG_6827.jpg" alt="Actividad escolar">
-                    <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                </div>
-                <div class="g-item">
-                    <img src="assets/images/20251107131854.png" alt="Actividad escolar">
-                    <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                </div>
-                <div class="g-item">
-                    <img src="assets/images/20251107131913.png" alt="Actividad escolar">
-                    <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                </div>
-                <div class="g-item">
-                    <img src="assets/images/20251107131958.png" alt="Actividad escolar">
-                    <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                </div>
-                <div class="g-item">
-                    <img src="assets/images/IMG_6831.jpg" alt="Actividad escolar">
-                    <div class="overlay"><i class="fas fa-search-plus"></i></div>
-                </div>
-            </div>
-        </div>
-    </section>
+    $component = __DIR__ . '/componentes/galeria_home.php';
+    if (is_file($component)) {
+        include $component;
+    }
+    ?>
 
 
     <!-- ===================== SECCIONES IMPORTADAS DESDE .HTML ===================== -->
@@ -19899,4 +19858,3 @@ try {
 </body>
 
 </html>
-

@@ -34,20 +34,37 @@ function cms_get_flash(): ?array
 
 function cms_table_exists(mysqli $db, string $table): bool
 {
-    $stmt = $db->prepare('SHOW TABLES LIKE ?');
-    if (!$stmt) {
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) {
         return false;
     }
-    $stmt->bind_param('s', $table);
-    $stmt->execute();
-    $stmt->store_result();
-    $exists = $stmt->num_rows > 0;
-    $stmt->close();
-    return $exists;
+
+    $stmt = $db->prepare('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?');
+    if ($stmt) {
+        $stmt->bind_param('s', $table);
+        $stmt->execute();
+        $stmt->bind_result($count);
+        $stmt->fetch();
+        $stmt->close();
+        if ((int) $count > 0) {
+            return true;
+        }
+    }
+
+    $result = $db->query('SELECT 1 FROM `' . $table . '` LIMIT 0');
+    if ($result) {
+        $result->free();
+        return true;
+    }
+
+    return false;
 }
 
 function cms_column_exists(mysqli $db, string $table, string $column): bool
 {
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) {
+        return false;
+    }
+
     $stmt = $db->prepare('SHOW COLUMNS FROM `' . $table . '` LIKE ?');
     if (!$stmt) {
         return false;
@@ -120,11 +137,35 @@ function cms_default_sections(): array
             'observacion' => 'Bloque de noticias destacadas del home con categoria, imagen y fecha.',
         ],
         [
+            'nombre_interno' => 'calendario_eventos_home',
+            'titulo_admin' => 'Calendario de eventos',
+            'tipo_seccion' => 'events',
+            'variante' => 'calendario_lista',
+            'orden' => 5,
+            'observacion' => 'Contenedor del home que muestra calendario institucional y próximos eventos.',
+        ],
+        [
+            'nombre_interno' => 'video_destacado_home',
+            'titulo_admin' => 'Video destacado',
+            'tipo_seccion' => 'video',
+            'variante' => 'banner_video',
+            'orden' => 6,
+            'observacion' => 'Contenedor del home con banner de video destacado basado en template_07.',
+        ],
+        [
+            'nombre_interno' => 'galeria_home',
+            'titulo_admin' => 'Galería home',
+            'tipo_seccion' => 'gallery',
+            'variante' => 'slider_seven',
+            'orden' => 7,
+            'observacion' => 'Contenedor del home con galería visual tipo carrusel basado en template_07.',
+        ],
+        [
             'nombre_interno' => 'faq_home',
             'titulo_admin' => 'Preguntas frecuentes',
             'tipo_seccion' => 'faq',
             'variante' => 'imagen_lateral',
-            'orden' => 5,
+            'orden' => 8,
             'observacion' => 'Contenedor de preguntas frecuentes con acordeon e imagen lateral.',
         ],
         [
@@ -132,7 +173,7 @@ function cms_default_sections(): array
             'titulo_admin' => 'Sobre nosotros',
             'tipo_seccion' => 'content',
             'variante' => 'imagen_texto',
-            'orden' => 6,
+            'orden' => 9,
             'observacion' => 'Bloque institucional de presentacion con imagen principal, video y descripcion.',
         ],
         [
@@ -140,7 +181,7 @@ function cms_default_sections(): array
             'titulo_admin' => 'Footer principal',
             'tipo_seccion' => 'footer',
             'variante' => 'institucional',
-            'orden' => 7,
+            'orden' => 10,
             'observacion' => 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.',
         ],
     ];
@@ -204,12 +245,15 @@ function cms_get_preview_target(string $name): string
         'menu_principal' => '#header-principal',
         'hero_principal' => '#hero-principal',
         'noticias_home' => '#noticias',
+        'calendario_eventos_home' => '#calendario-eventos-home',
+        'video_destacado_home' => '#video-destacado-home',
+        'galeria_home' => '#galeria-home',
         'faq_home' => '#faq',
         'about_home' => '#about',
         'footer_principal' => '#footer-principal',
     ];
 
-    return 'index.php' . ($anchors[$name] ?? '');
+    return 'index_1.php' . ($anchors[$name] ?? '');
 }
 
 function cms_get_component_path(string $name): ?string
@@ -463,6 +507,411 @@ function cms_upload_image(string $fieldName, string $folder, ?string $current = 
     return $relativePath;
 }
 
+function cms_upload_file(string $fieldName, string $folder, array $allowedExtensions, ?string $current = null): ?string
+{
+    if (empty($_FILES[$fieldName]) || !isset($_FILES[$fieldName]['error'])) {
+        return $current;
+    }
+
+    if ((int) $_FILES[$fieldName]['error'] === UPLOAD_ERR_NO_FILE) {
+        return $current;
+    }
+
+    if ((int) $_FILES[$fieldName]['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('No fue posible subir el archivo del campo ' . $fieldName . '.');
+    }
+
+    $ext = strtolower(pathinfo((string) $_FILES[$fieldName]['name'], PATHINFO_EXTENSION));
+    if (!in_array($ext, $allowedExtensions, true)) {
+        throw new RuntimeException('Tipo de archivo no permitido en ' . $fieldName . '.');
+    }
+
+    $relativeDir = 'uploads/' . trim($folder, '/');
+    $absoluteDir = dirname(__DIR__) . '/' . $relativeDir;
+    if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0777, true) && !is_dir($absoluteDir)) {
+        throw new RuntimeException('No fue posible crear la carpeta de subida.');
+    }
+
+    $filename = cms_normalize_filename((string) $_FILES[$fieldName]['name']);
+    $absolutePath = $absoluteDir . '/' . $filename;
+    $relativePath = $relativeDir . '/' . $filename;
+
+    if (!move_uploaded_file($_FILES[$fieldName]['tmp_name'], $absolutePath)) {
+        throw new RuntimeException('No fue posible mover el archivo subido.');
+    }
+
+    return $relativePath;
+}
+
+function cms_get_table_columns(mysqli $db, string $table): array
+{
+    if (!preg_match('/^[A-Za-z0-9_]+$/', $table)) {
+        return [];
+    }
+
+    $columns = [];
+    $result = $db->query('SHOW COLUMNS FROM `' . $table . '`');
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $columns[$row['Field']] = $row;
+        }
+        $result->free();
+    }
+
+    return $columns;
+}
+
+function cms_bind_params(mysqli_stmt $stmt, string $types, array &$values): void
+{
+    $refs = [];
+    foreach ($values as $key => $value) {
+        $refs[$key] = &$values[$key];
+    }
+    $stmt->bind_param($types, ...$refs);
+}
+
+function cms_event_id_column(array $columns): string
+{
+    if (isset($columns['id_evento'])) {
+        return 'id_evento';
+    }
+
+    return isset($columns['id']) ? 'id' : 'id_evento';
+}
+
+function cms_event_category_color(string $category): string
+{
+    $key = strtolower(strtr(trim($category), ['Á' => 'á', 'É' => 'é', 'Í' => 'í', 'Ó' => 'ó', 'Ú' => 'ú', 'Ñ' => 'ñ']));
+    $colors = [
+        'pastoral' => '#8e44ad',
+        'academico' => '#0d6efd',
+        'académico' => '#0d6efd',
+        'deportivo' => '#198754',
+        'institucional' => '#fd7e14',
+    ];
+
+    return $colors[$key] ?? '#fd7e14';
+}
+
+function cms_normalize_event_payload(array $post): array
+{
+    $title = trim((string) ($post['titulo'] ?? ''));
+    $startDate = trim((string) ($post['fecha_inicio'] ?? ''));
+    if ($title === '' || $startDate === '') {
+        throw new RuntimeException('El título y la fecha de inicio son obligatorios.');
+    }
+
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $startDate)) {
+        throw new RuntimeException('La fecha de inicio debe tener formato yyyy-mm-dd.');
+    }
+
+    $endDate = trim((string) ($post['fecha_termino'] ?? ''));
+    if ($endDate === '') {
+        $endDate = $startDate;
+    }
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $endDate)) {
+        throw new RuntimeException('La fecha de término debe tener formato yyyy-mm-dd.');
+    }
+
+    $startTime = trim((string) ($post['hora_inicio'] ?? ''));
+    $endTime = trim((string) ($post['hora_termino'] ?? ''));
+    foreach (['hora_inicio' => $startTime, 'hora_termino' => $endTime] as $field => $time) {
+        if ($time !== '' && !preg_match('/^\d{2}:\d{2}(:\d{2})?$/', $time)) {
+            throw new RuntimeException('El campo ' . $field . ' debe tener formato HH:mm.');
+        }
+    }
+
+    $state = trim((string) ($post['estado'] ?? ''));
+    $state = $state !== '' ? $state : 'publicado';
+    $allowedStates = ['borrador', 'publicado', 'oculto', 'cancelado'];
+    if (!in_array($state, $allowedStates, true)) {
+        throw new RuntimeException('Estado no permitido para el evento.');
+    }
+
+    $category = trim((string) ($post['categoria'] ?? ''));
+    $color = trim((string) ($post['color'] ?? ''));
+    if ($color === '') {
+        $color = cms_event_category_color($category);
+    }
+
+    return [
+        'titulo' => $title,
+        'descripcion_corta' => trim((string) ($post['descripcion_corta'] ?? '')),
+        'descripcion' => trim((string) ($post['descripcion'] ?? '')),
+        'fecha_inicio' => $startDate,
+        'fecha_termino' => $endDate,
+        'hora_inicio' => $startTime !== '' ? $startTime : null,
+        'hora_termino' => $endTime !== '' ? $endTime : null,
+        'categoria' => $category,
+        'ubicacion' => trim((string) ($post['ubicacion'] ?? '')),
+        'color' => $color,
+        'destacado' => !empty($post['destacado']) ? 1 : 0,
+        'visible' => isset($post['visible']) ? (int) (bool) $post['visible'] : 1,
+        'estado' => $state,
+        'orden' => max(0, (int) ($post['orden'] ?? 0)),
+    ];
+}
+
+function cms_event_duplicate_exists(mysqli $db, array $payload, int $excludeId = 0): bool
+{
+    $columns = cms_get_table_columns($db, 'eventos');
+    if (!$columns || !isset($columns['titulo'], $columns['fecha_inicio'])) {
+        return false;
+    }
+
+    $idColumn = cms_event_id_column($columns);
+    $sql = "SELECT `$idColumn` FROM eventos WHERE titulo = ? AND fecha_inicio = ?";
+    $types = 'ss';
+    $values = [$payload['titulo'], $payload['fecha_inicio']];
+
+    if (isset($columns['hora_inicio'])) {
+        if ($payload['hora_inicio'] === null || $payload['hora_inicio'] === '') {
+            $sql .= ' AND (hora_inicio IS NULL OR hora_inicio = \'\')';
+        } else {
+            $sql .= ' AND hora_inicio = ?';
+            $types .= 's';
+            $values[] = $payload['hora_inicio'];
+        }
+    }
+
+    if ($excludeId > 0 && isset($columns[$idColumn])) {
+        $sql .= " AND `$idColumn` <> ?";
+        $types .= 'i';
+        $values[] = $excludeId;
+    }
+
+    $sql .= ' LIMIT 1';
+    $stmt = $db->prepare($sql);
+    if (!$stmt) {
+        return false;
+    }
+    cms_bind_params($stmt, $types, $values);
+    $stmt->execute();
+    $stmt->store_result();
+    $exists = $stmt->num_rows > 0;
+    $stmt->close();
+
+    return $exists;
+}
+
+function cms_save_event(mysqli $db, array $post): int
+{
+    $columns = cms_get_table_columns($db, 'eventos');
+    if (!$columns) {
+        throw new RuntimeException('No se pudieron leer las columnas de la tabla eventos en la base de datos activa.');
+    }
+
+    $idColumn = cms_event_id_column($columns);
+    $idEvento = (int) ($post['id_evento'] ?? 0);
+    $payload = cms_normalize_event_payload($post);
+
+    if (cms_event_duplicate_exists($db, $payload, $idEvento)) {
+        throw new RuntimeException('Ya existe un evento con el mismo título, fecha y hora.');
+    }
+
+    $current = $idEvento > 0 ? cms_get_event($db, $idEvento) : null;
+    if (isset($columns['imagen'])) {
+        $payload['imagen'] = cms_upload_image('imagen', 'eventos', $current['imagen'] ?? null);
+    } elseif (isset($columns['imagen_principal'])) {
+        $payload['imagen_principal'] = cms_upload_image('imagen', 'eventos', $current['imagen_principal'] ?? null);
+    }
+
+    if (isset($columns['archivo_adjunto'])) {
+        $payload['archivo_adjunto'] = cms_upload_file('archivo_adjunto', 'eventos/adjuntos', ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'jpg', 'jpeg', 'png', 'webp'], $current['archivo_adjunto'] ?? null);
+    }
+
+    if (isset($columns['id_institucion']) && !isset($payload['id_institucion'])) {
+        $payload['id_institucion'] = cms_get_institution_id($db);
+    }
+
+    $data = [];
+    foreach ($payload as $key => $value) {
+        if (isset($columns[$key]) && $key !== $idColumn) {
+            $data[$key] = $value;
+        }
+    }
+
+    if (!$data) {
+        throw new RuntimeException('La tabla eventos no tiene columnas compatibles para guardar.');
+    }
+
+    if ($idEvento > 0) {
+        $sets = [];
+        foreach (array_keys($data) as $column) {
+            $sets[] = "`$column` = ?";
+        }
+        $sql = 'UPDATE eventos SET ' . implode(', ', $sets) . " WHERE `$idColumn` = ?";
+        $stmt = $db->prepare($sql);
+        $types = str_repeat('s', count($data)) . 'i';
+        $values = array_values($data);
+        $values[] = $idEvento;
+        cms_bind_params($stmt, $types, $values);
+        $stmt->execute();
+        $stmt->close();
+        return $idEvento;
+    }
+
+    $columnsSql = '`' . implode('`, `', array_keys($data)) . '`';
+    $placeholders = implode(', ', array_fill(0, count($data), '?'));
+    $stmt = $db->prepare("INSERT INTO eventos ($columnsSql) VALUES ($placeholders)");
+    $types = str_repeat('s', count($data));
+    $values = array_values($data);
+    cms_bind_params($stmt, $types, $values);
+    $stmt->execute();
+    $newId = (int) $db->insert_id;
+    $stmt->close();
+
+    return $newId;
+}
+
+function cms_get_event(mysqli $db, int $idEvento): ?array
+{
+    $columns = cms_get_table_columns($db, 'eventos');
+    if (!$columns) {
+        return null;
+    }
+
+    $idColumn = cms_event_id_column($columns);
+    $stmt = $db->prepare("SELECT * FROM eventos WHERE `$idColumn` = ? LIMIT 1");
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('i', $idEvento);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+    return $row ?: null;
+}
+
+function cms_list_events(mysqli $db, int $limit = 200): array
+{
+    $columns = cms_get_table_columns($db, 'eventos');
+    if (!$columns) {
+        return [];
+    }
+
+    $order = [];
+    if (isset($columns['fecha_inicio'])) {
+        $order[] = 'fecha_inicio DESC';
+    }
+    if (isset($columns['hora_inicio'])) {
+        $order[] = 'hora_inicio ASC';
+    }
+    if (isset($columns['orden'])) {
+        $order[] = 'orden ASC';
+    }
+    $orderSql = $order ? implode(', ', $order) : cms_event_id_column($columns) . ' DESC';
+
+    $limit = max(1, $limit);
+    $result = $db->query('SELECT * FROM eventos ORDER BY ' . $orderSql . ' LIMIT ' . $limit);
+    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+}
+
+function cms_list_public_events(mysqli $db, string $dateFrom, string $dateTo, int $limit = 40): array
+{
+    $columns = cms_get_table_columns($db, 'eventos');
+    if (!$columns || !isset($columns['fecha_inicio'])) {
+        return [];
+    }
+
+    $where = ['fecha_inicio BETWEEN ? AND ?'];
+    $types = 'ss';
+    $values = [$dateFrom, $dateTo];
+
+    if (isset($columns['visible'])) {
+        $where[] = 'visible = 1';
+    }
+    if (isset($columns['estado'])) {
+        $where[] = "estado = 'publicado'";
+    }
+
+    $order = ['fecha_inicio ASC'];
+    if (isset($columns['hora_inicio'])) {
+        $order[] = 'hora_inicio ASC';
+    }
+    if (isset($columns['orden'])) {
+        $order[] = 'orden ASC';
+    }
+
+    $sql = 'SELECT * FROM eventos WHERE ' . implode(' AND ', $where) . ' ORDER BY ' . implode(', ', $order) . ' LIMIT ' . max(1, $limit);
+    $stmt = $db->prepare($sql);
+    if (!$stmt) {
+        return [];
+    }
+    cms_bind_params($stmt, $types, $values);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $stmt->close();
+    return $rows;
+}
+
+function cms_toggle_event_visible(mysqli $db, int $idEvento): void
+{
+    $columns = cms_get_table_columns($db, 'eventos');
+    if (!$columns || !isset($columns['visible'])) {
+        throw new RuntimeException('La tabla eventos no tiene columna visible.');
+    }
+    $idColumn = cms_event_id_column($columns);
+    $stmt = $db->prepare("UPDATE eventos SET visible = IF(visible = 1, 0, 1) WHERE `$idColumn` = ?");
+    $stmt->bind_param('i', $idEvento);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function cms_cancel_event(mysqli $db, int $idEvento): void
+{
+    $columns = cms_get_table_columns($db, 'eventos');
+    if (!$columns) {
+        throw new RuntimeException('La tabla eventos no existe.');
+    }
+    $idColumn = cms_event_id_column($columns);
+    if (isset($columns['estado'])) {
+        $stmt = $db->prepare("UPDATE eventos SET estado = 'cancelado' WHERE `$idColumn` = ?");
+    } else {
+        $stmt = $db->prepare("DELETE FROM eventos WHERE `$idColumn` = ?");
+    }
+    $stmt->bind_param('i', $idEvento);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function cms_list_calendar_days(mysqli $db, string $dateFrom, string $dateTo): array
+{
+    $columns = cms_get_table_columns($db, 'calendario');
+    if (!$columns) {
+        return [];
+    }
+
+    $dateColumn = '';
+    foreach (['fecha', 'fecha_calendario', 'fecha_dia', 'dia'] as $candidate) {
+        if (isset($columns[$candidate])) {
+            $dateColumn = $candidate;
+            break;
+        }
+    }
+    if ($dateColumn === '') {
+        return [];
+    }
+
+    $stmt = $db->prepare("SELECT * FROM calendario WHERE `$dateColumn` BETWEEN ? AND ?");
+    if (!$stmt) {
+        return [];
+    }
+    $stmt->bind_param('ss', $dateFrom, $dateTo);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $rows[(string) $row[$dateColumn]] = $row;
+        }
+    }
+    $stmt->close();
+    return $rows;
+}
+
 function cms_toggle_section_visibility(mysqli $db, int $idSeccion): void
 {
     $stmt = $db->prepare("UPDATE seccion SET visible = IF(visible = 'si', 'no', 'si') WHERE id_seccion = ?");
@@ -522,6 +971,7 @@ function cms_save_item(mysqli $db, array $section, array $post): int
     $boton1Url = trim((string) ($post['boton_1_url'] ?? ''));
     $boton2Texto = trim((string) ($post['boton_2_texto'] ?? ''));
     $boton2Url = trim((string) ($post['boton_2_url'] ?? ''));
+    $url = trim((string) ($post['url'] ?? ''));
     $fechaPublicacion = trim((string) ($post['fecha_publicacion'] ?? ''));
     $visible = (($post['visible'] ?? 'no') === 'si') ? 'si' : 'no';
     $orden = max(1, (int) ($post['orden'] ?? 1));
@@ -546,11 +996,11 @@ function cms_save_item(mysqli $db, array $section, array $post): int
         $sql = 'UPDATE seccion_item
                 SET id_categoria = ?, etiqueta = ?, titulo = ?, titulo_linea_1 = ?, titulo_linea_2 = ?, titulo_linea_3 = ?,
                     subtitulo = ?, descripcion = ?, imagen = ?, imagen_mobile = ?, boton_1_texto = ?, boton_1_url = ?,
-                    boton_2_texto = ?, boton_2_url = ?, fecha_publicacion = ?, visible = ?, orden = ?
+                    boton_2_texto = ?, boton_2_url = ?, url = ?, fecha_publicacion = ?, visible = ?, orden = ?
                 WHERE id_item = ? AND id_seccion = ?';
         $stmt = $db->prepare($sql);
         $stmt->bind_param(
-            'isssssssssssssssiii',
+            'issssssssssssssssiii',
             $idCategoria,
             $etiqueta,
             $titulo,
@@ -565,6 +1015,7 @@ function cms_save_item(mysqli $db, array $section, array $post): int
             $boton1Url,
             $boton2Texto,
             $boton2Url,
+            $url,
             $fechaPublicacion,
             $visible,
             $orden,
@@ -573,11 +1024,11 @@ function cms_save_item(mysqli $db, array $section, array $post): int
         );
     } else {
         $sql = 'INSERT INTO seccion_item
-                (id_seccion, id_categoria, etiqueta, titulo, titulo_linea_1, titulo_linea_2, titulo_linea_3, subtitulo, descripcion, imagen, imagen_mobile, boton_1_texto, boton_1_url, boton_2_texto, boton_2_url, fecha_publicacion, visible, orden)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
+                (id_seccion, id_categoria, etiqueta, titulo, titulo_linea_1, titulo_linea_2, titulo_linea_3, subtitulo, descripcion, imagen, imagen_mobile, boton_1_texto, boton_1_url, boton_2_texto, boton_2_url, url, fecha_publicacion, visible, orden)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
         $stmt = $db->prepare($sql);
         $stmt->bind_param(
-            'iisssssssssssssssi',
+            'iissssssssssssssssi',
             $idSeccion,
             $idCategoria,
             $etiqueta,
@@ -593,6 +1044,7 @@ function cms_save_item(mysqli $db, array $section, array $post): int
             $boton1Url,
             $boton2Texto,
             $boton2Url,
+            $url,
             $fechaPublicacion,
             $visible,
             $orden

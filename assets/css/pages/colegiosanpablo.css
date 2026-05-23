@@ -386,6 +386,208 @@ body {
 .comunicado-item .info p { font-size: 13px; color: var(--sp-gris-texto); margin: 0; }
 .comunicado-item .arrow { margin-left: auto; color: var(--sp-azul); font-size: 18px; }
 
+/* ---- CALENDARIO DE EVENTOS ---- */
+.sp-calendario-eventos {
+    overflow: hidden;
+    position: relative;
+    z-index: 1;
+    padding: 80px 0;
+    background: #fff;
+}
+.sp-calendario-eventos::after {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 40%;
+    background-color: #ecf1f2;
+    content: "";
+    z-index: -1;
+}
+.sp-calendario-eventos .section-header-four h5 {
+    color: var(--sp-rojo);
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+.sp-calendario-eventos .section-header-four h2 {
+    color: #0f1720;
+    font-size: 32px;
+    font-weight: 800;
+}
+.sp-calendario-eventos .section-header-four h2 span {
+    color: inherit;
+    display: inline-block;
+    position: relative;
+}
+.sp-calendario-eventos .section-header-four h2 span img {
+    position: absolute;
+    left: 50%;
+    bottom: -11px;
+    width: 112px;
+    transform: translateX(-50%);
+}
+.sp-calendario-eventos .class-time__table {
+    min-width: 0;
+}
+.sp-calendario-eventos .calendario-eventos-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    gap: 18px;
+    align-items: start;
+}
+.sp-calendario-eventos .calendario-eventos-table {
+    background: #fff;
+    text-align: center;
+}
+.sp-calendario-eventos .calendario-eventos-table tr th {
+    background-color: #31bb82;
+    color: #fff;
+    font-weight: 700;
+    min-width: 104px;
+    padding: 15px 8px;
+}
+.sp-calendario-eventos .calendario-eventos-table tr td {
+    min-width: 104px;
+    height: 96px;
+    padding: 10px 8px;
+    vertical-align: top;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f1720;
+}
+.sp-calendario-eventos .calendario-eventos-table tr td:first-child {
+    height: auto;
+    vertical-align: middle;
+    font-weight: 700;
+}
+.sp-calendario-eventos .calendario-eventos-table tr td.calendar-empty {
+    background: #fbfbfb;
+}
+.sp-calendario-eventos .calendario-eventos-table tr td.is-weekend:not(.event-day) {
+    background: #f6f8fb;
+}
+.sp-calendario-eventos .calendario-eventos-table tr td.is-holiday:not(.event-day) {
+    background: color-mix(in srgb, var(--holiday-color, var(--sp-rojo)) 12%, #fff);
+    border-top: 3px solid var(--holiday-color, var(--sp-rojo));
+}
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day {
+    background-color: #31bb82;
+    color: #fff;
+    cursor: pointer;
+    transition: transform .2s, box-shadow .2s, background .2s;
+}
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day:hover,
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.is-selected {
+    box-shadow: inset 0 0 0 3px rgba(255,255,255,.38);
+    transform: translateY(-1px);
+}
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.pastoral { background-color: var(--sp-rojo); }
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.academico { background-color: var(--sp-azul); }
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.deportivo { background-color: #31bb82; }
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.institucional { background-color: var(--sp-naranja); }
+.sp-calendario-eventos .calendar-day-number {
+    display: block;
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 8px;
+}
+.sp-calendario-eventos .calendar-event-title {
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.25;
+}
+.sp-calendario-eventos .calendar-event-meta,
+.sp-calendario-eventos .calendar-event-more {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    margin-top: 5px;
+    opacity: .88;
+}
+.sp-calendario-eventos .calendar-day:not(.event-day) .calendar-day-number {
+    color: #8b98a5;
+    margin-top: 24px;
+}
+.sp-calendario-eventos .calendario-eventos-next {
+    background: #fff;
+    border: 1px solid #dbe1e8;
+    padding: 20px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.06);
+}
+.sp-calendario-eventos .calendario-eventos-next h3 {
+    color: #0f1720;
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 18px;
+}
+.sp-calendario-eventos .calendario-event-card {
+    display: grid;
+    grid-template-columns: 54px minmax(0, 1fr) 18px;
+    gap: 12px;
+    align-items: center;
+    color: inherit;
+    text-decoration: none;
+    padding: 12px 0;
+    border-bottom: 1px solid #e8edf2;
+}
+.sp-calendario-eventos .calendario-event-card:last-child {
+    border-bottom: 0;
+}
+.sp-calendario-eventos .calendario-event-card .event-date-box {
+    background: #31bb82;
+    color: #fff;
+    text-align: center;
+    padding: 8px 4px;
+    font-weight: 800;
+    line-height: 1;
+}
+.sp-calendario-eventos .calendario-event-card .event-date-box small {
+    display: block;
+    font-size: 10px;
+    margin-top: 5px;
+}
+.sp-calendario-eventos .calendario-event-card.pastoral .event-date-box { background: var(--sp-rojo); }
+.sp-calendario-eventos .calendario-event-card.academico .event-date-box { background: var(--sp-azul); }
+.sp-calendario-eventos .calendario-event-card.deportivo .event-date-box { background: #31bb82; }
+.sp-calendario-eventos .calendario-event-card.institucional .event-date-box { background: var(--sp-naranja); }
+.sp-calendario-eventos .event-card-body strong,
+.sp-calendario-eventos .event-card-body em,
+.sp-calendario-eventos .event-card-body small {
+    display: block;
+}
+.sp-calendario-eventos .event-card-body strong {
+    font-size: 14px;
+    font-weight: 800;
+    color: #0f1720;
+}
+.sp-calendario-eventos .event-card-body em {
+    color: #31bb82;
+    font-size: 11px;
+    font-style: normal;
+    font-weight: 800;
+    text-transform: uppercase;
+    margin: 3px 0;
+}
+.sp-calendario-eventos .event-card-body small {
+    color: #6f7b88;
+    font-size: 11px;
+}
+.sp-calendario-eventos .calendario-event-card > i {
+    color: #31bb82;
+}
+@media (max-width: 767px) {
+    .sp-calendario-eventos { padding: 65px 0; }
+    .sp-calendario-eventos .section-header-four h2 { font-size: 26px; }
+    .sp-calendario-eventos .calendario-eventos-layout { grid-template-columns: 1fr; }
+    .sp-calendario-eventos .calendario-eventos-table tr th,
+    .sp-calendario-eventos .calendario-eventos-table tr td {
+        min-width: 112px;
+    }
+}
+
 /* ---- VIDEO ---- */
 .sp-video { padding: 80px 0; background: #fff; }
 .video-wrapper {

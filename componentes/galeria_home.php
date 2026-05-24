@@ -102,9 +102,10 @@ $resolveGalleryImage = static function (array $item): string {
                 $url = trim((string) ($item['url'] ?? '#0'));
                 $href = $url !== '' && $url !== '#0' ? $url : $image;
                 $isExternal = preg_match('/^https?:\/\//i', $href) === 1;
+                $opensImage = $href === $image;
                 ?>
                 <a
-                    class="g-item<?= $index === 0 ? ' large' : '' ?> image-popup"
+                    class="g-item<?= $index === 0 ? ' large' : '' ?><?= $opensImage ? ' image-popup' : '' ?>"
                     href="<?= e($href) ?>"
                     aria-label="<?= e($title) ?>"
                     <?= $isExternal ? 'target="_blank" rel="noopener noreferrer"' : '' ?>

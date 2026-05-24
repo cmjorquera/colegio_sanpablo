@@ -89,20 +89,51 @@ function eventos_xml(string $value): string
     return htmlspecialchars($value, ENT_QUOTES | ENT_XML1, 'UTF-8');
 }
 
-function eventos_xlsx_cell(int $col, int $row, string $value, int $style = 0): string
+function eventos_xlsx_shared_index(array &$sharedStrings, string $value): int
+{
+    if (!array_key_exists($value, $sharedStrings)) {
+        $sharedStrings[$value] = count($sharedStrings);
+    }
+
+    return $sharedStrings[$value];
+}
+
+function eventos_xlsx_cell(int $col, int $row, string $value, int $style = 0, ?array &$sharedStrings = null): string
 {
     $ref = eventos_xlsx_col($col) . $row;
     $styleAttr = $style > 0 ? ' s="' . $style . '"' : '';
+    if ($sharedStrings !== null) {
+        $index = eventos_xlsx_shared_index($sharedStrings, $value);
+        return '<c r="' . $ref . '"' . $styleAttr . ' t="s"><v>' . $index . '</v></c>';
+    }
+
     return '<c r="' . $ref . '"' . $styleAttr . ' t="inlineStr"><is><t>' . eventos_xml($value) . '</t></is></c>';
 }
 
-function eventos_xlsx_row(int $rowNumber, array $values, int $style = 0): string
+function eventos_xlsx_row(int $rowNumber, array $values, int $style = 0, ?array &$sharedStrings = null, ?float $height = null): string
 {
     $cells = '';
     foreach (array_values($values) as $index => $value) {
-        $cells .= eventos_xlsx_cell($index + 1, $rowNumber, (string) $value, $style);
+        $cells .= eventos_xlsx_cell($index + 1, $rowNumber, (string) $value, $style, $sharedStrings);
     }
-    return '<row r="' . $rowNumber . '">' . $cells . '</row>';
+    $heightAttr = $height !== null ? ' ht="' . $height . '" customHeight="1"' : '';
+    return '<row r="' . $rowNumber . '"' . $heightAttr . '>' . $cells . '</row>';
+}
+
+function eventos_xlsx_shared_strings_xml(array $sharedStrings): string
+{
+    $items = '';
+    $values = array_flip($sharedStrings);
+    ksort($values);
+    foreach ($values as $value) {
+        $items .= '<si><t>' . eventos_xml((string) $value) . '</t></si>';
+    }
+
+    $count = count($sharedStrings);
+    return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+        . '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="' . $count . '" uniqueCount="' . $count . '">'
+        . $items
+        . '</sst>';
 }
 
 function eventos_generate_template_xlsx(mysqli $db): string
@@ -122,51 +153,62 @@ function eventos_generate_template_xlsx(mysqli $db): string
         throw new RuntimeException('No fue posible preparar la plantilla Excel.');
     }
 
+    $sharedStrings = [];
     $sheet1Rows = '';
-    $sheet1Rows .= eventos_xlsx_row(1, ['Plantilla de Carga Masiva de Eventos'], 1);
-    $sheet1Rows .= eventos_xlsx_row(2, [$institution], 2);
-    $sheet1Rows .= eventos_xlsx_row(3, ['Descargado por: ' . $adminName . ' | Fecha descarga: ' . $downloadedAt], 3);
-    $sheet1Rows .= eventos_xlsx_row(5, $columns, 4);
-    $sheet1Rows .= eventos_xlsx_row(6, ['Misa Institucional', 'Eucaristia en comunidad.', 'Descripcion completa del evento.', '2026-05-22', '2026-05-22', '09:00', '10:00', 'Pastoral', 'Capilla del Colegio', '#8e44ad', '1', '1', '1'], 5);
+    $sheet1Rows .= eventos_xlsx_row(1, ['Plantilla de Carga Masiva de Eventos'], 1, $sharedStrings, 28);
+    $sheet1Rows .= eventos_xlsx_row(2, [$institution], 2, $sharedStrings, 22);
+    $sheet1Rows .= eventos_xlsx_row(3, ['Descargado por: ' . $adminName . ' | Fecha descarga: ' . $downloadedAt], 3, $sharedStrings, 20);
+    $sheet1Rows .= eventos_xlsx_row(5, $columns, 4, $sharedStrings, 24);
+    $sheet1Rows .= eventos_xlsx_row(6, ['Misa Institucional', 'Eucaristia en comunidad.', 'Descripcion completa del evento.', '2026-05-22', '2026-05-22', '09:00', '10:00', 'Pastoral', 'Capilla del Colegio', '#8e44ad', '1', '1', '1'], 5, $sharedStrings, 22);
 
     $sheet1 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">'
+        . '<dimension ref="A1:' . $lastColumn . '500"/>'
         . '<sheetViews><sheetView workbookViewId="0"><pane ySplit="5" topLeftCell="A6" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>'
+        . '<sheetFormatPr defaultRowHeight="18"/>'
         . '<cols>'
         . '<col min="1" max="1" width="28" customWidth="1"/><col min="2" max="3" width="34" customWidth="1"/>'
         . '<col min="4" max="7" width="16" customWidth="1"/><col min="8" max="10" width="20" customWidth="1"/>'
         . '<col min="11" max="13" width="12" customWidth="1"/>'
         . '</cols><sheetData>' . $sheet1Rows . '</sheetData>'
-        . '<mergeCells count="3"><mergeCell ref="A1:' . $lastColumn . '1"/><mergeCell ref="A2:' . $lastColumn . '2"/><mergeCell ref="A3:' . $lastColumn . '3"/></mergeCells>'
         . '<autoFilter ref="A5:' . $lastColumn . '500"/>'
+        . '<mergeCells count="3"><mergeCell ref="A1:' . $lastColumn . '1"/><mergeCell ref="A2:' . $lastColumn . '2"/><mergeCell ref="A3:' . $lastColumn . '3"/></mergeCells>'
         . '<dataValidations count="4">'
         . '<dataValidation type="date" operator="between" allowBlank="0" sqref="D6:D500"><formula1>DATE(2020,1,1)</formula1><formula2>DATE(2035,12,31)</formula2></dataValidation>'
         . '<dataValidation type="time" operator="between" allowBlank="1" sqref="F6:G500"><formula1>TIME(0,0,0)</formula1><formula2>TIME(23,59,0)</formula2></dataValidation>'
         . '<dataValidation type="list" allowBlank="0" sqref="K6:K500"><formula1>"0,1"</formula1></dataValidation>'
         . '<dataValidation type="list" allowBlank="0" sqref="L6:L500"><formula1>"0,1"</formula1></dataValidation>'
-        . '</dataValidations></worksheet>';
+        . '</dataValidations>'
+        . '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>'
+        . '</worksheet>';
 
-    $helpRows = eventos_xlsx_row(1, ['AYUDA DE CARGA MASIVA DE EVENTOS'], 1);
-    $helpRows .= eventos_xlsx_row(3, ['COLUMNA', 'DESCRIPCION', 'EJEMPLO'], 4);
+    $helpRows = eventos_xlsx_row(1, ['AYUDA DE CARGA MASIVA DE EVENTOS'], 1, $sharedStrings, 28);
+    $helpRows .= eventos_xlsx_row(3, ['COLUMNA', 'DESCRIPCION', 'EJEMPLO'], 4, $sharedStrings, 24);
     $rowNumber = 4;
     foreach (eventos_excel_help_rows() as $row) {
-        $helpRows .= eventos_xlsx_row($rowNumber++, $row, 5);
+        $helpRows .= eventos_xlsx_row($rowNumber++, $row, 5, $sharedStrings, 22);
     }
-    $helpRows .= eventos_xlsx_row($rowNumber + 1, ['Reglas importantes', 'La carga masiva trabaja solo con la tabla eventos. No inserta ni modifica calendario.', ''], 6);
-    $helpRows .= eventos_xlsx_row($rowNumber + 2, ['Fechas', 'Usar yyyy-mm-dd. La fecha de termino no puede ser anterior a fecha_inicio.', '2026-05-22'], 5);
-    $helpRows .= eventos_xlsx_row($rowNumber + 3, ['Horas', 'Usar HH:mm. Evitar textos como 9 am o 09:00 hrs.', '09:30'], 5);
-    $helpRows .= eventos_xlsx_row($rowNumber + 4, ['Errores comunes', 'Titulo vacio, fecha invalida, hora invalida o valores visibles fuera de 0/1.', ''], 5);
+    $helpRows .= eventos_xlsx_row($rowNumber + 1, ['Reglas importantes', 'La carga masiva trabaja solo con la tabla eventos. No inserta ni modifica calendario.', ''], 6, $sharedStrings, 22);
+    $helpRows .= eventos_xlsx_row($rowNumber + 2, ['Fechas', 'Usar yyyy-mm-dd. La fecha de termino no puede ser anterior a fecha_inicio.', '2026-05-22'], 5, $sharedStrings, 22);
+    $helpRows .= eventos_xlsx_row($rowNumber + 3, ['Horas', 'Usar HH:mm. Evitar textos como 9 am o 09:00 hrs.', '09:30'], 5, $sharedStrings, 22);
+    $helpRows .= eventos_xlsx_row($rowNumber + 4, ['Errores comunes', 'Titulo vacio, fecha invalida, hora invalida o valores visibles fuera de 0/1.', ''], 5, $sharedStrings, 22);
 
     $sheet2 = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         . '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">'
+        . '<dimension ref="A1:C' . ($rowNumber + 4) . '"/>'
+        . '<sheetViews><sheetView workbookViewId="0"/></sheetViews>'
+        . '<sheetFormatPr defaultRowHeight="18"/>'
         . '<cols><col min="1" max="1" width="24" customWidth="1"/><col min="2" max="2" width="78" customWidth="1"/><col min="3" max="3" width="36" customWidth="1"/></cols>'
-        . '<sheetData>' . $helpRows . '</sheetData><mergeCells count="1"><mergeCell ref="A1:C1"/></mergeCells></worksheet>';
+        . '<sheetData>' . $helpRows . '</sheetData><mergeCells count="1"><mergeCell ref="A1:C1"/></mergeCells>'
+        . '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>'
+        . '</worksheet>';
 
-    $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>');
+    $zip->addFromString('[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/><Override PartName="/docProps/app.xml" ContentType="application/vnd.openxmlformats-officedocument.extended-properties+xml"/></Types>');
     $zip->addFromString('_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties" Target="docProps/app.xml"/></Relationships>');
     $zip->addFromString('xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="EVENTOS" sheetId="1" r:id="rId1"/><sheet name="AYUDA" sheetId="2" r:id="rId2"/></sheets></workbook>');
-    $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>');
+    $zip->addFromString('xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/></Relationships>');
     $zip->addFromString('xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="4"><font><sz val="11"/><color rgb="FF1F2937"/><name val="Calibri"/></font><font><b/><sz val="18"/><color rgb="FF0F2F57"/><name val="Calibri"/></font><font><b/><sz val="12"/><color rgb="FF3558D5"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF0F4C81"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF8FBFF"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFEFF6FF"/></patternFill></fill></fills><borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border><border><left style="thin"><color rgb="FFDDE6F2"/></left><right style="thin"><color rgb="FFDDE6F2"/></right><top style="thin"><color rgb="FFDDE6F2"/></top><bottom style="thin"><color rgb="FFDDE6F2"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="7"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="3" fillId="2" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="0" fillId="3" borderId="1" xfId="0" applyFill="1" applyBorder="1"/><xf numFmtId="0" fontId="2" fillId="4" borderId="1" xfId="0" applyFill="1" applyBorder="1"/></cellXfs></styleSheet>');
+    $zip->addFromString('xl/sharedStrings.xml', eventos_xlsx_shared_strings_xml($sharedStrings));
     $zip->addFromString('xl/worksheets/sheet1.xml', $sheet1);
     $zip->addFromString('xl/worksheets/sheet2.xml', $sheet2);
     $zip->addFromString('docProps/core.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/"><dc:title>Plantilla eventos</dc:title><dc:creator>CMS Colegio San Pablo</dc:creator></cp:coreProperties>');

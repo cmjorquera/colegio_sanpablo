@@ -353,6 +353,27 @@ admin_render_layout_start([
             padding: 16px 18px;
             background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,255,0.98));
         }
+        #eventModal .modal-content {
+            max-height: calc(100vh - 48px);
+        }
+        #eventModal .modal-body {
+            max-height: calc(100vh - 178px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: #9fb2cb #eef4fb;
+        }
+        #eventModal .modal-body::-webkit-scrollbar {
+            width: 10px;
+        }
+        #eventModal .modal-body::-webkit-scrollbar-track {
+            background: #eef4fb;
+            border-radius: 999px;
+        }
+        #eventModal .modal-body::-webkit-scrollbar-thumb {
+            background: #9fb2cb;
+            border-radius: 999px;
+            border: 2px solid #eef4fb;
+        }
         .admin-modal .modal-footer {
             padding: 14px 18px 16px;
             border-top: 1px solid #e8edf6;
@@ -489,6 +510,43 @@ admin_render_layout_start([
         }
         .event-import-form .form-control {
             max-width: 260px;
+        }
+        .event-upload-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1090;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.42);
+            backdrop-filter: blur(3px);
+        }
+        .event-upload-overlay.is-visible {
+            display: flex;
+        }
+        .event-upload-card {
+            width: min(360px, calc(100vw - 32px));
+            border-radius: 18px;
+            background: #fff;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 24px 54px rgba(15, 23, 42, 0.2);
+        }
+        .event-upload-card .spinner-border {
+            color: #1f8f6b;
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+        .event-upload-card strong {
+            display: block;
+            margin-top: 14px;
+            color: #162338;
+            font-weight: 800;
+        }
+        .event-upload-card small {
+            display: block;
+            margin-top: 4px;
+            color: #72809a;
         }
         .event-media-grid {
             display: grid;
@@ -776,11 +834,18 @@ HTML,
                     <button type="button" class="event-help-btn" data-eventos-help title="Ayuda de carga masiva"><i class="bi bi-question-circle-fill"></i></button>
                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-outline-secondary"><i class="bi bi-layers me-1"></i>Agregar item legacy</a>
                 </div>
-                <form class="event-import-form" method="post" action="eventos_preview_importacion.php" enctype="multipart/form-data">
+                <form class="event-import-form" id="eventExcelUploadForm" method="post" action="eventos_preview_importacion.php" enctype="multipart/form-data">
                     <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                     <input class="form-control" type="file" name="archivo_excel" accept=".xlsx,.xls,.csv" required>
                     <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Subir eventos desde Excel</button>
                 </form>
+            </div>
+            <div class="event-upload-overlay" id="eventExcelUploadOverlay" aria-hidden="true">
+                <div class="event-upload-card">
+                    <div class="spinner-border" role="status" aria-label="Validando archivo"></div>
+                    <strong>Validando archivo Excel</strong>
+                    <small>Preparando preview de eventos...</small>
+                </div>
             </div>
 
             <div class="offcanvas offcanvas-end event-help-offcanvas" tabindex="-1" id="eventosExcelHelp" aria-labelledby="eventosExcelHelpLabel">
@@ -1076,16 +1141,11 @@ HTML,
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-8">
                                 <div class="field-card" data-field-shell>
                                     <?php admin_modal_field_head('Imagen principal', 'evento_imagen', 'calendario_eventos_home', 'imagen'); ?>
                                     <input class="form-control" id="evento_imagen" type="file" name="imagen" accept="image/*">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="field-card" data-field-shell>
-                                    <?php admin_modal_field_head('Archivo adjunto', 'evento_archivo_adjunto', 'calendario_eventos_home', 'archivo-adjunto'); ?>
-                                    <input class="form-control" id="evento_archivo_adjunto" type="file" name="archivo_adjunto">
+                                    <div class="field-note">Esta imagen se usa como portada/hero del detalle del evento.</div>
                                 </div>
                             </div>
                             <div class="col-md-4">
@@ -1102,16 +1162,16 @@ HTML,
                                     <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
                                         <div>
                                             <label class="form-label d-block mb-1">Multimedia del evento</label>
-                                            <div class="field-note">Imágenes, videos locales y enlaces YouTube asociados a <code>evento_media</code>.</div>
+                                            <div class="field-note">Galería y videos del detalle del evento. Estos archivos se guardan en <code>evento_media</code>.</div>
                                         </div>
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-md-6">
-                                            <label class="form-label">Subir imágenes</label>
+                                            <label class="form-label">Imágenes para galería</label>
                                             <input class="form-control" type="file" name="event_media_images[]" accept="image/*" multiple>
                                         </div>
                                         <div class="col-md-6">
-                                            <label class="form-label">Subir videos</label>
+                                            <label class="form-label">Videos locales</label>
                                             <input class="form-control" type="file" name="event_media_videos[]" accept="video/*" multiple>
                                         </div>
                                         <div class="col-12">
@@ -1611,6 +1671,26 @@ admin_render_layout_end([
             document.querySelectorAll('input[name="event_media_images[]"], input[name="event_media_videos[]"]').forEach(function (field) {
                 field.addEventListener('change', renderMediaUploadPreview);
             });
+
+            var excelUploadForm = document.getElementById('eventExcelUploadForm');
+            var excelUploadOverlay = document.getElementById('eventExcelUploadOverlay');
+            if (excelUploadForm && excelUploadOverlay) {
+                excelUploadForm.addEventListener('submit', function (event) {
+                    if (excelUploadForm.dataset.readyToSubmit === '1') {
+                        return;
+                    }
+                    event.preventDefault();
+                    excelUploadOverlay.classList.add('is-visible');
+                    excelUploadOverlay.setAttribute('aria-hidden', 'false');
+                    excelUploadForm.querySelectorAll('button').forEach(function (control) {
+                        control.disabled = true;
+                    });
+                    window.setTimeout(function () {
+                        excelUploadForm.dataset.readyToSubmit = '1';
+                        excelUploadForm.submit();
+                    }, 3000);
+                });
+            }
         });
     </script>
     <script src="assets/js/eventos_excel_help.js"></script>

@@ -608,7 +608,7 @@ descripcion_corta desde eventos.descripcion_corta.
 descripcion desde eventos.descripcion.
 fecha_inicio y fecha_termino desde eventos.
 hora_inicio y hora_termino desde eventos.
-ubicacion, categoria, color, imagen, archivo_adjunto, destacado, visible y estado desde eventos.
+ubicacion, categoria, color, imagen, destacado, visible y estado desde eventos.
 
 Mapeo legacy seccion_item:
 
@@ -662,6 +662,8 @@ La tabla calendario no se modifica para este flujo. calendario sigue siendo solo
 
 El modal de crear/editar eventos en editar_contenedor.php mantiene visible y estado, quita los campos orden y destacado, y agrega el bloque Multimedia del evento.
 
+El campo archivo_adjunto de la tabla eventos queda como compatibilidad legacy, pero no se muestra en el modal de eventos para evitar confundirlo con imagenes o videos. Las imagenes y videos del detalle del evento deben gestionarse desde evento_media.
+
 Desde el bloque Multimedia del evento:
 
 se pueden subir varias imagenes.
@@ -690,6 +692,59 @@ carrusel de imagenes destacadas.
 galeria de imagenes.
 videos locales y YouTube.
 fallback institucional si no existen imagenes visibles.
+
+Ajuste visual del modal de eventos:
+
+editar_contenedor.php usa scroll interno en el body del modal #eventModal para que el formulario largo de evento y multimedia sea usable sin perder el encabezado ni el footer.
+
+La imagen principal del evento se conserva como portada/hero del detalle. Las imagenes de galeria, videos locales y URLs de YouTube se cargan en el bloque Multimedia del evento y se guardan en evento_media.
+
+--------------------------------------------------
+NAVEGACION MENSUAL Y UX CARGA MASIVA EVENTOS
+--------------------------------------------------
+
+Archivos modificados:
+
+componentes/calendario_eventos_home_1.php
+assets/css/pages/colegiosanpablo.css
+editar_contenedor.php
+eventos_preview_importacion.php
+assets/js/eventos_importacion.js
+
+Calendario publico:
+
+El componente calendario_eventos_home_1.php muestra por defecto el mes actual. Ademas acepta el parametro publico:
+
+cal_mes=YYYY-MM
+
+El calendario incorpora flecha izquierda para mes anterior y flecha derecha para mes siguiente, manteniendo el ancla:
+
+index_1.php?cal_mes=YYYY-MM#calendario-eventos-home
+
+Regla de datos:
+
+Cada mes renderizado consulta ambas fuentes:
+
+- tabla calendario para feriados, fines de semana y dias institucionales.
+- tabla eventos para eventos institucionales visibles y publicados.
+
+La navegacion mensual no modifica registros ni mezcla responsabilidades de tablas. calendario sigue siendo base de dias/feriados y eventos sigue siendo actividades cargables.
+
+UX carga masiva:
+
+En editar_contenedor.php, al subir un Excel desde el formulario de carga masiva, se muestra un spinner durante 3 segundos antes de enviar el archivo al preview.
+
+Regla tecnica:
+
+El input file no se deshabilita durante el spinner, porque un input file disabled no se envia por POST. Solo se deshabilita el boton de envio.
+
+Preview:
+
+eventos_preview_importacion.php muestra un estado de validacion con spinner durante 3 segundos y luego revela la tabla de preview con los eventos leidos del Excel.
+
+La importacion real sigue ocurriendo solo cuando el usuario marca checkboxes y confirma con:
+
+Cargar eventos seleccionados
 
 La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.
 
@@ -871,3 +926,42 @@ etiqueta
 titulo_bloque
 titulo_resaltado
 descripcion_bloque
+
+--------------------------------------------------
+AJUSTE PLANTILLA EXCEL EVENTOS
+--------------------------------------------------
+
+Archivo modificado:
+
+includes/eventos_excel_helpers.php
+
+Motivo:
+
+La plantilla .xlsx descargada podia abrir en Excel mostrando las hojas EVENTOS y AYUDA, pero sin pintar correctamente el contenido visible de la hoja EVENTOS.
+
+Ajuste aplicado:
+
+- La generacion .xlsx mantiene las hojas EVENTOS y AYUDA.
+- La hoja EVENTOS mantiene encabezados desde fila 5.
+- Se mantiene el flujo de carga masiva solo sobre la tabla eventos.
+- No se modifica la tabla calendario.
+- No se agregan columnas nuevas.
+- No se cambia la importacion ni el preview.
+- El archivo .xlsx ahora usa sharedStrings.xml para las cadenas de texto.
+- Se agregan dimension, sheetFormatPr, alturas de fila, pageMargins y orden OOXML mas compatible para sheetData, autoFilter, mergeCells y dataValidations.
+
+Columnas mantenidas:
+
+titulo
+descripcion_corta
+descripcion
+fecha_inicio
+fecha_termino
+hora_inicio
+hora_termino
+categoria
+ubicacion
+color
+destacado
+visible
+orden

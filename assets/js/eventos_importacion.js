@@ -16,6 +16,13 @@
     }
 
     document.addEventListener('DOMContentLoaded', function () {
+        var previewForm = document.getElementById('eventPreviewImportForm');
+        if (previewForm) {
+            window.setTimeout(function () {
+                previewForm.classList.remove('is-loading');
+            }, 3000);
+        }
+
         var selectAll = document.getElementById('eventSelectAll');
         if (selectAll) {
             selectAll.addEventListener('change', function () {

@@ -2,17 +2,48 @@
 $sectionName = $section['nombre_interno'] ?? 'calendario_eventos_home';
 $title = cfg($sectionConfigsMap, $sectionName, 'titulo_bloque', 'Calendario de eventos');
 $subtitle = cfg($sectionConfigsMap, $sectionName, 'subtitulo_bloque', 'Actividades y fechas institucionales');
-$monthTitle = cfg($sectionConfigsMap, $sectionName, 'mes_titulo', date('Y-m'));
+$requestedMonth = (string) ($_GET['cal_mes'] ?? '');
+$monthTitle = preg_match('/^\d{4}-\d{2}$/', $requestedMonth) ? $requestedMonth : date('Y-m');
 $limit = max(3, (int) cfg($sectionConfigsMap, $sectionName, 'cantidad_items', '6'));
 
 $monthDate = DateTime::createFromFormat('Y-m', $monthTitle) ?: new DateTime('first day of this month');
+$monthDate->modify('first day of this month');
 $monthStart = $monthDate->format('Y-m-01');
 $monthEnd = $monthDate->format('Y-m-t');
 $events = isset($db) ? cms_list_public_events($db, $monthStart, $monthEnd, 80) : [];
-if (!$events && $monthDate->format('Y-m') === date('Y-m')) {
-    $events = isset($db) ? cms_list_public_events($db, date('Y-m-01'), date('Y-m-t'), 80) : [];
-}
 $calendarDays = isset($db) ? cms_list_calendar_days($db, $monthStart, $monthEnd) : [];
+
+$monthNames = [
+    1 => 'Enero',
+    2 => 'Febrero',
+    3 => 'Marzo',
+    4 => 'Abril',
+    5 => 'Mayo',
+    6 => 'Junio',
+    7 => 'Julio',
+    8 => 'Agosto',
+    9 => 'Septiembre',
+    10 => 'Octubre',
+    11 => 'Noviembre',
+    12 => 'Diciembre',
+];
+$currentMonthLabel = ($monthNames[(int) $monthDate->format('n')] ?? $monthDate->format('F')) . ' ' . $monthDate->format('Y');
+$previousMonth = (clone $monthDate)->modify('-1 month')->format('Y-m');
+$nextMonth = (clone $monthDate)->modify('+1 month')->format('Y-m');
+$monthLink = static function (string $month): string {
+    $query = $_GET;
+    $query['cal_mes'] = $month;
+    return 'index_1.php?' . http_build_query($query) . '#calendario-eventos-home';
+};
+$eventCategoryClass = static function (?string $category): string {
+    $normalized = strtolower(trim((string) $category));
+    $normalized = str_replace(
+        ['á', 'é', 'í', 'ó', 'ú', 'ñ', ' '],
+        ['a', 'e', 'i', 'o', 'u', 'n', '-'],
+        $normalized
+    );
+    return preg_replace('/[^a-z0-9_-]/', '', $normalized) ?: 'institucional';
+};
 
 $eventsByDate = [];
 foreach ($events as $event) {
@@ -40,6 +71,15 @@ $upcoming = array_slice($events, 0, $limit);
 
         <div class="calendario-eventos-layout">
             <div class="class-time__table">
+                <div class="calendario-month-nav" aria-label="Navegacion mensual del calendario">
+                    <a class="calendar-month-arrow" href="<?= e($monthLink($previousMonth)) ?>" aria-label="Mes anterior">
+                        <i class="fa-light fa-arrow-left-long"></i>
+                    </a>
+                    <strong><?= e($currentMonthLabel) ?></strong>
+                    <a class="calendar-month-arrow" href="<?= e($monthLink($nextMonth)) ?>" aria-label="Mes siguiente">
+                        <i class="fa-light fa-arrow-right-long"></i>
+                    </a>
+                </div>
                 <table class="calendario-eventos-table">
                     <thead>
                         <tr>
@@ -74,7 +114,7 @@ $upcoming = array_slice($events, 0, $limit);
                             }
                             if ($dayEvents) {
                                 $cellClass[] = 'event-day';
-                                $cellClass[] = strtolower((string) ($dayEvents[0]['categoria'] ?? 'institucional'));
+                                $cellClass[] = $eventCategoryClass($dayEvents[0]['categoria'] ?? 'institucional');
                             }
                             ?>
                             <td class="<?= e(implode(' ', $cellClass)) ?>" <?= !empty($calendarDay['color']) ? 'style="--day-color:' . e($calendarDay['color']) . '"' : '' ?>>
@@ -104,7 +144,7 @@ $upcoming = array_slice($events, 0, $limit);
                     <?php foreach ($upcoming as $event): ?>
                         <?php
                         $eventDate = !empty($event['fecha_inicio']) ? new DateTime($event['fecha_inicio']) : null;
-                        $categoryClass = strtolower((string) ($event['categoria'] ?? 'institucional'));
+                        $categoryClass = $eventCategoryClass($event['categoria'] ?? 'institucional');
                         ?>
                         <a class="calendario-event-card <?= e($categoryClass) ?>" href="evento_detalle.php?id_evento=<?= (int) ($event['id_evento'] ?? 0) ?>">
                             <span class="event-date-box">

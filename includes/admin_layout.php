@@ -55,6 +55,13 @@ function admin_render_layout_start(array $options = []): void
         }
         a { text-decoration: none; }
         .admin-shell { display: flex; min-height: 100vh; }
+        .admin-shell.sidebar-collapsed .sidebar { width: 96px; padding-left: 14px; padding-right: 14px; }
+        .admin-shell.sidebar-collapsed .brand-box { justify-content: center; padding: 12px; }
+        .admin-shell.sidebar-collapsed .brand-copy,
+        .admin-shell.sidebar-collapsed .nav-label,
+        .admin-shell.sidebar-collapsed .sidebar-footer { display: none; }
+        .admin-shell.sidebar-collapsed .sidebar .nav-link { justify-content: center; padding: 14px 10px; }
+        .admin-shell.sidebar-collapsed .sidebar .nav-link i { width: auto; }
         .sidebar {
             width: 300px;
             background: linear-gradient(180deg, #0d1527 0%, #111b31 50%, #0e1629 100%);
@@ -66,6 +73,7 @@ function admin_render_layout_start(array $options = []): void
             overflow-y: auto;
             box-shadow: 12px 0 35px rgba(15, 23, 42, 0.18);
             z-index: 1040;
+            transition: width .25s ease, transform .3s ease, padding .25s ease;
         }
         .brand-box {
             display: flex;
@@ -135,6 +143,14 @@ function admin_render_layout_start(array $options = []): void
         .topbar h2 { margin: 0; font-size: 1.65rem; font-weight: 700; color: var(--sp-dark); }
         .crumb { color: var(--sp-muted); font-size: 0.92rem; }
         .topbar-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
+        .sidebar-toggle {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
         .btn-soft { background: var(--sp-primary-soft); color: var(--sp-primary); border: none; }
         .btn-soft:hover { background: #d7f1e6; color: #136c51; }
         .btn-premium {
@@ -155,6 +171,29 @@ function admin_render_layout_start(array $options = []): void
             font-weight: 700;
             color: #fff;
             background: linear-gradient(135deg, var(--sp-secondary), #274f70);
+        }
+        .admin-user-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-left: 4px;
+        }
+        .admin-user-meta {
+            text-align: right;
+            line-height: 1.15;
+        }
+        .admin-user-meta strong {
+            display: block;
+            color: var(--sp-dark);
+            font-size: .95rem;
+            max-width: 190px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .admin-user-meta span {
+            color: var(--sp-muted);
+            font-size: .78rem;
         }
         .section-card {
             background: var(--sp-card);
@@ -193,34 +232,38 @@ function admin_render_layout_start(array $options = []): void
         .form-label { font-weight: 600; color: var(--sp-secondary); margin-bottom: 8px; }
         .form-control, .form-select { border-radius: 14px; border: 1px solid var(--sp-border); min-height: 44px; padding: 10px 12px; }
         textarea.form-control { min-height: 120px; }
-        .mobile-sidebar-toggle { display: none; }
         @media (max-width: 1199px) {
             .sidebar { position: fixed; left: 0; top: 0; transform: translateX(-100%); transition: .3s ease; }
             .sidebar.show { transform: translateX(0); }
-            .mobile-sidebar-toggle { display: inline-flex; }
+            .admin-shell.sidebar-collapsed .sidebar { width: 300px; padding: 24px 18px; }
+            .admin-shell.sidebar-collapsed .brand-copy,
+            .admin-shell.sidebar-collapsed .nav-label,
+            .admin-shell.sidebar-collapsed .sidebar-footer { display: block; }
+            .admin-shell.sidebar-collapsed .sidebar .nav-link { justify-content: flex-start; padding: 14px 16px; }
             .content-area { width: 100%; padding: 18px; }
         }
         @media (max-width: 767px) {
             .topbar-actions { justify-content: start; }
             .section-card { padding: 18px; }
+            .admin-user-meta { display: none; }
         }
     </style>
     <?= $extraHead ?>
 </head>
 <body>
-    <div class="admin-shell">
+    <div class="admin-shell" id="adminShell">
         <aside class="sidebar" id="adminSidebar">
             <div class="brand-box">
                 <div class="brand-icon"><i class="bi bi-building"></i></div>
-                <div>
+                <div class="brand-copy">
                     <h1><?= cms_e($institutionShortName) ?></h1>
                     <p>Panel institucional</p>
                 </div>
             </div>
             <nav class="nav flex-column">
                 <?php foreach (admin_nav_items() as $key => $item): ?>
-                    <a class="nav-link <?= $activePanel === $key ? 'active' : '' ?>" href="<?= cms_e($item['href']) ?>">
-                        <i class="bi <?= cms_e($item['icon']) ?>"></i><?= cms_e($item['label']) ?>
+                    <a class="nav-link <?= $activePanel === $key ? 'active' : '' ?>" href="<?= cms_e($item['href']) ?>" title="<?= cms_e($item['label']) ?>">
+                        <i class="bi <?= cms_e($item['icon']) ?>"></i><span class="nav-label"><?= cms_e($item['label']) ?></span>
                     </a>
                 <?php endforeach; ?>
             </nav>
@@ -234,7 +277,7 @@ function admin_render_layout_start(array $options = []): void
                 <div class="row g-3 align-items-center">
                     <div class="col-lg-7">
                         <div class="d-flex align-items-center gap-3">
-                            <button class="btn btn-soft mobile-sidebar-toggle" id="toggleSidebar" type="button"><i class="bi bi-list"></i></button>
+                            <button class="btn btn-soft sidebar-toggle" id="toggleSidebar" type="button" title="Colapsar menú"><i class="bi bi-list"></i></button>
                             <div>
                                 <h2><?= cms_e($pageTitle) ?></h2>
                                 <div class="crumb"><?= cms_e($breadcrumb) ?></div>
@@ -244,7 +287,13 @@ function admin_render_layout_start(array $options = []): void
                     <div class="col-lg-5">
                         <div class="topbar-actions">
                             <?= $headerActions ?>
-                            <div class="user-pill"><?= cms_e(strtoupper(substr(trim($adminName) !== '' ? trim($adminName) : 'AD', 0, 2))) ?></div>
+                            <div class="admin-user-box">
+                                <div class="admin-user-meta">
+                                    <strong><?= cms_e($adminName) ?></strong>
+                                    <span><?= cms_e($_SESSION['admin_rol'] ?? 'Administrador') ?></span>
+                                </div>
+                                <div class="user-pill"><?= cms_e(strtoupper(substr(trim($adminName) !== '' ? trim($adminName) : 'AD', 0, 2))) ?></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -264,11 +313,24 @@ function admin_render_layout_end(array $options = []): void
     <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
+            var shell = document.getElementById('adminShell');
             var sidebar = document.getElementById('adminSidebar');
             var toggle = document.getElementById('toggleSidebar');
+            if (shell && window.localStorage && localStorage.getItem('adminSidebarCollapsed') === '1') {
+                shell.classList.add('sidebar-collapsed');
+            }
             if (toggle && sidebar) {
                 toggle.addEventListener('click', function () {
-                    sidebar.classList.toggle('show');
+                    if (window.matchMedia('(max-width: 1199px)').matches) {
+                        sidebar.classList.toggle('show');
+                        return;
+                    }
+                    if (shell) {
+                        shell.classList.toggle('sidebar-collapsed');
+                        if (window.localStorage) {
+                            localStorage.setItem('adminSidebarCollapsed', shell.classList.contains('sidebar-collapsed') ? '1' : '0');
+                        }
+                    }
                 });
             }
         });

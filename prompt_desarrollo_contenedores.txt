@@ -577,6 +577,57 @@ Desde evento_detalle.php los enlaces de volver deben regresar a:
 
 index_1.php#calendario-eventos-home
 
+Detalle publico rediseñado:
+
+Archivo modificado:
+
+evento_detalle.php
+
+Tablas usadas:
+
+eventos
+seccion_item
+institucion
+
+El detalle publico mantiene el header dinamico basado en menus y sub_menus desde cms_get_site_data(), y mantiene footer institucional con datos de institucion.
+
+Compatibilidad de rutas:
+
+evento_detalle.php?id_evento=X usa la tabla eventos.
+evento_detalle.php?id_item=X usa la tabla seccion_item como compatibilidad legacy.
+
+Reglas de publicacion:
+
+Para id_evento solo se muestra el evento si visible = 1 y estado no es cancelado, oculto ni borrador.
+Para id_item solo se muestra el item si visible = si.
+
+Mapeo de eventos:
+
+titulo desde eventos.titulo.
+descripcion_corta desde eventos.descripcion_corta.
+descripcion desde eventos.descripcion.
+fecha_inicio y fecha_termino desde eventos.
+hora_inicio y hora_termino desde eventos.
+ubicacion, categoria, color, imagen, archivo_adjunto, destacado, visible y estado desde eventos.
+
+Mapeo legacy seccion_item:
+
+titulo desde seccion_item.titulo.
+descripcion desde seccion_item.descripcion.
+imagen desde seccion_item.imagen.
+fecha desde seccion_item.fecha_publicacion.
+categoria desde seccion_item.etiqueta.
+hora/descripcion breve puede usar seccion_item.subtitulo cuando exista.
+
+Reglas visuales:
+
+La pagina usa hero superior con imagen, overlay oscuro, badge de categoria, titulo, descripcion corta y datos rapidos.
+El cuerpo usa dos columnas: contenido principal a la izquierda y tarjeta destacada de datos a la derecha.
+La galeria queda preparada para multiples imagenes; actualmente usa imagen principal como primera imagen solo si existe fisicamente.
+Si la imagen del evento esta vacia o el archivo no existe, el hero usa fallback institucional assets/images/frontis_01.jpg y no se muestra icono roto.
+La seccion Videos del evento queda preparada pero oculta mientras no existan videos.
+El boton volver siempre apunta a index_1.php#calendario-eventos-home.
+
 La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.
 
 La base actual incluye además la tabla:
@@ -686,3 +737,9 @@ Auditoria / Logs
 Icono:
 
 bi-clock-history
+
+Regla visual del layout administrativo:
+
+El sidebar izquierdo debe mantener la capacidad de colapsarse en escritorio mediante el boton del topbar. En modo colapsado deben quedar visibles los iconos y ocultarse los textos del menu, sin eliminar el acceso a Auditoria / Logs. En pantallas pequenas el mismo boton abre/cierra el sidebar como menu movil.
+
+El topbar debe mostrar el nombre del usuario logueado junto al circulo de iniciales, usando los datos de sesion admin_nombre y admin_rol.

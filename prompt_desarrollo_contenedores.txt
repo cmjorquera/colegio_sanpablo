@@ -448,6 +448,11 @@ url_boton
 cantidad_items
 mes_titulo
 
+Conceptos obligatorios:
+
+calendario = base de dias, feriados, fines de semana y dias institucionales.
+eventos = actividades institucionales cargables manualmente o por Excel.
+
 Los eventos reales se guardan en la tabla eventos. La tabla seccion_item queda como compatibilidad del CMS y como fallback visual cuando aun no existen eventos cargados en la tabla eventos.
 
 Campos legacy usados en seccion_item cuando se use el fallback:
@@ -479,13 +484,24 @@ evento_detalle.php?id_evento=ID
 
 El contenedor calendario_eventos_home mantiene su definición visual dentro del CMS de contenedores, pero los eventos reales se administran desde la tabla eventos.
 
-La tabla seccion sigue definiendo el contenedor, seccion_config sigue guardando configuraciones del bloque y seccion_item queda solo como compatibilidad visual o fallback. El calendario público debe alimentarse preferentemente desde eventos.
+La tabla seccion sigue definiendo el contenedor, seccion_config sigue guardando configuraciones del bloque y seccion_item queda solo como compatibilidad visual o fallback. El calendario publico debe mostrar siempre tanto feriados/dias especiales desde calendario como eventos desde eventos.
 
 Los eventos pueden crearse manualmente desde la pestaña Items del contenedor calendario_eventos_home mediante el botón Agregar evento.
 
-También pueden cargarse masivamente desde Excel o CSV desde la misma pestaña Items.
+Tambien pueden cargarse masivamente desde Excel o CSV desde la misma pestaña Items.
 
-La plantilla se descarga desde el admin con el botón Descargar plantilla Excel. La carga masiva no incluye imágenes ni archivos adjuntos.
+La plantilla se descarga desde el admin con el boton Descargar plantilla Excel. La carga masiva no incluye imagenes ni archivos adjuntos. Si PHP no tiene ZipArchive, el sistema puede entregar un Excel XML .xls compatible con Excel manteniendo las hojas EVENTOS y AYUDA.
+
+La plantilla Excel debe tener:
+
+Hoja EVENTOS:
+fila 1 titulo institucional.
+fila 2 nombre de institucion desde tabla institucion.
+fila 3 Descargado por y Fecha descarga. El usuario se obtiene desde SESSION id_usuario y tabla usuario.
+fila 5 encabezados reales.
+
+Hoja AYUDA:
+documentacion institucional de columnas, formatos, ejemplos, errores comunes, reglas de fechas y reglas de horas.
 
 Campos mínimos obligatorios para carga o creación:
 
@@ -506,18 +522,44 @@ ubicacion
 color
 destacado
 visible
-estado
 orden
+
+El campo estado no forma parte de la plantilla Excel ni del preview. Para cargas masivas se usa el valor por defecto publicado mediante la normalizacion del CMS.
 
 Reglas:
 
 fecha_inicio debe venir como yyyy-mm-dd.
 hora_inicio debe venir como HH:mm.
-estado permitido: borrador, publicado, oculto, cancelado.
 visible y destacado usan 1 o 0.
 Si fecha_termino viene vacía, se usa fecha_inicio.
-Si estado viene vacío, se usa publicado.
 Si color viene vacío, se asigna según categoría.
+
+Flujo obligatorio de carga masiva:
+
+1. Usuario sube Excel o CSV.
+2. Sistema parsea y valida.
+3. Se muestra una tabla preview.
+4. Cada fila tiene checkbox individual.
+5. Existe checkbox superior Seleccionar todos.
+6. Solo filas marcadas se importan.
+7. La insercion real ocurre al confirmar con Cargar eventos seleccionados.
+
+La subida del archivo nunca debe insertar automaticamente eventos.
+
+REGLA IMPORTANTE SOBRE CALENDARIO VS EVENTOS:
+
+La tabla calendario contiene los dias del calendario institucional. Incluye fecha, es_feriado, nombre_feriado, tipo, color, fines de semana y dias habiles. Estos registros no se cargan masivamente desde Excel y no se editan desde el flujo de eventos.
+
+La tabla eventos contiene eventos institucionales reales. Este flujo de plantilla, preview con checkbox e importacion confirmada trabaja solo con eventos.
+
+componentes/calendario_eventos_home_1.php debe mostrar ambos tipos de informacion:
+
+feriados y dias especiales desde calendario.
+eventos cargados desde eventos.
+
+Los feriados existentes en calendario deben aparecer aunque no existan eventos cargados.
+
+La carga masiva Excel no debe insertar ni modificar registros en calendario.
 
 Los eventos publicados y visibles se muestran en el calendario público del home.
 
@@ -544,3 +586,103 @@ dia_semana
 Esta tabla define los nombres de lunes a domingo, orden y si corresponde a fin de semana. El calendario público puede usar los datos ya denormalizados de calendario, pero no se debe olvidar que dia_semana forma parte del modelo real del calendario institucional.
 
 Para que eventos del mes actual no desaparezcan cuando la fecha exacta ya pasó, el componente debe buscar eventos desde el primer día del mes actual cuando no encuentre eventos en el mes configurado. Ejemplo: si hoy es 2026-05-23 y existe un evento 2026-05-22, debe seguir mostrándose dentro del calendario de Mayo 2026.
+
+---
+
+# AUDITORIA CENTRAL DEL CMS
+
+El CMS incorpora una capa backend reutilizable de auditoria en:
+
+includes/funciones_auditoria.php
+
+La auditoria trabaja con mysqli y con la tabla real:
+
+auditoria_log
+
+Campos esperados:
+
+id_log
+id_usuario
+id_institucion
+modulo
+tabla_afectada
+id_registro
+accion
+descripcion
+datos_antes
+datos_despues
+ip_usuario
+user_agent
+fecha_hora
+
+La funcion principal es:
+
+registrarAuditoria($conexion, $modulo, $tablaAfectada, $idRegistro, $accion, $descripcion = '', $datosAntes = null, $datosDespues = null)
+
+Si auditoria_log no existe o le faltan columnas, la funcion no rompe el flujo administrativo: registra el problema en error_log y retorna false.
+
+Funciones auxiliares:
+
+obtenerRegistroAuditoria($conexion, $tabla, $campoId, $id)
+normalizarDatosAuditoria($datos)
+auditoriaTablaLista($conexion)
+
+La lectura de registros para datos antes/despues usa lista blanca:
+
+usuario.id_usuario
+institucion.id_institucion
+menus.id_menu
+sub_menus.id_sub_menu
+seccion.id_seccion
+seccion_config.id_config
+seccion_item.id_item
+eventos.id_evento
+
+No se permiten tablas arbitrarias.
+
+Campos sensibles ocultos en JSON:
+
+clave
+password
+token
+token_reinicio
+
+Acciones estandar:
+
+login
+logout
+crear
+editar
+eliminar
+activar
+desactivar
+ocultar
+publicar
+cancelar
+importar
+descargar
+error
+
+Integraciones iniciales:
+
+login_check.php registra login correcto y login fallido.
+admin_1.php registra menus, sub_menus y visibilidad de seccion.
+editar_contenedor.php registra eventos, seccion_config y seccion_item.
+eventos_descargar_plantilla_1.php registra descarga de plantilla.
+eventos_importar_confirmados.php registra importacion masiva confirmada.
+
+Vista administrativa:
+
+auditoria_log.php
+
+Solo usuarios con sesion admin pueden acceder. Si no hay sesion, redirige a index_1.php.
+
+La vista usa el layout administrativo, DataTables y Bootstrap. Permite filtrar por usuario, modulo, accion, fecha desde y fecha hasta. El detalle se abre en offcanvas derecho con datos generales, JSON antes/despues y comparacion visual de diferencias de primer nivel.
+
+El acceso visual queda integrado al sidebar izquierdo del panel mediante includes/admin_layout.php con el modulo:
+
+Auditoria / Logs
+
+Icono:
+
+bi-clock-history

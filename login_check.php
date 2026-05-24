@@ -20,6 +20,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/class/conexion.php';
+require_once __DIR__ . '/includes/funciones_auditoria.php';
 
 $usuario = trim((string) ($_POST['usuario'] ?? ''));
 $clave = trim((string) ($_POST['clave'] ?? ''));
@@ -50,11 +51,19 @@ try {
     $stmt->close();
 
     if (!$user) {
+        registrarAuditoria($db, 'Login administrador', 'usuario', null, 'error', 'Intento de login fallido: usuario no encontrado', null, [
+            'usuario_input' => $usuario,
+            'motivo' => 'usuario_no_encontrado',
+        ]);
         echo json_encode(['ok' => false, 'msg' => 'Usuario o clave incorrectos']);
         exit;
     }
 
     if (strtolower((string) ($user['estado'] ?? '')) !== 'activo') {
+        registrarAuditoria($db, 'Login administrador', 'usuario', (int) $user['id_usuario'], 'error', 'Intento de login fallido: cuenta inactiva', $user, [
+            'usuario_input' => $usuario,
+            'motivo' => 'cuenta_inactiva',
+        ]);
         echo json_encode(['ok' => false, 'msg' => 'Tu cuenta no esta activa. Contacta al administrador.']);
         exit;
     }
@@ -71,6 +80,10 @@ try {
     }
 
     if (!$valid) {
+        registrarAuditoria($db, 'Login administrador', 'usuario', (int) $user['id_usuario'], 'error', 'Intento de login fallido: clave incorrecta', $user, [
+            'usuario_input' => $usuario,
+            'motivo' => 'clave_incorrecta',
+        ]);
         echo json_encode(['ok' => false, 'msg' => 'Usuario o clave incorrectos']);
         exit;
     }
@@ -83,6 +96,8 @@ try {
     $_SESSION['admin_email'] = (string) ($user['email'] ?? '');
     $_SESSION['admin_nombre'] = trim((string) ($user['nombre'] ?? '') . ' ' . (string) ($user['apellido'] ?? ''));
     $_SESSION['admin_rol'] = (string) ($user['rol'] ?? '');
+
+    registrarAuditoria($db, 'Login administrador', 'usuario', (int) $user['id_usuario'], 'login', 'Login correcto en panel CMS', null, $user);
 
     echo json_encode(['ok' => true, 'redirect' => 'admin_1.php']);
 } catch (Throwable $exception) {

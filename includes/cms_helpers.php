@@ -1074,7 +1074,7 @@ function cms_delete_item(mysqli $db, int $idItem): void
     $stmt->close();
 }
 
-function cms_save_menu(mysqli $db, array $post): void
+function cms_save_menu(mysqli $db, array $post): int
 {
     $idMenu = (int) ($post['id_menu'] ?? 0);
     $nombre = trim((string) ($post['nombre'] ?? ''));
@@ -1096,7 +1096,9 @@ function cms_save_menu(mysqli $db, array $post): void
     }
 
     $stmt->execute();
+    $savedId = $idMenu > 0 ? $idMenu : (int) $db->insert_id;
     $stmt->close();
+    return $savedId;
 }
 
 function cms_toggle_menu(mysqli $db, int $idMenu): void
@@ -1107,7 +1109,7 @@ function cms_toggle_menu(mysqli $db, int $idMenu): void
     $stmt->close();
 }
 
-function cms_save_submenu(mysqli $db, array $post): void
+function cms_save_submenu(mysqli $db, array $post): int
 {
     $idSubMenu = (int) ($post['id_sub_menu'] ?? 0);
     $idMenu = (int) ($post['id_menu'] ?? 0);
@@ -1131,7 +1133,9 @@ function cms_save_submenu(mysqli $db, array $post): void
     }
 
     $stmt->execute();
+    $savedId = $idSubMenu > 0 ? $idSubMenu : (int) $db->insert_id;
     $stmt->close();
+    return $savedId;
 }
 
 function cms_toggle_submenu(mysqli $db, int $idSubMenu): void

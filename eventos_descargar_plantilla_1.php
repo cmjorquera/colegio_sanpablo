@@ -6,18 +6,24 @@ if (empty($_SESSION['admin_logged'])) {
     exit;
 }
 
-$columns = ['titulo', 'descripcion_corta', 'descripcion', 'fecha_inicio', 'fecha_termino', 'hora_inicio', 'hora_termino', 'categoria', 'ubicacion', 'color', 'destacado', 'visible', 'estado', 'orden'];
-$rows = [
-    $columns,
-    ['Misa Institucional', 'Eucaristía en comunidad.', 'Descripción completa del evento.', '2026-05-22', '2026-05-22', '09:00', '10:00', 'Pastoral', 'Capilla del Colegio', '#8e44ad', '1', '1', 'publicado', '1'],
-];
+require_once __DIR__ . '/includes/cms_helpers.php';
+require_once __DIR__ . '/includes/eventos_excel_helpers.php';
+require_once __DIR__ . '/includes/funciones_auditoria.php';
 
-header('Content-Type: text/csv; charset=UTF-8');
-header('Content-Disposition: attachment; filename="plantilla_eventos_calendario.csv"');
+try {
+    $db = cms_get_connection();
+    $hasZip = class_exists('ZipArchive');
+    $file = $hasZip ? eventos_generate_template_xlsx($db) : eventos_generate_template_xls_xml($db);
+    registrarAuditoria($db, 'Eventos del calendario', 'eventos', null, 'descargar', 'Se descargó la plantilla de carga masiva de eventos', null, [
+        'archivo' => 'plantilla_eventos_calendario.' . ($hasZip ? 'xlsx' : 'xls'),
+    ]);
 
-$output = fopen('php://output', 'w');
-fwrite($output, "\xEF\xBB\xBF");
-foreach ($rows as $row) {
-    fputcsv($output, $row, ';');
+    header('Content-Type: ' . ($hasZip ? 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' : 'application/vnd.ms-excel'));
+    header('Content-Disposition: attachment; filename="plantilla_eventos_calendario.' . ($hasZip ? 'xlsx' : 'xls') . '"');
+    header('Content-Length: ' . filesize($file));
+    readfile($file);
+    unlink($file);
+} catch (Throwable $exception) {
+    cms_set_flash('danger', $exception->getMessage());
+    cms_redirect('editar_contenedor.php?id=' . (int) ($_GET['id'] ?? 0) . '&tab=items');
 }
-fclose($output);

@@ -8,6 +8,7 @@ if (empty($_SESSION['admin_logged'])) {
 
 require_once __DIR__ . '/includes/cms_helpers.php';
 require_once __DIR__ . '/includes/admin_layout.php';
+require_once __DIR__ . '/includes/funciones_auditoria.php';
 
 $db = cms_get_connection();
 $institutionId = cms_get_institution_id($db);
@@ -215,37 +216,60 @@ try {
         }
 
         if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'guardar_evento') {
-            cms_save_event($db, $_POST);
+            $idEventoAudit = (int) ($_POST['id_evento'] ?? 0);
+            $datosAntes = $idEventoAudit > 0 ? obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit) : null;
+            $savedEventId = cms_save_event($db, $_POST);
+            $datosDespues = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $savedEventId);
+            registrarAuditoria($db, 'Eventos del calendario', 'eventos', $savedEventId, $idEventoAudit > 0 ? 'editar' : 'crear', $idEventoAudit > 0 ? 'Se modificó un evento' : 'Se creó un evento', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El evento fue guardado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
 
         if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'toggle_evento') {
-            cms_toggle_event_visible($db, (int) ($_POST['id_evento'] ?? 0));
+            $idEventoAudit = (int) ($_POST['id_evento'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            cms_toggle_event_visible($db, $idEventoAudit);
+            $datosDespues = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            $accionAudit = (int) ($datosDespues['visible'] ?? 0) === 1 ? 'publicar' : 'ocultar';
+            registrarAuditoria($db, 'Eventos del calendario', 'eventos', $idEventoAudit, $accionAudit, 'Se cambió la visibilidad de un evento', $datosAntes, $datosDespues);
             cms_set_flash('success', 'La visibilidad del evento fue actualizada.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
 
         if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'cancelar_evento') {
-            cms_cancel_event($db, (int) ($_POST['id_evento'] ?? 0));
+            $idEventoAudit = (int) ($_POST['id_evento'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            cms_cancel_event($db, $idEventoAudit);
+            $datosDespues = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            registrarAuditoria($db, 'Eventos del calendario', 'eventos', $idEventoAudit, 'cancelar', 'Se canceló un evento', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El evento fue cancelado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
 
         if ($action === 'guardar_seccion') {
+            $datosAntes = cms_get_section_configs($db, $idSeccion);
             cms_save_section($db, $idSeccion, $_POST);
+            $datosDespues = cms_get_section_configs($db, $idSeccion);
+            registrarAuditoria($db, 'Configuración de contenedores', 'seccion_config', $idSeccion, 'editar', 'Se modificó la configuración de un contenedor', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El contenedor fue actualizado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion);
         }
 
         if ($action === 'guardar_item') {
-            cms_save_item($db, $section, $_POST);
+            $idItemAudit = (int) ($_POST['id_item'] ?? 0);
+            $datosAntes = $idItemAudit > 0 ? obtenerRegistroAuditoria($db, 'seccion_item', 'id_item', $idItemAudit) : null;
+            $savedItemId = cms_save_item($db, $section, $_POST);
+            $datosDespues = obtenerRegistroAuditoria($db, 'seccion_item', 'id_item', $savedItemId);
+            registrarAuditoria($db, 'Items de contenedor', 'seccion_item', $savedItemId, $idItemAudit > 0 ? 'editar' : 'crear', $idItemAudit > 0 ? 'Se modificó un item de contenedor' : 'Se creó un item de contenedor', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El item fue guardado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
 
         if ($action === 'eliminar_item') {
-            cms_delete_item($db, (int) ($_POST['id_item'] ?? 0));
+            $idItemAudit = (int) ($_POST['id_item'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'seccion_item', 'id_item', $idItemAudit);
+            cms_delete_item($db, $idItemAudit);
+            registrarAuditoria($db, 'Items de contenedor', 'seccion_item', $idItemAudit, 'eliminar', 'Se eliminó un item de contenedor', $datosAntes, null);
             cms_set_flash('success', 'El item fue eliminado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
@@ -451,6 +475,38 @@ admin_render_layout_start([
         }
         .event-import-form .form-control {
             max-width: 260px;
+        }
+        .event-help-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #bfd2ee;
+            color: #0f4c81;
+            background: #f4f8ff;
+        }
+        .event-help-btn:hover {
+            color: #fff;
+            background: #0f4c81;
+            border-color: #0f4c81;
+        }
+        .event-help-offcanvas .offcanvas-header {
+            background: #0f4c81;
+            color: #fff;
+        }
+        .event-help-offcanvas .help-step {
+            border: 1px solid #e4ebf5;
+            border-radius: 12px;
+            padding: 12px;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+        .event-help-offcanvas .help-step strong {
+            display: block;
+            color: #162338;
+            margin-bottom: 4px;
         }
         .admin-modal .row.g-3 {
             --bs-gutter-x: 0.9rem;
@@ -668,13 +724,32 @@ HTML,
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar evento</a>
                     <a href="eventos_descargar_plantilla_1.php?id=<?= (int) $idSeccion ?>" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Descargar plantilla Excel</a>
+                    <button type="button" class="event-help-btn" data-eventos-help title="Ayuda de carga masiva"><i class="bi bi-question-circle-fill"></i></button>
                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-outline-secondary"><i class="bi bi-layers me-1"></i>Agregar item legacy</a>
                 </div>
-                <form class="event-import-form" method="post" action="eventos_importar_excel_1.php" enctype="multipart/form-data">
+                <form class="event-import-form" method="post" action="eventos_preview_importacion.php" enctype="multipart/form-data">
                     <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
-                    <input class="form-control" type="file" name="archivo_excel" accept=".xlsx,.csv" required>
+                    <input class="form-control" type="file" name="archivo_excel" accept=".xlsx,.xls,.csv" required>
                     <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Subir eventos desde Excel</button>
                 </form>
+            </div>
+
+            <div class="offcanvas offcanvas-end event-help-offcanvas" tabindex="-1" id="eventosExcelHelp" aria-labelledby="eventosExcelHelpLabel">
+                <div class="offcanvas-header">
+                    <div>
+                        <h5 class="offcanvas-title" id="eventosExcelHelpLabel">Carga masiva de eventos</h5>
+                        <small>Flujo institucional con validación previa</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+                </div>
+                <div class="offcanvas-body bg-light">
+                    <div class="help-step"><strong>1. Descargar plantilla</strong>Usa la plantilla Excel oficial. La hoja EVENTOS contiene solo los campos cargables y la hoja AYUDA documenta formatos y ejemplos.</div>
+                    <div class="help-step"><strong>2. Completar columnas</strong>El titulo y fecha_inicio son obligatorios. Las fechas usan yyyy-mm-dd y las horas HH:mm.</div>
+                    <div class="help-step"><strong>3. Subir archivo</strong>La subida no publica nada. El sistema solo interpreta el Excel y muestra una tabla de preview.</div>
+                    <div class="help-step"><strong>4. Validar filas</strong>Cada fila muestra su estado: valido, fecha invalida, falta titulo, categoria vacia o duplicado.</div>
+                    <div class="help-step"><strong>5. Seleccionar y confirmar</strong>Marca los eventos que deseas importar o usa Seleccionar todos. La inserción real ocurre con Cargar eventos seleccionados.</div>
+                    <div class="help-step"><strong>Regla calendario/eventos</strong>Este flujo trabaja solo con la tabla eventos. No crea ni modifica registros de calendario, feriados ni días institucionales.</div>
+                </div>
             </div>
 
             <div class="table-responsive">
@@ -1403,6 +1478,7 @@ admin_render_layout_end([
             }
         });
     </script>
+    <script src="assets/js/eventos_excel_help.js"></script>
 HTML
     ),
 ]);

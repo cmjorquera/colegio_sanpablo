@@ -8,6 +8,7 @@ if (empty($_SESSION['admin_logged'])) {
 
 require_once __DIR__ . '/includes/cms_helpers.php';
 require_once __DIR__ . '/includes/admin_layout.php';
+require_once __DIR__ . '/includes/funciones_auditoria.php';
 
 $db = cms_get_connection();
 $institutionId = cms_get_institution_id($db);
@@ -23,7 +24,10 @@ try {
         $isAjax = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
 
         if ($action === 'toggle_seccion' && $sectionId > 0) {
+            $datosAntes = obtenerRegistroAuditoria($db, 'seccion', 'id_seccion', $sectionId);
             cms_toggle_section_visibility($db, $sectionId);
+            $datosDespues = obtenerRegistroAuditoria($db, 'seccion', 'id_seccion', $sectionId);
+            registrarAuditoria($db, 'Contenedores del sitio', 'seccion', $sectionId, ($datosDespues['visible'] ?? '') === 'si' ? 'activar' : 'ocultar', 'Se cambió la visibilidad de un contenedor', $datosAntes, $datosDespues);
             if ($isAjax) {
                 $updatedSection = cms_get_section($db, $sectionId);
                 header('Content-Type: application/json; charset=UTF-8');
@@ -39,25 +43,43 @@ try {
         }
 
         if ($action === 'guardar_menu') {
-            cms_save_menu($db, $_POST);
+            $idMenuAudit = (int) ($_POST['id_menu'] ?? 0);
+            $datosAntes = $idMenuAudit > 0 ? obtenerRegistroAuditoria($db, 'menus', 'id_menu', $idMenuAudit) : null;
+            $savedMenuId = cms_save_menu($db, $_POST);
+            $datosDespues = obtenerRegistroAuditoria($db, 'menus', 'id_menu', $savedMenuId);
+            registrarAuditoria($db, 'Menú principal', 'menus', $savedMenuId, $idMenuAudit > 0 ? 'editar' : 'crear', $idMenuAudit > 0 ? 'Se modificó un menú principal' : 'Se creó un menú principal', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El menú fue guardado correctamente.');
             cms_redirect('admin_1.php?panel=menus');
         }
 
         if ($action === 'toggle_menu') {
-            cms_toggle_menu($db, (int) ($_POST['id_menu'] ?? 0));
+            $idMenuAudit = (int) ($_POST['id_menu'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'menus', 'id_menu', $idMenuAudit);
+            cms_toggle_menu($db, $idMenuAudit);
+            $datosDespues = obtenerRegistroAuditoria($db, 'menus', 'id_menu', $idMenuAudit);
+            $accionAudit = (int) ($datosDespues['estado'] ?? 0) === 1 ? 'activar' : 'desactivar';
+            registrarAuditoria($db, 'Menú principal', 'menus', $idMenuAudit, $accionAudit, 'Se cambió el estado de un menú principal', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El estado del menú fue actualizado.');
             cms_redirect('admin_1.php?panel=menus');
         }
 
         if ($action === 'guardar_submenu') {
-            cms_save_submenu($db, $_POST);
+            $idSubMenuAudit = (int) ($_POST['id_sub_menu'] ?? 0);
+            $datosAntes = $idSubMenuAudit > 0 ? obtenerRegistroAuditoria($db, 'sub_menus', 'id_sub_menu', $idSubMenuAudit) : null;
+            $savedSubMenuId = cms_save_submenu($db, $_POST);
+            $datosDespues = obtenerRegistroAuditoria($db, 'sub_menus', 'id_sub_menu', $savedSubMenuId);
+            registrarAuditoria($db, 'Submenús', 'sub_menus', $savedSubMenuId, $idSubMenuAudit > 0 ? 'editar' : 'crear', $idSubMenuAudit > 0 ? 'Se modificó un submenú' : 'Se creó un submenú', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El submenú fue guardado correctamente.');
             cms_redirect('admin_1.php?panel=submenus');
         }
 
         if ($action === 'toggle_submenu') {
-            cms_toggle_submenu($db, (int) ($_POST['id_sub_menu'] ?? 0));
+            $idSubMenuAudit = (int) ($_POST['id_sub_menu'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'sub_menus', 'id_sub_menu', $idSubMenuAudit);
+            cms_toggle_submenu($db, $idSubMenuAudit);
+            $datosDespues = obtenerRegistroAuditoria($db, 'sub_menus', 'id_sub_menu', $idSubMenuAudit);
+            $accionAudit = (int) ($datosDespues['estado'] ?? 0) === 1 ? 'activar' : 'desactivar';
+            registrarAuditoria($db, 'Submenús', 'sub_menus', $idSubMenuAudit, $accionAudit, 'Se cambió el estado de un submenú', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El estado del submenú fue actualizado.');
             cms_redirect('admin_1.php?panel=submenus');
         }

@@ -219,6 +219,7 @@ try {
             $idEventoAudit = (int) ($_POST['id_evento'] ?? 0);
             $datosAntes = $idEventoAudit > 0 ? obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit) : null;
             $savedEventId = cms_save_event($db, $_POST);
+            cms_save_event_media_uploads($db, $savedEventId);
             $datosDespues = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $savedEventId);
             registrarAuditoria($db, 'Eventos del calendario', 'eventos', $savedEventId, $idEventoAudit > 0 ? 'editar' : 'crear', $idEventoAudit > 0 ? 'Se modificó un evento' : 'Se creó un evento', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El evento fue guardado correctamente.');
@@ -244,6 +245,18 @@ try {
             registrarAuditoria($db, 'Eventos del calendario', 'eventos', $idEventoAudit, 'cancelar', 'Se canceló un evento', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El evento fue cancelado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && strpos($action, 'toggle_evento_media:') === 0) {
+            cms_toggle_event_media_visible($db, (int) substr($action, strlen('toggle_evento_media:')));
+            cms_set_flash('success', 'La visibilidad del archivo multimedia fue actualizada.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items&modal=evento&evento=' . (int) ($_POST['id_evento'] ?? 0));
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && strpos($action, 'eliminar_evento_media:') === 0) {
+            cms_delete_event_media($db, (int) substr($action, strlen('eliminar_evento_media:')));
+            cms_set_flash('success', 'El archivo multimedia fue eliminado.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items&modal=evento&evento=' . (int) ($_POST['id_evento'] ?? 0));
         }
 
         if ($action === 'guardar_seccion') {
@@ -291,6 +304,7 @@ $isTopbar = ($section['nombre_interno'] ?? '') === 'topbar';
 $isEventsCalendar = ($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events';
 $eventosCalendario = $isEventsCalendar ? cms_list_events($db, 300) : [];
 $editingEvent = ($isEventsCalendar && isset($_GET['evento'])) ? cms_get_event($db, (int) $_GET['evento']) : null;
+$editingEventMedia = ($isEventsCalendar && $editingEvent) ? cms_list_event_media($db, (int) ($editingEvent['id_evento'] ?? 0), false) : [];
 $topbarConfigs = [
     'texto_boton_ingresar' => topbar_get_config_value($configs, 'texto_boton_ingresar', 'Ingresar'),
     'mostrar_direccion' => topbar_get_config_value($configs, 'mostrar_direccion', 'si'),
@@ -475,6 +489,41 @@ admin_render_layout_start([
         }
         .event-import-form .form-control {
             max-width: 260px;
+        }
+        .event-media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+        }
+        .event-media-card {
+            border: 1px solid #e4ebf5;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #f8fbff;
+        }
+        .event-media-thumb {
+            aspect-ratio: 16 / 10;
+            display: grid;
+            place-items: center;
+            background: #eaf1f8;
+            color: #12324a;
+            font-size: 1.6rem;
+        }
+        .event-media-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .event-media-body {
+            padding: 10px;
+        }
+        .event-media-body strong,
+        .event-media-body small {
+            display: block;
+        }
+        .event-media-body small {
+            color: #72809a;
         }
         .event-help-btn {
             width: 40px;
@@ -763,7 +812,6 @@ HTML,
                             <th>Ubicación</th>
                             <th>Estado</th>
                             <th>Visible</th>
-                            <th>Destacado</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -781,7 +829,6 @@ HTML,
                                 <td><?= cms_e($evento['ubicacion'] ?? '') ?></td>
                                 <td><span class="badge-soft <?= ($evento['estado'] ?? '') === 'publicado' ? 'success' : 'warning' ?>"><?= cms_e($evento['estado'] ?? '') ?></span></td>
                                 <td><span class="badge-soft <?= (int) ($evento['visible'] ?? 1) === 1 ? 'success' : 'warning' ?>"><?= (int) ($evento['visible'] ?? 1) === 1 ? 'Si' : 'No' ?></span></td>
-                                <td><?= !empty($evento['destacado']) ? 'Si' : 'No' ?></td>
                                 <td>
                                     <div class="d-flex gap-2 flex-wrap">
                                         <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento&evento=<?= $eventId ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
@@ -1019,7 +1066,7 @@ HTML,
                                     <input class="form-control" id="evento_color" type="color" name="color" value="<?= cms_e($eventForm['color'] ?? '#fd7e14') ?>">
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-4">
                                 <div class="field-card">
                                     <?php admin_modal_field_head('Estado', 'evento_estado', 'calendario_eventos_home', 'estado', false); ?>
                                     <select class="form-select" id="evento_estado" name="estado">
@@ -1027,12 +1074,6 @@ HTML,
                                             <option value="<?= cms_e($stateOption) ?>" <?= (($eventForm['estado'] ?? 'publicado') === $stateOption) ? 'selected' : '' ?>><?= cms_e($stateOption) ?></option>
                                         <?php endforeach; ?>
                                     </select>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="field-card">
-                                    <?php admin_modal_field_head('Orden', 'evento_orden', 'calendario_eventos_home', 'orden', false); ?>
-                                    <input class="form-control" id="evento_orden" type="number" name="orden" min="0" value="<?= (int) ($eventForm['orden'] ?? 0) ?>">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -1047,22 +1088,76 @@ HTML,
                                     <input class="form-control" id="evento_archivo_adjunto" type="file" name="archivo_adjunto">
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="field-card">
-                                    <label class="form-label d-block">Destacado</label>
-                                    <select class="form-select" name="destacado">
-                                        <option value="0" <?= empty($eventForm['destacado']) ? 'selected' : '' ?>>No</option>
-                                        <option value="1" <?= !empty($eventForm['destacado']) ? 'selected' : '' ?>>Si</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-4">
                                 <div class="field-card">
                                     <label class="form-label d-block">Visible</label>
                                     <select class="form-select" name="visible">
                                         <option value="1" <?= (int) ($eventForm['visible'] ?? 1) === 1 ? 'selected' : '' ?>>Si</option>
                                         <option value="0" <?= (int) ($eventForm['visible'] ?? 1) === 0 ? 'selected' : '' ?>>No</option>
                                     </select>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="field-card">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+                                        <div>
+                                            <label class="form-label d-block mb-1">Multimedia del evento</label>
+                                            <div class="field-note">Imágenes, videos locales y enlaces YouTube asociados a <code>evento_media</code>.</div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Subir imágenes</label>
+                                            <input class="form-control" type="file" name="event_media_images[]" accept="image/*" multiple>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Subir videos</label>
+                                            <input class="form-control" type="file" name="event_media_videos[]" accept="video/*" multiple>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="event-media-grid d-none" id="eventMediaUploadPreview"></div>
+                                        </div>
+                                        <div class="col-md-7">
+                                            <label class="form-label">URL YouTube</label>
+                                            <input class="form-control" name="event_media_youtube_url[]" placeholder="https://www.youtube.com/watch?v=...">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label">Título del video</label>
+                                            <input class="form-control" name="event_media_youtube_title[]" placeholder="Resumen del evento">
+                                        </div>
+                                    </div>
+
+                                    <?php if ($editingEventMedia): ?>
+                                        <div class="event-media-grid mt-3">
+                                            <?php foreach ($editingEventMedia as $media): ?>
+                                                <div class="event-media-card">
+                                                    <div class="event-media-thumb">
+                                                        <?php if (($media['tipo'] ?? '') === 'imagen' && !empty($media['archivo'])): ?>
+                                                            <img src="<?= cms_e($media['archivo']) ?>" alt="<?= cms_e($media['titulo'] ?? '') ?>">
+                                                        <?php elseif (($media['tipo'] ?? '') === 'video'): ?>
+                                                            <i class="bi bi-play-btn"></i>
+                                                        <?php else: ?>
+                                                            <i class="bi bi-youtube"></i>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="event-media-body">
+                                                        <strong><?= cms_e($media['titulo'] ?? ucfirst((string) ($media['tipo'] ?? 'media'))) ?></strong>
+                                                        <small><?= cms_e($media['tipo'] ?? '') ?> · <?= (int) ($media['visible'] ?? 1) === 1 ? 'Visible' : 'Oculto' ?></small>
+                                                        <div class="d-flex gap-2 mt-2">
+                                                            <button type="submit" name="accion" value="toggle_evento_media:<?= (int) $media['id_media'] ?>" class="btn btn-sm btn-outline-warning" formnovalidate>
+                                                                <?= (int) ($media['visible'] ?? 1) === 1 ? 'Ocultar' : 'Mostrar' ?>
+                                                            </button>
+                                                            <button type="submit" name="accion" value="eliminar_evento_media:<?= (int) $media['id_media'] ?>" class="btn btn-sm btn-outline-danger" formnovalidate onclick="return confirm('¿Eliminar este archivo multimedia?');">Eliminar</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php elseif ($eventIdValue > 0): ?>
+                                        <div class="field-note mt-3">Este evento todavía no tiene multimedia asociado.</div>
+                                    <?php else: ?>
+                                        <div class="field-note mt-3">Guarda el evento para asociar y administrar multimedia.</div>
+                                    <?php endif; ?>
                                 </div>
                             </div>
                         </div>
@@ -1476,6 +1571,46 @@ admin_render_layout_end([
                     eventModal.show();
                 }
             }
+
+            var mediaPreview = document.getElementById('eventMediaUploadPreview');
+            function renderMediaUploadPreview() {
+                if (!mediaPreview) {
+                    return;
+                }
+                var fields = document.querySelectorAll('input[name="event_media_images[]"], input[name="event_media_videos[]"]');
+                mediaPreview.innerHTML = '';
+                fields.forEach(function (field) {
+                    Array.prototype.slice.call(field.files || []).forEach(function (file) {
+                        var card = document.createElement('div');
+                        card.className = 'event-media-card';
+                        var thumb = document.createElement('div');
+                        thumb.className = 'event-media-thumb';
+                        if (file.type.indexOf('image/') === 0) {
+                            var img = document.createElement('img');
+                            img.src = URL.createObjectURL(file);
+                            img.onload = function () { URL.revokeObjectURL(img.src); };
+                            thumb.appendChild(img);
+                        } else {
+                            thumb.innerHTML = '<i class="bi bi-play-btn"></i>';
+                        }
+                        var body = document.createElement('div');
+                        body.className = 'event-media-body';
+                        var title = document.createElement('strong');
+                        title.textContent = file.name;
+                        var meta = document.createElement('small');
+                        meta.textContent = 'Archivo seleccionado';
+                        body.appendChild(title);
+                        body.appendChild(meta);
+                        card.appendChild(thumb);
+                        card.appendChild(body);
+                        mediaPreview.appendChild(card);
+                    });
+                });
+                mediaPreview.classList.toggle('d-none', mediaPreview.children.length === 0);
+            }
+            document.querySelectorAll('input[name="event_media_images[]"], input[name="event_media_videos[]"]').forEach(function (field) {
+                field.addEventListener('change', renderMediaUploadPreview);
+            });
         });
     </script>
     <script src="assets/js/eventos_excel_help.js"></script>

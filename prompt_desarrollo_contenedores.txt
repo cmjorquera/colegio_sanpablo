@@ -628,6 +628,69 @@ Si la imagen del evento esta vacia o el archivo no existe, el hero usa fallback 
 La seccion Videos del evento queda preparada pero oculta mientras no existan videos.
 El boton volver siempre apunta a index_1.php#calendario-eventos-home.
 
+Multimedia por evento:
+
+Se agrega tabla hija:
+
+evento_media
+
+Campos:
+
+id_media
+id_evento
+tipo
+archivo
+url
+titulo
+descripcion
+portada
+visible
+orden
+creado_en
+
+Relacion:
+
+evento_media.id_evento referencia eventos.id_evento con ON DELETE CASCADE.
+
+Tipos permitidos:
+
+imagen
+video
+youtube
+
+La tabla calendario no se modifica para este flujo. calendario sigue siendo solo base de dias, feriados y dias institucionales.
+
+El modal de crear/editar eventos en editar_contenedor.php mantiene visible y estado, quita los campos orden y destacado, y agrega el bloque Multimedia del evento.
+
+Desde el bloque Multimedia del evento:
+
+se pueden subir varias imagenes.
+se pueden subir videos locales.
+se pueden registrar URLs de YouTube.
+se muestran previews de archivos seleccionados y multimedia ya guardada.
+se puede ocultar/mostrar multimedia.
+se puede eliminar multimedia.
+
+Los archivos multimedia se guardan bajo:
+
+uploads/eventos/media/ID_EVENTO
+
+Helpers asociados en includes/cms_helpers.php:
+
+cms_ensure_event_media_table()
+cms_list_event_media()
+cms_save_event_media_uploads()
+cms_toggle_event_media_visible()
+cms_delete_event_media()
+
+evento_detalle.php usa evento_media para:
+
+hero con imagen principal tomada desde imagen marcada como portada o primera imagen visible.
+carrusel de imagenes destacadas.
+galeria de imagenes.
+videos locales y YouTube.
+fallback institucional si no existen imagenes visibles.
+
 La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.
 
 La base actual incluye además la tabla:
@@ -743,3 +806,68 @@ Regla visual del layout administrativo:
 El sidebar izquierdo debe mantener la capacidad de colapsarse en escritorio mediante el boton del topbar. En modo colapsado deben quedar visibles los iconos y ocultarse los textos del menu, sin eliminar el acceso a Auditoria / Logs. En pantallas pequenas el mismo boton abre/cierra el sidebar como menu movil.
 
 El topbar debe mostrar el nombre del usuario logueado junto al circulo de iniciales, usando los datos de sesion admin_nombre y admin_rol.
+
+--------------------------------------------------
+CONTENEDOR GALERIA HOME
+--------------------------------------------------
+
+Cambio implementado:
+
+Se agrego el componente publico:
+
+componentes/galeria_home.php
+
+Objetivo:
+
+Incorporar en index_1.php la seccion visual del prototipo colegiosanpablo_odd.php:
+
+<section class="sp-galeria" id="galeria">
+
+Reglas aplicadas:
+
+- No se usa colegiosanpablo.php.
+- No se modifica index_1.php porque ya carga componentes dinamicamente desde seccion.nombre_interno.
+- No se modifica el layout administrativo ni el sidebar.
+- El contenedor logico existente galeria_home se renderiza mediante componentes/galeria_home.php.
+- El ancla de vista previa del CMS para galeria_home apunta a index_1.php#galeria.
+
+Administracion:
+
+La galeria se administra desde admin_1.php > Contenedores > Galeria home > Items.
+
+Tabla usada:
+
+seccion_item
+
+Campos usados:
+
+titulo
+descripcion
+imagen
+url
+visible
+orden
+
+Render publico:
+
+- Solo se muestran items visibles con imagen.
+- Se muestran maximo 6 imagenes para respetar el layout original.
+- La primera imagen usa la clase large.
+- Si no hay items cargados en seccion_item, se usan imagenes fallback institucionales existentes en assets/images para que la seccion no quede vacia.
+- Si una imagen configurada no existe en disco, se reemplaza por assets/images/frontis_01.jpg para evitar iconos de imagen rota.
+
+Estilo:
+
+Se reutilizan las clases ya existentes en assets/css/pages/colegiosanpablo.css:
+
+sp-galeria
+gallery-grid
+g-item
+overlay
+
+Configuracion opcional del contenedor:
+
+etiqueta
+titulo_bloque
+titulo_resaltado
+descripcion_bloque

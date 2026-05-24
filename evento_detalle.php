@@ -7,6 +7,7 @@ $idEvento = (int) ($_GET['id_evento'] ?? 0);
 $idItem = (int) ($_GET['id_item'] ?? 0);
 $sourceType = '';
 $rawEvent = null;
+$eventMedia = [];
 
 if ($idEvento > 0) {
     $rawEvent = cms_get_event($db, $idEvento);
@@ -14,6 +15,9 @@ if ($idEvento > 0) {
         $rawEvent = null;
     }
     $sourceType = $rawEvent ? 'eventos' : '';
+    if ($rawEvent) {
+        $eventMedia = cms_list_event_media($db, $idEvento, true);
+    }
 } elseif ($idItem > 0) {
     $rawEvent = cms_get_item($db, $idItem);
     if ($rawEvent && ($rawEvent['visible'] ?? 'si') !== 'si') {
@@ -68,8 +72,29 @@ function event_detail_time(?string $time): string
     return $time !== '' ? substr($time, 0, 5) : '';
 }
 
+function event_detail_youtube_embed(?string $url): string
+{
+    $url = trim((string) $url);
+    if ($url === '') {
+        return '';
+    }
+    if (preg_match('/youtu\.be\/([A-Za-z0-9_-]+)/', $url, $match) || preg_match('/[?&]v=([A-Za-z0-9_-]+)/', $url, $match) || preg_match('/youtube\.com\/embed\/([A-Za-z0-9_-]+)/', $url, $match)) {
+        return 'https://www.youtube.com/embed/' . $match[1];
+    }
+    return $url;
+}
+
 if ($sourceType === 'eventos') {
     $rawImage = $rawEvent['imagen'] ?? '';
+    $mediaImages = array_values(array_filter($eventMedia, static fn(array $media): bool => ($media['tipo'] ?? '') === 'imagen' && !empty($media['archivo'])));
+    $coverMedia = $mediaImages[0] ?? null;
+    foreach ($mediaImages as $media) {
+        if (!empty($media['portada'])) {
+            $coverMedia = $media;
+            break;
+        }
+    }
+    $coverImage = $coverMedia['archivo'] ?? $rawImage;
     $event = [
         'title' => $rawEvent['titulo'] ?? '',
         'short_description' => $rawEvent['descripcion_corta'] ?? '',
@@ -80,9 +105,9 @@ if ($sourceType === 'eventos') {
         'time_end' => event_detail_time($rawEvent['hora_termino'] ?? ''),
         'location' => $rawEvent['ubicacion'] ?? '',
         'category' => $rawEvent['categoria'] ?? 'Institucional',
-        'color' => $rawEvent['color'] ?? '#1f8f6b',
-        'image' => event_detail_asset($rawImage),
-        'has_real_image' => event_detail_asset_exists($rawImage),
+        'color' => $rawEvent['color'] ?? ($site['institution']['color_primario'] ?? '#1f8f6b'),
+        'image' => event_detail_asset($coverImage),
+        'has_real_image' => event_detail_asset_exists($coverImage),
         'attachment' => $rawEvent['archivo_adjunto'] ?? '',
         'featured' => (int) ($rawEvent['destacado'] ?? 0) === 1,
     ];
@@ -124,12 +149,24 @@ if ($sourceType === 'eventos') {
 }
 
 $galleryImages = [];
-if ($rawEvent && !empty($event['has_real_image'])) {
-    $galleryImages[] = $event['image'];
+if ($sourceType === 'eventos') {
+    foreach ($eventMedia as $media) {
+        if (($media['tipo'] ?? '') === 'imagen' && event_detail_asset_exists($media['archivo'] ?? '')) {
+            $galleryImages[] = $media;
+        }
+    }
 }
-$hasVideos = false;
+if (!$galleryImages && $rawEvent && !empty($event['has_real_image'])) {
+    $galleryImages[] = ['archivo' => $event['image'], 'titulo' => $event['title'], 'descripcion' => '', 'portada' => 1];
+}
+$eventVideos = $sourceType === 'eventos'
+    ? array_values(array_filter($eventMedia, static fn(array $media): bool => in_array(($media['tipo'] ?? ''), ['video', 'youtube'], true)))
+    : [];
+$hasVideos = count($eventVideos) > 0;
 $institution = $site['institution'] ?? [];
 $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
+$primaryColor = $institution['color_primario'] ?? '#1f8f6b';
+$secondaryColor = $institution['color_secundario'] ?? '#E9A629';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -149,6 +186,10 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/pages/colegiosanpablo.css">
     <style>
+        :root {
+            --event-primary: <?= e($primaryColor) ?>;
+            --event-secondary: <?= e($secondaryColor) ?>;
+        }
         .event-detail-page { background: #f5f7fb; }
         .event-hero {
             position: relative;
@@ -267,6 +308,36 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
             background: #f8fbff;
             padding: 22px;
         }
+        .event-video-grid {
+            display: grid;
+            gap: 18px;
+        }
+        .event-video-card {
+            overflow: hidden;
+            border: 1px solid #e4ebf5;
+            border-radius: 18px;
+            background: #f8fbff;
+        }
+        .event-video-card iframe,
+        .event-video-card video {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border: 0;
+            background: #0f172a;
+        }
+        .event-video-caption {
+            padding: 14px 16px;
+        }
+        .event-video-caption strong {
+            display: block;
+            color: #12324a;
+            margin-bottom: 4px;
+        }
+        .event-video-caption p {
+            color: #627188;
+            margin: 0;
+        }
         .event-side-card {
             position: sticky;
             top: 24px;
@@ -291,7 +362,7 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
             display: grid;
             place-items: center;
             background: #e8f7f1;
-            color: #1f8f6b;
+            color: var(--event-primary);
         }
         .event-info-list strong {
             display: block;
@@ -313,7 +384,7 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
             font-weight: 700;
         }
         .event-back-btn {
-            background: linear-gradient(135deg, #1f8f6b, #27b785);
+            background: linear-gradient(135deg, var(--event-primary), var(--event-secondary));
             color: #fff;
         }
         .event-back-btn:hover { color: #fff; }
@@ -419,7 +490,7 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
                                 <div class="carousel-inner rounded-4 overflow-hidden">
                                     <?php foreach ($galleryImages as $index => $image): ?>
                                         <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
-                                            <img src="<?= e($image) ?>" class="d-block w-100" style="height:420px;object-fit:cover;" alt="<?= e($event['title']) ?>">
+                                            <img src="<?= e($image['archivo'] ?? '') ?>" class="d-block w-100" style="height:420px;object-fit:cover;" alt="<?= e($image['titulo'] ?? $event['title']) ?>">
                                         </div>
                                     <?php endforeach; ?>
                                 </div>
@@ -434,8 +505,8 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
                         <?php if ($galleryImages): ?>
                             <div class="event-gallery-grid">
                                 <?php foreach ($galleryImages as $image): ?>
-                                    <a class="event-gallery-item image-popup" href="<?= e($image) ?>">
-                                        <img src="<?= e($image) ?>" alt="<?= e($event['title']) ?>">
+                                    <a class="event-gallery-item image-popup" href="<?= e($image['archivo'] ?? '') ?>">
+                                        <img src="<?= e($image['archivo'] ?? '') ?>" alt="<?= e($image['titulo'] ?? $event['title']) ?>">
                                     </a>
                                 <?php endforeach; ?>
                             </div>
@@ -452,7 +523,23 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
                     <?php if ($hasVideos): ?>
                         <section class="event-card">
                             <h3>Videos del evento</h3>
-                            <div class="event-gallery-empty">Sección preparada para videos MP4 o YouTube.</div>
+                            <div class="event-video-grid">
+                                <?php foreach ($eventVideos as $video): ?>
+                                    <div class="event-video-card">
+                                        <?php if (($video['tipo'] ?? '') === 'youtube'): ?>
+                                            <iframe src="<?= e(event_detail_youtube_embed($video['url'] ?? '')) ?>" title="<?= e($video['titulo'] ?? 'Video del evento') ?>" allowfullscreen loading="lazy"></iframe>
+                                        <?php else: ?>
+                                            <video controls preload="metadata" src="<?= e($video['archivo'] ?? '') ?>"></video>
+                                        <?php endif; ?>
+                                        <?php if (!empty($video['titulo']) || !empty($video['descripcion'])): ?>
+                                            <div class="event-video-caption">
+                                                <?php if (!empty($video['titulo'])): ?><strong><?= e($video['titulo']) ?></strong><?php endif; ?>
+                                                <?php if (!empty($video['descripcion'])): ?><p><?= e($video['descripcion']) ?></p><?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
                         </section>
                     <?php endif; ?>
                 </div>
@@ -465,9 +552,6 @@ $favicon = $institution['favicon'] ?? 'assets/images/icono_ppt.png';
                             <li><i class="fa-regular fa-clock"></i><div><strong>Hora</strong><span><?= e($event['time_start'] ?: 'Por confirmar') ?><?= $event['time_end'] ? ' - ' . e($event['time_end']) : '' ?></span></div></li>
                             <li><i class="fa-solid fa-location-dot"></i><div><strong>Ubicación</strong><span><?= e($event['location'] ?: 'Por confirmar') ?></span></div></li>
                             <li><i class="fa-solid fa-tag"></i><div><strong>Categoría</strong><span><?= e($event['category']) ?></span></div></li>
-                            <?php if ($event['featured']): ?>
-                                <li><i class="fa-solid fa-star"></i><div><strong>Destacado</strong><span>Evento destacado</span></div></li>
-                            <?php endif; ?>
                         </ul>
                         <?php if ($event['attachment'] !== ''): ?>
                             <a href="<?= e($event['attachment']) ?>" class="event-file-btn" target="_blank" rel="noopener"><i class="fa-regular fa-file-lines"></i>Ver archivo adjunto</a>

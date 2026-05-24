@@ -247,7 +247,7 @@ function cms_get_preview_target(string $name): string
         'noticias_home' => '#noticias',
         'calendario_eventos_home' => '#calendario-eventos-home',
         'video_destacado_home' => '#video-destacado-home',
-        'galeria_home' => '#galeria-home',
+        'galeria_home' => '#galeria',
         'faq_home' => '#faq',
         'about_home' => '#about',
         'footer_principal' => '#footer-principal',
@@ -568,6 +568,153 @@ function cms_get_table_columns(mysqli $db, string $table): array
     }
 
     return $columns;
+}
+
+function cms_ensure_event_media_table(mysqli $db): void
+{
+    $sql = "CREATE TABLE IF NOT EXISTS evento_media (
+        id_media int(11) NOT NULL AUTO_INCREMENT,
+        id_evento int(11) NOT NULL,
+        tipo enum('imagen','video','youtube') NOT NULL DEFAULT 'imagen',
+        archivo varchar(255) DEFAULT NULL,
+        url varchar(500) DEFAULT NULL,
+        titulo varchar(180) DEFAULT NULL,
+        descripcion text DEFAULT NULL,
+        portada tinyint(1) NOT NULL DEFAULT 0,
+        visible tinyint(1) NOT NULL DEFAULT 1,
+        orden int(11) NOT NULL DEFAULT 0,
+        creado_en timestamp NOT NULL DEFAULT current_timestamp(),
+        PRIMARY KEY (id_media),
+        KEY idx_evento_media_evento (id_evento),
+        CONSTRAINT fk_evento_media_evento FOREIGN KEY (id_evento) REFERENCES eventos (id_evento) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+    $db->query($sql);
+}
+
+function cms_list_event_media(mysqli $db, int $idEvento, bool $onlyVisible = true): array
+{
+    cms_ensure_event_media_table($db);
+    $where = 'id_evento = ?';
+    if ($onlyVisible) {
+        $where .= ' AND visible = 1';
+    }
+    $stmt = $db->prepare("SELECT * FROM evento_media WHERE {$where} ORDER BY portada DESC, orden ASC, id_media ASC");
+    if (!$stmt) {
+        return [];
+    }
+    $stmt->bind_param('i', $idEvento);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $stmt->close();
+    return $rows;
+}
+
+function cms_upload_event_media_file(array $file, int $idEvento, string $tipo): ?string
+{
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+        return null;
+    }
+    if ((int) $file['error'] !== UPLOAD_ERR_OK) {
+        throw new RuntimeException('No fue posible subir un archivo multimedia del evento.');
+    }
+
+    $ext = strtolower(pathinfo((string) $file['name'], PATHINFO_EXTENSION));
+    $allowed = $tipo === 'video' ? ['mp4', 'webm', 'mov', 'm4v'] : ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    if (!in_array($ext, $allowed, true)) {
+        throw new RuntimeException('Formato multimedia no permitido.');
+    }
+
+    $relativeDir = 'uploads/eventos/media/' . $idEvento;
+    $absoluteDir = dirname(__DIR__) . '/' . $relativeDir;
+    if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0777, true) && !is_dir($absoluteDir)) {
+        throw new RuntimeException('No fue posible crear la carpeta multimedia del evento.');
+    }
+
+    $filename = cms_normalize_filename((string) $file['name']);
+    $absolutePath = $absoluteDir . '/' . $filename;
+    $relativePath = $relativeDir . '/' . $filename;
+    if (!move_uploaded_file((string) $file['tmp_name'], $absolutePath)) {
+        throw new RuntimeException('No fue posible mover el archivo multimedia.');
+    }
+    return $relativePath;
+}
+
+function cms_save_event_media_uploads(mysqli $db, int $idEvento): void
+{
+    cms_ensure_event_media_table($db);
+    foreach (['event_media_images' => 'imagen', 'event_media_videos' => 'video'] as $field => $tipo) {
+        if (empty($_FILES[$field]['name']) || !is_array($_FILES[$field]['name'])) {
+            continue;
+        }
+        foreach ($_FILES[$field]['name'] as $index => $name) {
+            $file = [
+                'name' => $name,
+                'tmp_name' => $_FILES[$field]['tmp_name'][$index] ?? '',
+                'error' => $_FILES[$field]['error'][$index] ?? UPLOAD_ERR_NO_FILE,
+            ];
+            $path = cms_upload_event_media_file($file, $idEvento, $tipo);
+            if ($path === null) {
+                continue;
+            }
+            $titulo = pathinfo((string) $name, PATHINFO_FILENAME);
+            $orden = (int) (time() % 100000);
+            $stmt = $db->prepare('INSERT INTO evento_media (id_evento, tipo, archivo, titulo, visible, orden) VALUES (?, ?, ?, ?, 1, ?)');
+            $stmt->bind_param('isssi', $idEvento, $tipo, $path, $titulo, $orden);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    $youtubeUrls = $_POST['event_media_youtube_url'] ?? [];
+    $youtubeTitles = $_POST['event_media_youtube_title'] ?? [];
+    if (is_array($youtubeUrls)) {
+        foreach ($youtubeUrls as $index => $url) {
+            $url = trim((string) $url);
+            if ($url === '') {
+                continue;
+            }
+            $titulo = trim((string) ($youtubeTitles[$index] ?? 'Video YouTube'));
+            $orden = (int) (time() % 100000);
+            $stmt = $db->prepare("INSERT INTO evento_media (id_evento, tipo, url, titulo, visible, orden) VALUES (?, 'youtube', ?, ?, 1, ?)");
+            $stmt->bind_param('issi', $idEvento, $url, $titulo, $orden);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
+
+function cms_toggle_event_media_visible(mysqli $db, int $idMedia): void
+{
+    cms_ensure_event_media_table($db);
+    $stmt = $db->prepare('UPDATE evento_media SET visible = IF(visible = 1, 0, 1) WHERE id_media = ?');
+    $stmt->bind_param('i', $idMedia);
+    $stmt->execute();
+    $stmt->close();
+}
+
+function cms_delete_event_media(mysqli $db, int $idMedia): void
+{
+    cms_ensure_event_media_table($db);
+    $stmt = $db->prepare('SELECT archivo FROM evento_media WHERE id_media = ? LIMIT 1');
+    $stmt->bind_param('i', $idMedia);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $media = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+
+    $stmt = $db->prepare('DELETE FROM evento_media WHERE id_media = ?');
+    $stmt->bind_param('i', $idMedia);
+    $stmt->execute();
+    $stmt->close();
+
+    $archivo = trim((string) ($media['archivo'] ?? ''));
+    if ($archivo !== '' && !preg_match('/^https?:\/\//i', $archivo)) {
+        $absolutePath = dirname(__DIR__) . '/' . ltrim($archivo, '/');
+        if (is_file($absolutePath)) {
+            unlink($absolutePath);
+        }
+    }
 }
 
 function cms_bind_params(mysqli_stmt $stmt, string $types, array &$values): void

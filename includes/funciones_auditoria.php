@@ -35,6 +35,7 @@ function auditoriaWhitelist(): array
         'seccion_config' => 'id_config',
         'seccion_item' => 'id_item',
         'eventos' => 'id_evento',
+        'evento_media' => 'id_media',
         'auditoria_log' => 'id_log',
     ];
 }

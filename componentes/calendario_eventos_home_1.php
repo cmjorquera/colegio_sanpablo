@@ -85,7 +85,7 @@ $upcoming = array_slice($events, 0, $limit);
                                         <span class="calendar-event-meta">Feriado</span>
                                     <?php endif; ?>
                                     <?php if ($dayEvents): ?>
-                                        <span class="calendar-event-title"><?= e($dayEvents[0]['titulo'] ?? '') ?></span>
+                                        <a class="calendar-event-title" href="evento_detalle.php?id_evento=<?= (int) ($dayEvents[0]['id_evento'] ?? 0) ?>"><?= e($dayEvents[0]['titulo'] ?? '') ?></a>
                                         <span class="calendar-event-meta"><?= e($dayEvents[0]['hora_inicio'] ?? '') ?></span>
                                         <?php if (count($dayEvents) > 1): ?><span class="calendar-event-more">+<?= count($dayEvents) - 1 ?></span><?php endif; ?>
                                     <?php endif; ?>

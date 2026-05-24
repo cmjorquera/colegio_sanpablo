@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: colegiosanpablo.php');
+    header('Location: index_1.php');
     exit;
 }
 

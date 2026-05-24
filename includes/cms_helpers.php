@@ -258,7 +258,16 @@ function cms_get_preview_target(string $name): string
 
 function cms_get_component_path(string $name): ?string
 {
+    $fallbackComponents = [
+        'header_principal' => 'header',
+        'calendario_eventos_home' => 'calendario_eventos_home_1',
+    ];
+
     $path = __DIR__ . '/../componentes/' . $name . '.php';
+    if (!is_file($path) && isset($fallbackComponents[$name])) {
+        $path = __DIR__ . '/../componentes/' . $fallbackComponents[$name] . '.php';
+    }
+
     return is_file($path) ? $path : null;
 }
 

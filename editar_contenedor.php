@@ -667,10 +667,10 @@ HTML,
             <div class="admin-event-toolbar">
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar evento</a>
-                    <a href="admin_eventos_descargar_plantilla.php?id=<?= (int) $idSeccion ?>" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Descargar plantilla Excel</a>
+                    <a href="eventos_descargar_plantilla_1.php?id=<?= (int) $idSeccion ?>" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Descargar plantilla Excel</a>
                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-outline-secondary"><i class="bi bi-layers me-1"></i>Agregar item legacy</a>
                 </div>
-                <form class="event-import-form" method="post" action="admin_eventos_importar_excel.php" enctype="multipart/form-data">
+                <form class="event-import-form" method="post" action="eventos_importar_excel_1.php" enctype="multipart/form-data">
                     <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                     <input class="form-control" type="file" name="archivo_excel" accept=".xlsx,.csv" required>
                     <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Subir eventos desde Excel</button>

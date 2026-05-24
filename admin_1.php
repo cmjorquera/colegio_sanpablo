@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: colegiosanpablo.php');
+    header('Location: index_1.php');
     exit;
 }
 
@@ -109,7 +109,7 @@ admin_render_layout_start([
     'institution_short_name' => $institution['nombre_corto'] ?? ($institution['nombre'] ?? 'Institución'),
     'institution_logo' => $institution['logo_header'] ?? '',
     'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
-    'header_actions' => '<a href="index.php" target="_blank" class="btn btn-soft"><i class="bi bi-eye me-2"></i>Ver sitio</a>',
+    'header_actions' => '<a href="index_1.php" target="_blank" class="btn btn-soft"><i class="bi bi-eye me-2"></i>Ver sitio</a>',
 ]);
 ?>
 

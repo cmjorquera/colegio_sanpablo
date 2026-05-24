@@ -50,6 +50,71 @@ Las páginas de detalle o botones de volver deben regresar a index_1.php o a un 
 
 ---
 
+# RECUPERACION DESDE VERSION ANTIGUA
+
+Existe una referencia histórica en:
+
+version_antigua.zip
+
+Esa versión se puede usar solo como fuente de rescate visual o estructural cuando falten archivos del sistema actual.
+
+Archivos importantes rescatados o comparados desde esa versión:
+
+admin.php
+preview_contenedor.php
+componentes/header_principal.php
+includes/admin_layout.php
+prompt_desarrollo_contenedores.txt
+qaseduc_colegio_spablo.sql
+
+El menú público superior marcado visualmente en el sitio no es hardcodeado. Vive en:
+
+componentes/header_principal.php
+
+Ese componente usa:
+
+$arrMenus
+$arrSubs
+
+Estos arrays se cargan desde:
+
+menus
+sub_menus
+
+La administración de esos nombres se hace desde el panel administrativo en los módulos:
+
+Menú principal
+Submenús
+
+Si el archivo componentes/header_principal.php falta, el menú público desaparece aunque las tablas menus y sub_menus tengan datos.
+
+En esta recuperación se validó que componentes/header.php contiene la misma lógica de menú dinámico. Como el entorno bloquea crear componentes/header_principal.php, cms_get_component_path() carga componentes/header.php cuando el contenedor lógico se llama header_principal.
+
+---
+
+# ARCHIVOS PRINCIPALES ACTUALES
+
+Por bloqueo de escritura en algunos nombres exactos del entorno local, el sistema actual usa estos nombres activos:
+
+index_1.php
+admin_1.php
+preview_contenedor_1.php
+componentes/calendario_eventos_home_1.php
+
+Para compatibilidad con URLs antiguas se agregó:
+
+.htaccess
+
+Reglas activas:
+
+admin.php redirige internamente a admin_1.php
+preview_contenedor.php redirige internamente a preview_contenedor_1.php
+index.php redirige internamente a index_1.php
+
+El helper cms_get_component_path() mantiene el nombre lógico del contenedor calendario_eventos_home, pero carga componentes/calendario_eventos_home_1.php cuando el archivo original no existe.
+
+---
+
 # AUTENTICACION DEL ADMINISTRADOR
 
 El acceso al panel administrativo se realiza desde el contenedor topbar, mediante el modal de ingreso del sitio publico.
@@ -106,9 +171,9 @@ admin_rol
 
 El destino luego de iniciar sesion es:
 
-admin.php
+admin_1.php
 
-Si admin.php, editar_contenedor.php o preview_contenedor.php se abren sin sesion admin, deben redirigir a:
+Si admin_1.php, editar_contenedor.php o preview_contenedor_1.php se abren sin sesion admin, deben redirigir a:
 
 index_1.php
 
@@ -316,7 +381,7 @@ si existen más en BD, mostrar solo las primeras 4 según orden
 Debes revisar y modificar solo si es necesario:
 
 componentes/topbar.php  
-admin.php  
+admin_1.php  
 index_1.php  
 editar_contenedor.php  
 
@@ -366,7 +431,7 @@ Este contenedor pertenece al home y muestra una sección visual de calendario in
 
 Archivo del componente:
 
-componentes/calendario_eventos_home.php
+componentes/calendario_eventos_home_1.php
 
 La sección se define en la tabla seccion con:
 
@@ -471,3 +536,11 @@ Desde evento_detalle.php los enlaces de volver deben regresar a:
 index_1.php#calendario-eventos-home
 
 La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.
+
+La base actual incluye además la tabla:
+
+dia_semana
+
+Esta tabla define los nombres de lunes a domingo, orden y si corresponde a fin de semana. El calendario público puede usar los datos ya denormalizados de calendario, pero no se debe olvidar que dia_semana forma parte del modelo real del calendario institucional.
+
+Para que eventos del mes actual no desaparezcan cuando la fecha exacta ya pasó, el componente debe buscar eventos desde el primer día del mes actual cuando no encuentre eventos en el mes configurado. Ejemplo: si hoy es 2026-05-23 y existe un evento 2026-05-22, debe seguir mostrándose dentro del calendario de Mayo 2026.

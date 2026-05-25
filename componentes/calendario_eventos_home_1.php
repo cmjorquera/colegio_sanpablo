@@ -171,3 +171,61 @@ $upcoming = array_slice($events, 0, $limit);
         </div>
     </div>
 </section>
+
+<script>
+document.addEventListener('click', function (event) {
+    var link = event.target.closest('.calendar-month-arrow');
+    if (!link || !window.fetch || !window.DOMParser) {
+        return;
+    }
+
+    event.preventDefault();
+    var calendar = document.getElementById('calendario-eventos-home');
+    if (!calendar) {
+        window.location.href = link.href;
+        return;
+    }
+
+    calendar.classList.add('is-loading-month');
+    fetch(link.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (response) { return response.text(); })
+        .then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var nextCalendar = doc.getElementById('calendario-eventos-home');
+            if (!nextCalendar) {
+                window.location.href = link.href;
+                return;
+            }
+
+            calendar.innerHTML = nextCalendar.innerHTML;
+            window.history.pushState({ calendarioMes: true }, '', link.href);
+        })
+        .catch(function () {
+            window.location.href = link.href;
+        })
+        .finally(function () {
+            calendar.classList.remove('is-loading-month');
+        });
+});
+
+window.addEventListener('popstate', function () {
+    var calendar = document.getElementById('calendario-eventos-home');
+    if (!calendar || !window.fetch || !window.DOMParser) {
+        return;
+    }
+
+    calendar.classList.add('is-loading-month');
+    fetch(window.location.href, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (response) { return response.text(); })
+        .then(function (html) {
+            var doc = new DOMParser().parseFromString(html, 'text/html');
+            var nextCalendar = doc.getElementById('calendario-eventos-home');
+            if (nextCalendar) {
+                calendar.innerHTML = nextCalendar.innerHTML;
+            }
+        })
+        .finally(function () {
+            calendar.classList.remove('is-loading-month');
+        });
+});
+</script>

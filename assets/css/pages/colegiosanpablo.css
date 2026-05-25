@@ -464,6 +464,11 @@ body {
     background: #31bb82;
     border-color: #31bb82;
 }
+.sp-calendario-eventos.is-loading-month .calendario-eventos-layout {
+    opacity: .55;
+    pointer-events: none;
+    transition: opacity .18s ease;
+}
 .sp-calendario-eventos .calendario-eventos-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 300px;

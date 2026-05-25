@@ -746,6 +746,12 @@ La importacion real sigue ocurriendo solo cuando el usuario marca checkboxes y c
 
 Cargar eventos seleccionados
 
+Ajuste de navegacion sin salto:
+
+Las flechas del calendario publico actualizan el mes mediante fetch sobre el mismo componente calendario_eventos_home_1.php. Esto evita que al cambiar de mes la pagina suba o baje por recarga completa o por salto al ancla.
+
+El enlace con cal_mes y #calendario-eventos-home se mantiene como fallback para navegadores sin JavaScript.
+
 La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.
 
 La base actual incluye además la tabla:
@@ -965,3 +971,47 @@ color
 destacado
 visible
 orden
+
+--------------------------------------------------
+REDISENO DASHBOARD ADMINISTRATIVO
+--------------------------------------------------
+
+Archivos modificados:
+
+admin_1.php
+prompt_desarrollo_contenedores.txt
+
+Correccion importante:
+
+El topbar publico de index_1.php y componentes/topbar.php no debe modificarse para este pedido. Se restaura el cambio visual aplicado al sitio publico y el trabajo queda limitado al contenido interno del dashboard administrativo.
+
+Reglas aplicadas:
+
+- No se modifica el menu lateral del administrador.
+- No se modifica el header publico.
+- No se modifica index_1.php para este rediseño.
+- No se modifica componentes/topbar.php para este rediseño.
+- Se mantiene includes/admin_layout.php como layout base del panel.
+- Se rediseña solo el contenido del panel dashboard dentro de admin_1.php.
+
+Dashboard:
+
+El panel dashboard muestra:
+
+- Metricas principales: contenedores, menus, submenus y eventos del mes.
+- Proximos eventos desde la tabla eventos usando cms_list_public_events().
+- Mini calendario mensual informativo.
+- Accesos rapidos a eventos, menus y configuracion.
+- Listado resumido de contenedores del home desde la tabla seccion.
+- Actividad reciente desde auditoria_log si la tabla existe.
+- Estado del sitio con contenedores activos y usuario administrador.
+
+Tablas consultadas:
+
+seccion
+menus
+sub_menus
+eventos
+auditoria_log
+
+No se crean tablas nuevas ni columnas nuevas.

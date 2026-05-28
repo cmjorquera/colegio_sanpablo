@@ -1136,6 +1136,37 @@ function cms_save_item(mysqli $db, array $section, array $post): int
         ? 'noticias'
         : 'secciones/' . preg_replace('/[^a-z0-9_-]+/i', '-', $section['nombre_interno']);
 
+    if (($section['nombre_interno'] ?? '') === 'video_destacado_home' || ($section['tipo_seccion'] ?? '') === 'video') {
+        $youtubeUrl = trim((string) ($post['url'] ?? ''));
+        $uploadedVideo = cms_upload_file('video_file', $folder, ['mp4', 'webm', 'mov', 'm4v'], null);
+        $url = $youtubeUrl !== ''
+            ? $youtubeUrl
+            : ($uploadedVideo ?: (string) ($itemActual['url'] ?? ''));
+        $titulo = trim((string) ($post['titulo'] ?? 'Video destacado'));
+        $titulo = $titulo !== '' ? $titulo : 'Video destacado';
+
+        if ($url === '') {
+            throw new RuntimeException('Debes ingresar un enlace de YouTube o cargar un video.');
+        }
+
+        if ($idItem > 0) {
+            $stmt = $db->prepare("UPDATE seccion_item
+                SET id_categoria = NULL, etiqueta = 'video_destacado', titulo = ?, url = ?, visible = ?, orden = ?
+                WHERE id_item = ? AND id_seccion = ?");
+            $stmt->bind_param('sssiii', $titulo, $url, $visible, $orden, $idItem, $idSeccion);
+        } else {
+            $stmt = $db->prepare("INSERT INTO seccion_item
+                (id_seccion, id_categoria, etiqueta, titulo, url, visible, orden)
+                VALUES (?, NULL, 'video_destacado', ?, ?, ?, ?)");
+            $stmt->bind_param('isssi', $idSeccion, $titulo, $url, $visible, $orden);
+        }
+
+        $stmt->execute();
+        $newId = $idItem > 0 ? $idItem : (int) $db->insert_id;
+        $stmt->close();
+        return $newId;
+    }
+
     $clearImagen = isset($post['clear_imagen']) && (string) $post['clear_imagen'] === '1';
     $clearImagenMobile = isset($post['clear_imagen_mobile']) && (string) $post['clear_imagen_mobile'] === '1';
 

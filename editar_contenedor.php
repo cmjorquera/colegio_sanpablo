@@ -302,6 +302,7 @@ $openModal = $_GET['modal'] ?? '';
 $tab = $_GET['tab'] ?? 'general';
 $isTopbar = ($section['nombre_interno'] ?? '') === 'topbar';
 $isEventsCalendar = ($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events';
+$isVideoFeatured = ($section['nombre_interno'] ?? '') === 'video_destacado_home' || ($section['tipo_seccion'] ?? '') === 'video';
 $eventosCalendario = $isEventsCalendar ? cms_list_events($db, 300) : [];
 $editingEvent = ($isEventsCalendar && isset($_GET['evento'])) ? cms_get_event($db, (int) $_GET['evento']) : null;
 $editingEventMedia = ($isEventsCalendar && $editingEvent) ? cms_list_event_media($db, (int) ($editingEvent['id_evento'] ?? 0), false) : [];
@@ -1015,7 +1016,7 @@ HTML,
                     <thead>
                         <tr>
                             <th>Orden</th>
-                            <th>Título</th>
+                            <th><?= $isVideoFeatured ? 'Video' : 'Título' ?></th>
                             <th>Visible</th>
                             <th>Acciones</th>
                         </tr>
@@ -1026,7 +1027,12 @@ HTML,
                                 <td><?= (int) $item['orden'] ?></td>
                                 <td>
                                     <?php $displayTitle = $item['titulo'] ?: trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? '')); ?>
-                                    <?= cms_e($displayTitle) ?>
+                                    <?php if ($isVideoFeatured): ?>
+                                        <div class="fw-semibold"><?= cms_e($displayTitle ?: 'Video destacado') ?></div>
+                                        <small class="text-muted"><?= cms_e($item['url'] ?? '') ?></small>
+                                    <?php else: ?>
+                                        <?= cms_e($displayTitle) ?>
+                                    <?php endif; ?>
                                 </td>
                                 <td><span class="badge-soft <?= ($item['visible'] ?? '') === 'si' ? 'success' : 'warning' ?>"><?= ($item['visible'] ?? '') === 'si' ? 'Si' : 'No' ?></span></td>
                                 <td>
@@ -1301,7 +1307,45 @@ HTML,
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <?php if (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
+                        <?php if ($isVideoFeatured): ?>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título interno', 'item_titulo_video', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_video" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? 'Video destacado') ?>" placeholder="Video destacado">
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL de YouTube', 'item_url_video', $section['nombre_interno'], 'url'); ?>
+                                        <?php $editingVideoUrl = (string) ($editingItem['url'] ?? ''); ?>
+                                        <input class="form-control" id="item_url_video" name="url" value="<?= preg_match('/(youtube\.com|youtu\.be)/i', $editingVideoUrl) ? cms_e($editingVideoUrl) : '' ?>" placeholder="https://www.youtube.com/watch?v=...">
+                                        <div class="field-note">Si cargas un video local y dejas esta URL vacía, se usará el archivo subido.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Video local', 'item_video_file', $section['nombre_interno'], 'video'); ?>
+                                        <input class="form-control" id="item_video_file" type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v">
+                                        <?php if (!empty($editingItem['url']) && !preg_match('/(youtube\.com|youtu\.be)/i', (string) $editingItem['url'])): ?>
+                                            <div class="field-note">Actual: <code><?= cms_e($editingItem['url']) ?></code></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Visible', 'item_visible_video', $section['nombre_interno'], 'visible', false); ?>
+                                        <select class="form-select" id="item_visible_video" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Orden', 'item_orden_video', $section['nombre_interno'], 'orden', false); ?>
+                                        <input class="form-control" id="item_orden_video" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <div class="field-card" data-field-shell>
@@ -1509,38 +1553,40 @@ HTML,
                             </div>
                         <?php endif; ?>
 
-                        <hr class="my-4">
+                        <?php if (!$isVideoFeatured): ?>
+                            <hr class="my-4">
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="field-card" data-field-shell>
-                                    <?php admin_modal_field_head('Imagen', 'item_imagen', $section['nombre_interno'], 'imagen', true, 'clear_imagen'); ?>
-                                    <input class="form-control" id="item_imagen" type="file" name="imagen" accept="image/*">
-                                    <div class="field-note">Si bloqueas este campo, la imagen se guardará vacía.</div>
-                                </div>
-                            </div>
-                            <?php if (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
+                            <div class="row g-3">
                                 <div class="col-md-6">
                                     <div class="field-card" data-field-shell>
-                                        <?php admin_modal_field_head('Imagen mobile', 'item_imagen_mobile', $section['nombre_interno'], 'imagen-mobile', true, 'clear_imagen_mobile'); ?>
-                                        <input class="form-control" id="item_imagen_mobile" type="file" name="imagen_mobile" accept="image/*">
-                                        <div class="field-note">Úsala si el diseño necesita una imagen distinta en móviles.</div>
+                                        <?php admin_modal_field_head('Imagen', 'item_imagen', $section['nombre_interno'], 'imagen', true, 'clear_imagen'); ?>
+                                        <input class="form-control" id="item_imagen" type="file" name="imagen" accept="image/*">
+                                        <div class="field-note">Si bloqueas este campo, la imagen se guardará vacía.</div>
                                     </div>
                                 </div>
-                            <?php endif; ?>
-                            <div class="col-md-3">
-                                <div class="field-card">
-                                    <?php admin_modal_field_head('Visible', 'item_visible', $section['nombre_interno'], 'visible', false); ?>
-                                    <select class="form-select" id="item_visible" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
+                                <?php if (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
+                                    <div class="col-md-6">
+                                        <div class="field-card" data-field-shell>
+                                            <?php admin_modal_field_head('Imagen mobile', 'item_imagen_mobile', $section['nombre_interno'], 'imagen-mobile', true, 'clear_imagen_mobile'); ?>
+                                            <input class="form-control" id="item_imagen_mobile" type="file" name="imagen_mobile" accept="image/*">
+                                            <div class="field-note">Úsala si el diseño necesita una imagen distinta en móviles.</div>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                                <div class="col-md-3">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Visible', 'item_visible', $section['nombre_interno'], 'visible', false); ?>
+                                        <select class="form-select" id="item_visible" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Orden', 'item_orden', $section['nombre_interno'], 'orden', false); ?>
+                                        <input class="form-control" id="item_orden" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>">
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="field-card">
-                                    <?php admin_modal_field_head('Orden', 'item_orden', $section['nombre_interno'], 'orden', false); ?>
-                                    <input class="form-control" id="item_orden" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>">
-                                </div>
-                            </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>

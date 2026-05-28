@@ -405,7 +405,7 @@ body {
     z-index: -1;
 }
 .sp-calendario-eventos .section-header-four h5 {
-    color: var(--sp-rojo);
+    color: var(--calendar-secondary, var(--sp-rojo));
     font-size: 13px;
     font-weight: 800;
     text-transform: uppercase;
@@ -453,16 +453,16 @@ body {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    color: #0f4c81;
-    background: #eef7f3;
-    border: 1px solid #d3eadf;
+    color: var(--calendar-primary, #0f4c81);
+    background: color-mix(in srgb, var(--calendar-primary, #0f4c81) 8%, #fff);
+    border: 1px solid color-mix(in srgb, var(--calendar-primary, #0f4c81) 20%, #fff);
     text-decoration: none;
     transition: .2s ease;
 }
 .sp-calendario-eventos .calendar-month-arrow:hover {
     color: #fff;
-    background: #31bb82;
-    border-color: #31bb82;
+    background: var(--calendar-primary, #31bb82);
+    border-color: var(--calendar-primary, #31bb82);
 }
 .sp-calendario-eventos.is-loading-month .calendario-eventos-layout {
     opacity: .55;
@@ -480,7 +480,7 @@ body {
     text-align: center;
 }
 .sp-calendario-eventos .calendario-eventos-table tr th {
-    background-color: #31bb82;
+    background-color: var(--calendar-primary, #31bb82);
     color: #fff;
     font-weight: 700;
     min-width: 104px;
@@ -507,11 +507,11 @@ body {
     background: #f6f8fb;
 }
 .sp-calendario-eventos .calendario-eventos-table tr td.is-holiday:not(.event-day) {
-    background: color-mix(in srgb, var(--holiday-color, var(--sp-rojo)) 12%, #fff);
-    border-top: 3px solid var(--holiday-color, var(--sp-rojo));
+    background: color-mix(in srgb, var(--calendar-secondary, var(--sp-rojo)) 12%, #fff);
+    border-top: 3px solid var(--calendar-secondary, var(--sp-rojo));
 }
 .sp-calendario-eventos .calendario-eventos-table tr td.event-day {
-    background-color: #31bb82;
+    background-color: var(--calendar-primary, #31bb82);
     color: #fff;
     cursor: pointer;
     transition: transform .2s, box-shadow .2s, background .2s;
@@ -521,10 +521,10 @@ body {
     box-shadow: inset 0 0 0 3px rgba(255,255,255,.38);
     transform: translateY(-1px);
 }
-.sp-calendario-eventos .calendario-eventos-table tr td.event-day.pastoral { background-color: var(--sp-rojo); }
-.sp-calendario-eventos .calendario-eventos-table tr td.event-day.academico { background-color: var(--sp-azul); }
-.sp-calendario-eventos .calendario-eventos-table tr td.event-day.deportivo { background-color: #31bb82; }
-.sp-calendario-eventos .calendario-eventos-table tr td.event-day.institucional { background-color: var(--sp-naranja); }
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.academico { background-color: var(--calendar-primary, var(--sp-azul)); }
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.pastoral { background-color: var(--calendar-secondary, var(--sp-rojo)); }
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.deportivo { background-color: var(--calendar-tertiary, #31bb82); }
+.sp-calendario-eventos .calendario-eventos-table tr td.event-day.institucional { background-color: var(--calendar-quaternary, var(--sp-naranja)); }
 .sp-calendario-eventos .calendar-day-number {
     display: block;
     font-size: 20px;
@@ -576,7 +576,7 @@ body {
     border-bottom: 0;
 }
 .sp-calendario-eventos .calendario-event-card .event-date-box {
-    background: #31bb82;
+    background: var(--calendar-primary, #31bb82);
     color: #fff;
     text-align: center;
     padding: 8px 4px;
@@ -588,10 +588,10 @@ body {
     font-size: 10px;
     margin-top: 5px;
 }
-.sp-calendario-eventos .calendario-event-card.pastoral .event-date-box { background: var(--sp-rojo); }
-.sp-calendario-eventos .calendario-event-card.academico .event-date-box { background: var(--sp-azul); }
-.sp-calendario-eventos .calendario-event-card.deportivo .event-date-box { background: #31bb82; }
-.sp-calendario-eventos .calendario-event-card.institucional .event-date-box { background: var(--sp-naranja); }
+.sp-calendario-eventos .calendario-event-card.academico .event-date-box { background: var(--calendar-primary, var(--sp-azul)); }
+.sp-calendario-eventos .calendario-event-card.pastoral .event-date-box { background: var(--calendar-secondary, var(--sp-rojo)); }
+.sp-calendario-eventos .calendario-event-card.deportivo .event-date-box { background: var(--calendar-tertiary, #31bb82); }
+.sp-calendario-eventos .calendario-event-card.institucional .event-date-box { background: var(--calendar-quaternary, var(--sp-naranja)); }
 .sp-calendario-eventos .event-card-body strong,
 .sp-calendario-eventos .event-card-body em,
 .sp-calendario-eventos .event-card-body small {
@@ -603,7 +603,7 @@ body {
     color: #0f1720;
 }
 .sp-calendario-eventos .event-card-body em {
-    color: #31bb82;
+    color: var(--calendar-primary, #31bb82);
     font-size: 11px;
     font-style: normal;
     font-weight: 800;
@@ -615,7 +615,7 @@ body {
     font-size: 11px;
 }
 .sp-calendario-eventos .calendario-event-card > i {
-    color: #31bb82;
+    color: var(--calendar-primary, #31bb82);
 }
 @media (max-width: 767px) {
     .sp-calendario-eventos { padding: 65px 0; }

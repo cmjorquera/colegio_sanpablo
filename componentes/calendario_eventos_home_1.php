@@ -5,6 +5,21 @@ $subtitle = cfg($sectionConfigsMap, $sectionName, 'subtitulo_bloque', 'Actividad
 $requestedMonth = (string) ($_GET['cal_mes'] ?? '');
 $monthTitle = preg_match('/^\d{4}-\d{2}$/', $requestedMonth) ? $requestedMonth : date('Y-m');
 $limit = max(3, (int) cfg($sectionConfigsMap, $sectionName, 'cantidad_items', '6'));
+$calendarColor = static function (?string $value, string $fallback): string {
+    $value = trim((string) $value);
+    return preg_match('/^#(?:[0-9a-fA-F]{3}){1,2}$/', $value) ? $value : $fallback;
+};
+$calendarPrimary = $calendarColor($institution['color_primario'] ?? null, '#2060B0');
+$calendarSecondary = $calendarColor($institution['color_secundario'] ?? null, '#E8A030');
+$calendarTertiary = $calendarColor($institution['color_terciario'] ?? null, '#2D2D2D');
+$calendarQuaternary = $calendarColor($institution['color_cuaternario'] ?? null, '#D94535');
+$calendarStyle = sprintf(
+    '--calendar-primary:%s;--calendar-secondary:%s;--calendar-tertiary:%s;--calendar-quaternary:%s;',
+    $calendarPrimary,
+    $calendarSecondary,
+    $calendarTertiary,
+    $calendarQuaternary
+);
 
 $monthDate = DateTime::createFromFormat('Y-m', $monthTitle) ?: new DateTime('first day of this month');
 $monthDate->modify('first day of this month');
@@ -62,7 +77,7 @@ $current->modify('-' . $startOffset . ' days');
 $upcoming = array_slice($events, 0, $limit);
 ?>
 
-<section class="sp-calendario-eventos" id="calendario-eventos-home">
+<section class="sp-calendario-eventos" id="calendario-eventos-home" style="<?= e($calendarStyle) ?>">
     <div class="container">
         <div class="section-header-four text-center">
             <h5><?= e($subtitle) ?></h5>
@@ -117,7 +132,7 @@ $upcoming = array_slice($events, 0, $limit);
                                 $cellClass[] = $eventCategoryClass($dayEvents[0]['categoria'] ?? 'institucional');
                             }
                             ?>
-                            <td class="<?= e(implode(' ', $cellClass)) ?>" <?= !empty($calendarDay['color']) ? 'style="--day-color:' . e($calendarDay['color']) . '"' : '' ?>>
+                            <td class="<?= e(implode(' ', $cellClass)) ?>">
                                 <?php if ($isCurrentMonth): ?>
                                     <span class="calendar-day-number"><?= (int) $current->format('j') ?></span>
                                     <?php if ($isHoliday && !empty($calendarDay['nombre_feriado'])): ?>

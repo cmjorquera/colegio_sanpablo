@@ -34,19 +34,19 @@ página pública donde se renderiza
 
 La página pública principal del sitio es:
 
-index_1.php
+index.php
 
-No usar colegiosanpablo.php ni archivos HTML importados como destino principal de nuevas integraciones. Esos archivos pueden existir como referencia o legado, pero el render público oficial del CMS debe apuntar a index_1.php.
+No usar colegiosanpablo.php ni archivos HTML importados como destino principal de nuevas integraciones. Esos archivos pueden existir como referencia o legado, pero el render público oficial del CMS debe apuntar a index.php.
 
 Los previews del CMS deben usar:
 
-index_1.php#ID_DEL_CONTENEDOR
+index.php#ID_DEL_CONTENEDOR
 
 El contenedor calendario_eventos_home se previsualiza en:
 
-index_1.php#calendario-eventos-home
+index.php#calendario-eventos-home
 
-Las páginas de detalle o botones de volver deben regresar a index_1.php o a un ancla de index_1.php.
+Las páginas de detalle o botones de volver deben regresar a index.php o a un ancla de index.php.
 
 ---
 
@@ -96,10 +96,10 @@ En esta recuperación se validó que componentes/header.php contiene la misma l�
 
 Por bloqueo de escritura en algunos nombres exactos del entorno local, el sistema actual usa estos nombres activos:
 
-index_1.php
-admin_1.php
-preview_contenedor_1.php
-componentes/calendario_eventos_home_1.php
+index.php
+admin.php
+preview_contenedor.php
+componentes/calendario_eventos_home.php
 
 Para compatibilidad con URLs antiguas se agregó:
 
@@ -107,11 +107,11 @@ Para compatibilidad con URLs antiguas se agregó:
 
 Reglas activas:
 
-admin.php redirige internamente a admin_1.php
-preview_contenedor.php redirige internamente a preview_contenedor_1.php
-index.php redirige internamente a index_1.php
+admin.php redirige internamente a admin.php
+preview_contenedor.php redirige internamente a preview_contenedor.php
+index.php redirige internamente a index.php
 
-El helper cms_get_component_path() mantiene el nombre lógico del contenedor calendario_eventos_home, pero carga componentes/calendario_eventos_home_1.php cuando el archivo original no existe.
+El helper cms_get_component_path() mantiene el nombre lógico del contenedor calendario_eventos_home, pero carga componentes/calendario_eventos_home.php cuando el archivo original no existe.
 
 ---
 
@@ -171,11 +171,11 @@ admin_rol
 
 El destino luego de iniciar sesion es:
 
-admin_1.php
+admin.php
 
-Si admin_1.php, editar_contenedor.php o preview_contenedor_1.php se abren sin sesion admin, deben redirigir a:
+Si admin.php, editar_contenedor.php o preview_contenedor.php se abren sin sesion admin, deben redirigir a:
 
-index_1.php
+index.php
 
 No redirigir accesos no autenticados a colegiosanpablo.php.
 
@@ -381,8 +381,8 @@ si existen más en BD, mostrar solo las primeras 4 según orden
 Debes revisar y modificar solo si es necesario:
 
 componentes/topbar.php  
-admin_1.php  
-index_1.php  
+admin.php  
+index.php  
 editar_contenedor.php  
 
 Si es necesario puedes crear:
@@ -431,7 +431,7 @@ Este contenedor pertenece al home y muestra una sección visual de calendario in
 
 Archivo del componente:
 
-componentes/calendario_eventos_home_1.php
+componentes/calendario_eventos_home.php
 
 La sección se define en la tabla seccion con:
 
@@ -552,7 +552,7 @@ La tabla calendario contiene los dias del calendario institucional. Incluye fech
 
 La tabla eventos contiene eventos institucionales reales. Este flujo de plantilla, preview con checkbox e importacion confirmada trabaja solo con eventos.
 
-componentes/calendario_eventos_home_1.php debe mostrar ambos tipos de informacion:
+componentes/calendario_eventos_home.php debe mostrar ambos tipos de informacion:
 
 feriados y dias especiales desde calendario.
 eventos cargados desde eventos.
@@ -565,7 +565,7 @@ Los eventos publicados y visibles se muestran en el calendario público del home
 
 El calendario público debe renderizarse en la página principal:
 
-index_1.php#calendario-eventos-home
+index.php#calendario-eventos-home
 
 No apuntar el calendario ni sus botones de retorno a colegiosanpablo.php.
 
@@ -575,7 +575,7 @@ evento_detalle.php?id_evento=X
 
 Desde evento_detalle.php los enlaces de volver deben regresar a:
 
-index_1.php#calendario-eventos-home
+index.php#calendario-eventos-home
 
 Detalle publico rediseñado:
 
@@ -626,7 +626,7 @@ El cuerpo usa dos columnas: contenido principal a la izquierda y tarjeta destaca
 La galeria queda preparada para multiples imagenes; actualmente usa imagen principal como primera imagen solo si existe fisicamente.
 Si la imagen del evento esta vacia o el archivo no existe, el hero usa fallback institucional assets/images/frontis_01.jpg y no se muestra icono roto.
 La seccion Videos del evento queda preparada pero oculta mientras no existan videos.
-El boton volver siempre apunta a index_1.php#calendario-eventos-home.
+El boton volver siempre apunta a index.php#calendario-eventos-home.
 
 Multimedia por evento:
 
@@ -705,7 +705,7 @@ NAVEGACION MENSUAL Y UX CARGA MASIVA EVENTOS
 
 Archivos modificados:
 
-componentes/calendario_eventos_home_1.php
+componentes/calendario_eventos_home.php
 assets/css/pages/colegiosanpablo.css
 editar_contenedor.php
 eventos_preview_importacion.php
@@ -713,13 +713,13 @@ assets/js/eventos_importacion.js
 
 Calendario publico:
 
-El componente calendario_eventos_home_1.php muestra por defecto el mes actual. Ademas acepta el parametro publico:
+El componente calendario_eventos_home.php muestra por defecto el mes actual. Ademas acepta el parametro publico:
 
 cal_mes=YYYY-MM
 
 El calendario incorpora flecha izquierda para mes anterior y flecha derecha para mes siguiente, manteniendo el ancla:
 
-index_1.php?cal_mes=YYYY-MM#calendario-eventos-home
+index.php?cal_mes=YYYY-MM#calendario-eventos-home
 
 Regla de datos:
 
@@ -748,7 +748,7 @@ Cargar eventos seleccionados
 
 Ajuste de navegacion sin salto:
 
-Las flechas del calendario publico actualizan el mes mediante fetch sobre el mismo componente calendario_eventos_home_1.php. Esto evita que al cambiar de mes la pagina suba o baje por recarga completa o por salto al ancla.
+Las flechas del calendario publico actualizan el mes mediante fetch sobre el mismo componente calendario_eventos_home.php. Esto evita que al cambiar de mes la pagina suba o baje por recarga completa o por salto al ancla.
 
 El enlace con cal_mes y #calendario-eventos-home se mantiene como fallback para navegadores sin JavaScript.
 
@@ -841,16 +841,16 @@ error
 Integraciones iniciales:
 
 login_check.php registra login correcto y login fallido.
-admin_1.php registra menus, sub_menus y visibilidad de seccion.
+admin.php registra menus, sub_menus y visibilidad de seccion.
 editar_contenedor.php registra eventos, seccion_config y seccion_item.
-eventos_descargar_plantilla_1.php registra descarga de plantilla.
+eventos_descargar_plantilla.php registra descarga de plantilla.
 eventos_importar_confirmados.php registra importacion masiva confirmada.
 
 Vista administrativa:
 
 auditoria_log.php
 
-Solo usuarios con sesion admin pueden acceder. Si no hay sesion, redirige a index_1.php.
+Solo usuarios con sesion admin pueden acceder. Si no hay sesion, redirige a index.php.
 
 La vista usa el layout administrativo, DataTables y Bootstrap. Permite filtrar por usuario, modulo, accion, fecha desde y fecha hasta. El detalle se abre en offcanvas derecho con datos generales, JSON antes/despues y comparacion visual de diferencias de primer nivel.
 
@@ -880,21 +880,21 @@ componentes/galeria_home.php
 
 Objetivo:
 
-Incorporar en index_1.php la seccion visual del prototipo colegiosanpablo_odd.php:
+Incorporar en index.php la seccion visual del prototipo colegiosanpablo_odd.php:
 
 <section class="sp-galeria" id="galeria">
 
 Reglas aplicadas:
 
 - No se usa colegiosanpablo.php.
-- No se modifica index_1.php porque ya carga componentes dinamicamente desde seccion.nombre_interno.
+- No se modifica index.php porque ya carga componentes dinamicamente desde seccion.nombre_interno.
 - No se modifica el layout administrativo ni el sidebar.
 - El contenedor logico existente galeria_home se renderiza mediante componentes/galeria_home.php.
-- El ancla de vista previa del CMS para galeria_home apunta a index_1.php#galeria.
+- El ancla de vista previa del CMS para galeria_home apunta a index.php#galeria.
 
 Administracion:
 
-La galeria se administra desde admin_1.php > Contenedores > Galeria home > Items.
+La galeria se administra desde admin.php > Contenedores > Galeria home > Items.
 
 Tabla usada:
 
@@ -978,21 +978,21 @@ REDISENO DASHBOARD ADMINISTRATIVO
 
 Archivos modificados:
 
-admin_1.php
+admin.php
 prompt_desarrollo_contenedores.txt
 
 Correccion importante:
 
-El topbar publico de index_1.php y componentes/topbar.php no debe modificarse para este pedido. Se restaura el cambio visual aplicado al sitio publico y el trabajo queda limitado al contenido interno del dashboard administrativo.
+El topbar publico de index.php y componentes/topbar.php no debe modificarse para este pedido. Se restaura el cambio visual aplicado al sitio publico y el trabajo queda limitado al contenido interno del dashboard administrativo.
 
 Reglas aplicadas:
 
 - No se modifica el menu lateral del administrador.
 - No se modifica el header publico.
-- No se modifica index_1.php para este rediseño.
+- No se modifica index.php para este rediseño.
 - No se modifica componentes/topbar.php para este rediseño.
 - Se mantiene includes/admin_layout.php como layout base del panel.
-- Se rediseña solo el contenido del panel dashboard dentro de admin_1.php.
+- Se rediseña solo el contenido del panel dashboard dentro de admin.php.
 
 Dashboard:
 
@@ -1015,3 +1015,428 @@ eventos
 auditoria_log
 
 No se crean tablas nuevas ni columnas nuevas.
+
+--------------------------------------------------
+DIFERENCIA ENTRE carpeta componentes/ Y carpeta contenedores/
+--------------------------------------------------
+
+contenedores/
+    Contiene los bloques HTML ESTATICOS originales del tema comprado (HTML template).
+    Son archivos de referencia visual, con contenido hardcodeado, sin PHP dinamico.
+    Se usan SOLO como referencia para ver como era el diseño original del bloque.
+    Ejemplo: contenedores/video.php tiene el HTML del bloque video con URL hardcodeada.
+    NUNCA se incluyen directamente en index.php ni en el sitio publico.
+
+componentes/
+    Contiene los componentes PHP DINAMICOS que se renderizan realmente en el sitio publico.
+    Cada archivo lee datos desde la base de datos via $sectionItemsMap y $sectionConfigsMap.
+    Se incluyen dinamicamente en index.php segun las secciones activas en la tabla seccion.
+    El nombre del archivo coincide con el campo nombre_interno de la tabla seccion.
+    Ejemplo: componentes/video_destacado_home.php es el componente real del video.
+
+Regla: cuando se construye un componente nuevo, el archivo de contenedores/ es la referencia
+visual, y el archivo de componentes/ es el que hace el trabajo real con datos de la BD.
+
+--------------------------------------------------
+CONTENEDOR video_destacado_home
+--------------------------------------------------
+
+Seccion en tabla seccion:
+
+nombre_interno = video_destacado_home
+tipo_seccion = video
+
+Archivo del componente publico:
+
+componentes/video_destacado_home.php
+
+Tablas usadas:
+
+seccion_item  (guarda el URL del video)
+seccion_config  (guarda imagen_fondo opcional y titulo_bloque)
+
+Campos de seccion_item usados:
+
+etiqueta = 'video_destacado'
+titulo   = titulo interno del item (ej: "Video destacado")
+url      = URL del video (YouTube o video local)
+visible  = si/no
+orden    = posicion
+
+Campos de seccion_config usados:
+
+imagen_fondo  = ruta a imagen de fondo del bloque (opcional)
+titulo_bloque = texto del bloque (opcional)
+video_url     = URL de video fallback si seccion_item esta vacio (legacy, no recomendado)
+
+Logica de imagen de fondo (imagen_fondo):
+
+1. Si imagen_fondo esta configurada en seccion_config se usa esa imagen.
+2. Si no esta configurada y el video es de YouTube, se extrae automaticamente
+   el thumbnail de YouTube usando: https://img.youtube.com/vi/{VIDEO_ID}/maxresdefault.jpg
+3. Si tampoco hay URL de YouTube, se usa el fallback: assets/images/video/video-eight-image.jpg
+
+Esto evita que aparezca la imagen placeholder del tema HTML (video-eight-image.jpg)
+cuando hay una URL de YouTube configurada.
+
+Logica del video:
+
+Si url es YouTube → se abre en popup iframe con magnificPopup (tipo: 'iframe').
+Si url es video local → se abre en popup inline con magnificPopup (tipo: 'inline').
+
+Flujo administrativo:
+
+El admin va a Contenedores > Video destacado > Items > Editar item.
+Ahi ingresa la URL de YouTube en el campo "URL de YouTube".
+El thumbnail de YouTube se usa automaticamente como fondo del bloque.
+Si quiere una imagen personalizada, agrega la clave imagen_fondo en la pestaña General
+con la ruta al archivo de imagen (ej: assets/images/mi-imagen.jpg).
+
+Administracion del item en editar_contenedor.php:
+
+El modal de item para tipo video muestra:
+- Titulo interno
+- URL de YouTube
+- Video local (archivo mp4/webm/mov/m4v)
+- Visible
+- Orden
+
+NO muestra campo imagen porque la imagen de fondo se controla desde seccion_config (imagen_fondo).
+
+Pagina publica donde se renderiza:
+
+index.php (seccion con id video_destacado_home)
+
+Ancla de vista previa del CMS:
+
+index.php#video-destacado-home
+
+MODAL DE VIDEO (reproductor propio, sin magnificPopup):
+
+Se eliminó la dependencia de magnificPopup para este contenedor.
+El componente tiene su propio overlay/modal sin dependencias externas.
+
+Flujo del modal YouTube:
+1. El botón play tiene data-url con la URL del CMS.
+2. Al hacer clic se extrae solo el video_id con regex.
+3. Se construye URL limpia: https://www.youtube.com/embed/{ID}?autoplay=1&rel=0&modestbranding=1
+4. Se abre el overlay con iframe que carga esa URL.
+
+REGLA YouTube embedding:
+No todos los videos de YouTube permiten embedding. Si el video tiene embedding
+deshabilitado por su dueño, mostrará error dentro del iframe. Eso no es código.
+Para verificar: youtube.com > Compartir > Incorporar > "reproduccion en otros sitios deshabilitada".
+Usar siempre URLs directas sin list=RDMM ni start_radio=1 para mejores resultados.
+
+El modal propio usa: overlay backdrop blur, escala animada, cierre con X / ESC / clic fondo.
+
+--------------------------------------------------
+CALENDARIO DE EVENTOS - MIGRACIÓN A FULLCALENDAR
+--------------------------------------------------
+
+Archivos modificados:
+
+componentes/calendario_eventos_home.php
+
+Archivo nuevo:
+
+calendario_eventos_json.php
+
+Cambio:
+
+Se reemplazó la tabla HTML/PHP del calendario por FullCalendar v6 (librería).
+El componente ya no construye el HTML del calendario en PHP.
+FullCalendar carga los eventos via AJAX desde calendario_eventos_json.php.
+
+CDN usado:
+
+https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js
+
+Este bundle incluye todos los plugins (dayGrid, timeGrid, list) y todos los locales.
+No hay que instalar nada en el servidor. El CSS se inyecta automáticamente via JS.
+
+Endpoint JSON (calendario_eventos_json.php):
+
+- Recibe parametros start y end de FullCalendar (ISO 8601).
+- Consulta la tabla eventos via cms_list_public_events().
+- Consulta la tabla calendario via cms_list_calendar_days() para feriados.
+- Retorna array JSON con formato FullCalendar (id, title, start, end, color, url).
+- Los feriados se incluyen como display: 'background' para no tapar eventos.
+- No requiere sesion de admin. Es endpoint público.
+- Mapeo categoría → color (igual que el CSS existente):
+    academico    → color_primario
+    pastoral     → color_secundario
+    deportivo    → color_terciario
+    institucional→ color_cuaternario
+    default      → color_primario
+
+Colores institucionales:
+
+Los colores se leen de la tabla institucion (color_primario, color_secundario, etc.)
+en el endpoint JSON y también en el componente PHP.
+Se aplican a los eventos via propiedad 'color' del JSON.
+Se aplican al header del calendario y botones de nav via CSS variables de FullCalendar.
+
+Barra lateral Próximos eventos:
+
+Se mantiene en PHP. Pero ahora consulta eventos desde HOY hacia adelante (+120 dias)
+en vez de mostrar eventos del mes visualizado en el calendario. Asi siempre muestra
+eventos próximos relevantes sin importar qué mes está abierto en FullCalendar.
+
+Lo que se eliminó:
+
+- El PHP que construía la tabla del calendario (for loop de celdas).
+- La navegación mensual por URL (?cal_mes=YYYY-MM).
+- El fetch de cambio de mes via AJAX.
+- Las clases calendar-day, calendar-empty, event-day del CSS (ya no se generan).
+  (el CSS de esas clases puede dejarse para no romper nada).
+
+Configuración de FullCalendar:
+
+- locale: 'es' (español, fechas y textos en español).
+- firstDay: 1 (semana empieza el lunes, como en el calendario anterior).
+- initialView: 'dayGridMonth'.
+- dayMaxEvents: 3 (muestra +N para días con muchos eventos).
+- Los botones prev/next son circulares con color primario institucional.
+- El dia de hoy se resalta con un fondo muy suave del color primario.
+- Al hacer clic en un evento se navega a evento_detalle.php?id_evento=X.
+- Hover muestra tooltip nativo con titulo + hora + ubicacion.
+
+REGLA IMPORTANTE sobre el CSS existente en colegiosanpablo.css:
+
+Las reglas CSS de .calendario-eventos-table, .calendar-day, .calendar-empty,
+.event-day, .calendar-day-number etc. quedaron huérfanas (ya no generan HTML esas clases).
+Pueden dejarse o eliminarse en una limpieza posterior. No rompen nada.
+Las reglas de .calendario-eventos-next, .calendario-event-card, .event-date-box,
+.event-card-body si siguen en uso (barra lateral PHP).
+Los overrides de FullCalendar se agregan en el <style> inline del componente
+porque necesitan los valores PHP de los colores institucionales.
+
+--------------------------------------------------
+CONTENEDOR modal_bienvenida
+--------------------------------------------------
+
+Seccion en tabla seccion:
+
+nombre_interno = modal_bienvenida
+tipo_seccion = modal
+orden = 99
+
+La sección se crea automáticamente via cms_sync_sections() al cargar cualquier página
+del sitio que llame a cms_get_site_data() (incluyendo index.php y editar_contenedor.php).
+
+Archivo del componente publico:
+
+componentes/modal_bienvenida.php
+
+Tablas usadas:
+
+seccion_item  → contenido del modal (imagen, titulo, descripcion, boton)
+seccion_config → comportamiento del modal (mostrar, delay_ms)
+
+Campos de seccion_item usados:
+
+imagen        → imagen superior del modal (opcional, 880x340px recomendado)
+titulo        → titular del modal
+descripcion   → texto del cuerpo (soporta saltos de linea con nl2br)
+boton_1_texto → texto del botón CTA (dejar vacío para no mostrar botón)
+boton_1_url   → URL destino del botón
+visible       → si/no (solo el primer item visible se usa)
+orden         → para ordenar si hay más de un item
+
+Campos de seccion_config usados:
+
+mostrar    → 'una_vez' (default, una vez por sesión del navegador)
+             'siempre' (cada vez que carga la página)
+delay_ms   → milisegundos antes de aparecer (default: 1200)
+
+Lógica de visibilidad (JS con Web Storage):
+
+1. Si hay un dismiss guardado en localStorage < 7 días → no mostrar.
+2. Si mostrar = 'una_vez' y ya fue visto en esta sesión (sessionStorage) → no mostrar.
+3. Si mostrar = 'siempre' → mostrar siempre (pero solo una vez por carga de página).
+4. El botón "No volver a mostrar" → guarda timestamp en localStorage (7 días).
+5. El botón X y el backdrop → solo cierran (no guardan dismiss permanente).
+
+El modal se muestra solo cuando tiene al menos UN item visible con contenido.
+Si la sección tiene visible = 'no', index.php no incluye el componente.
+
+Diseño visual:
+
+- Barra superior con gradiente institucional (color_primario → color_secundario).
+- Botón X con rotación al hover.
+- Imagen a ancho completo con efecto zoom suave al hover.
+- Título con color_primario institucional.
+- Botón CTA con color_primario, bordes redondeados (pill), sombra.
+- Animación de entrada: fade in + slide up + scale.
+- Backdrop con blur.
+- Responsive: se adapta a móviles sin scroll.
+
+Administración desde el CMS:
+
+admin.php > Contenedores > Modal de bienvenida
+
+Pestaña General:
+- Visible: si/no (activa o desactiva el modal completo)
+- Clave mostrar → 'una_vez' o 'siempre'
+- Clave delay_ms → número de milisegundos
+
+Pestaña Items:
+- Formulario específico con: imagen, título, mensaje, botón texto, botón URL, visible, orden
+- Vista previa de imagen actual si ya hay una cargada
+
+Archivos modificados además del componente:
+
+includes/cms_helpers.php → se agregó modal_informativo a cms_default_sections(), preview targets y fallback en cms_get_component_path()
+editar_contenedor.php → se agregó $isModal y formulario específico para tipo modal
+
+NOTA DE MIGRACIÓN:
+El componente se creó primero como modal_bienvenida y luego se renombró a modal_informativo.
+En la BD puede existir una sección antigua con nombre_interno = modal_bienvenida.
+El sistema maneja esto con dos mecanismos:
+1. cms_get_component_path() tiene fallback: modal_bienvenida → modal_informativo
+2. componentes/modal_bienvenida.php redirige con include a modal_informativo.php
+3. modal_informativo.php tiene guard PHP (define MODAL_INFORMATIVO_RENDERED) para no duplicar
+El admin puede eliminar la sección modal_bienvenida antigua si aparece en la lista.
+
+--------------------------------------------------
+CONTENEDOR noticias_home - CARRUSEL CON SWIPER
+--------------------------------------------------
+
+Archivo modificado:
+
+componentes/noticias_home.php
+
+Archivo nuevo:
+
+todas_noticias.php
+
+Cambio:
+
+Se reemplazó el grid Bootstrap fijo (máx 4 columnas) por un carrusel con Swiper.js.
+Swiper ya estaba cargado en index.php (assets/js/swiper-bundle.min.js).
+
+Comportamiento:
+
+- Carga todos los items visibles (hasta cantidad_items, default 12).
+- Muestra 4 a la vez en desktop, menos en pantallas chicas.
+- Flechas prev/next circulares en los costados (color institucional color_primario).
+- Las flechas se deshabilitan automáticamente al llegar al inicio/fin.
+- Cada card es un link: usa boton_1_url del item o cae a url_boton (todas_noticias.php).
+- El botón "Ver todas las noticias" apunta a todas_noticias.php (default).
+
+Campos de seccion_config:
+
+cantidad_items  → cuántos items cargar en total (default: 12)
+titulo_bloque   → título del bloque (default: Últimas Noticias)
+subtitulo_bloque→ subtítulo encima del título (default: Novedades)
+texto_boton     → texto del botón ver más (default: Ver todas las noticias)
+url_boton       → URL del botón ver más (default: todas_noticias.php)
+
+todas_noticias.php:
+
+Página pública vacía con estructura base:
+- Reutiliza header_principal y footer_principal via cms_get_component_path().
+- Hero con gradiente institucional (color_primario → color_secundario).
+- Breadcrumb: Inicio / Noticias.
+- Cuerpo placeholder "Próximamente" para completar después.
+- Botón volver a index.php#noticias.
+
+--------------------------------------------------
+AJUSTE MODAL INFORMATIVO - EVITAR PESTAÑAZO
+--------------------------------------------------
+
+Archivo modificado:
+
+componentes/modal_informativo.php
+
+Motivo:
+
+El modal podia generar un pestañazo al cargar nuevamente la pagina porque el componente se
+renderizaba siempre y la decision de no mostrarlo dependia completamente del JS despues del
+parseo del HTML.
+
+Ajuste aplicado:
+
+- El modal queda oculto por defecto con display:none!important, visibility:hidden y opacity:0.
+- Solo se muestra cuando el JS confirma que corresponde abrirlo y agrega las clases
+  sp-mi-ready y sp-mi-open.
+- Si ya fue visto en la sesion o existe dismiss vigente en localStorage, el nodo se elimina
+  inmediatamente del DOM para evitar cualquier parpadeo visual.
+- Se agrega control pageshow para cubrir restauraciones desde cache del navegador.
+- El guard PHP ahora acepta MODAL_INFO_DONE y MODAL_INFORMATIVO_RENDERED para mantener
+  compatibilidad con el nombre documentado y evitar doble render.
+
+Tablas usadas:
+
+seccion
+seccion_config
+seccion_item
+institucion
+
+Flujo publico:
+
+index.php incluye el componente segun la seccion visible modal_informativo. El modal respeta:
+mostrar = una_vez o siempre, delay_ms, sessionStorage para visto por sesion y localStorage para
+"No volver a mostrar" durante 7 dias.
+
+--------------------------------------------------
+NORMALIZACION DE ARCHIVOS _1.PHP
+--------------------------------------------------
+
+Archivos renombrados:
+
+index_1.php -> index.php
+admin_1.php -> admin.php
+preview_contenedor_1.php -> preview_contenedor.php
+eventos_descargar_plantilla_1.php -> eventos_descargar_plantilla.php
+eventos_importar_excel_1.php -> eventos_importar_excel.php
+componentes/calendario_eventos_home_1.php -> componentes/calendario_eventos_home.php
+
+Motivo:
+
+Los nombres con sufijo _1.php eran una compatibilidad temporal por bloqueos de escritura
+del entorno local. Al corregirse esos bloqueos, el sistema vuelve a usar los nombres
+canonicos.
+
+Ajuste aplicado:
+
+- Las referencias internas ahora apuntan a index.php, admin.php y preview_contenedor.php.
+- Los endpoints de eventos usan eventos_descargar_plantilla.php y eventos_importar_excel.php.
+- cms_get_component_path() ya carga directamente componentes/calendario_eventos_home.php.
+- .htaccess queda simplificado con DirectoryIndex index.php, sin rewrites hacia archivos _1.
+
+Regla actual:
+
+No crear nuevos archivos con sufijo _1.php. Si aparece una referencia antigua a index_1.php,
+admin_1.php, preview_contenedor_1.php o calendario_eventos_home_1.php, debe actualizarse al
+nombre canonico correspondiente.
+
+--------------------------------------------------
+MODAL INFORMATIVO - CAMBIO A COOKIE DE SERVIDOR
+--------------------------------------------------
+
+Archivo modificado:
+
+componentes/modal_informativo.php
+
+Motivo:
+
+El modal seguia generando pestañazo en la segunda carga cuando la decision de no mostrarlo
+dependia de sessionStorage/localStorage del navegador, porque el HTML del modal se imprimia
+igual y luego el JS lo ocultaba.
+
+Ajuste aplicado:
+
+- Se reemplaza la decision principal por cookies leidas desde PHP.
+- Al abrirse por primera vez, el JS escribe una cookie de sesion sp_mi_s_HASH.
+- En la siguiente carga, PHP detecta esa cookie y retorna antes de imprimir el modal.
+- El boton "No volver a mostrar" escribe sp_mi_d_HASH con Max-Age de 7 dias.
+- El HASH depende del contenido del modal, por lo que si cambia titulo, descripcion, imagen
+  o boton, se considera un modal nuevo y puede volver a mostrarse.
+- Se mantiene mostrar = siempre como excepcion: en ese modo no se bloquea por cookie de sesion.
+
+Regla:
+
+Para evitar pestañazos, el modal no debe depender solo de ocultamiento visual con JS. La
+segunda carga debe resolverse antes del render desde componentes/modal_informativo.php.

@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: index_1.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -19,7 +19,7 @@ $section = $idSeccion > 0 ? cms_get_section($db, $idSeccion) : null;
 
 if (!$section) {
     cms_set_flash('danger', 'El contenedor solicitado no existe.');
-    cms_redirect('admin_1.php?panel=contenedores');
+    cms_redirect('admin.php?panel=contenedores');
 }
 
 function topbar_get_config_value(array $configs, string $key, string $default = ''): string
@@ -303,6 +303,7 @@ $tab = $_GET['tab'] ?? 'general';
 $isTopbar = ($section['nombre_interno'] ?? '') === 'topbar';
 $isEventsCalendar = ($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events';
 $isVideoFeatured = ($section['nombre_interno'] ?? '') === 'video_destacado_home' || ($section['tipo_seccion'] ?? '') === 'video';
+$isModal = in_array(($section['nombre_interno'] ?? ''), ['modal_informativo', 'modal_bienvenida'], true) || ($section['tipo_seccion'] ?? '') === 'modal';
 $eventosCalendario = $isEventsCalendar ? cms_list_events($db, 300) : [];
 $editingEvent = ($isEventsCalendar && isset($_GET['evento'])) ? cms_get_event($db, (int) $_GET['evento']) : null;
 $editingEventMedia = ($isEventsCalendar && $editingEvent) ? cms_list_event_media($db, (int) ($editingEvent['id_evento'] ?? 0), false) : [];
@@ -326,64 +327,94 @@ admin_render_layout_start([
     'institution_name' => $site['institution']['nombre'] ?? 'Institución activa',
     'institution_short_name' => $site['institution']['nombre_corto'] ?? ($site['institution']['nombre'] ?? 'Institución'),
     'institution_logo' => $site['institution']['logo_header'] ?? '',
+    'color_primario' => $site['institution']['color_primario'] ?? '',
+    'color_secundario' => $site['institution']['color_secundario'] ?? '',
+    'color_terciario' => $site['institution']['color_terciario'] ?? '',
+    'color_cuaternario' => $site['institution']['color_cuaternario'] ?? '',
     'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
-    'header_actions' => '<a href="admin_1.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver</a><a href="preview_contenedor_1.php?id=' . (int) $idSeccion . '" class="btn btn-premium"><i class="bi bi-eye me-2"></i>Visualizar</a>',
+    'header_actions' => '<a href="admin.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver</a><a href="preview_contenedor.php?id=' . (int) $idSeccion . '" class="btn btn-premium"><i class="bi bi-eye me-2"></i>Visualizar</a>',
     'extra_head' => <<<'HTML'
     <style>
-        .hero-card { border: 1px solid #dbe4ef; border-radius: 22px; overflow: hidden; background: #fff; height: 100%; }
+        .hero-card { border: 1px solid var(--adm-border); border-radius: 10px; overflow: hidden; background: #fff; height: 100%; }
         .hero-thumb { height: 180px; background-size: cover; background-position: center; }
-        .nav-pills .nav-link.active { background: linear-gradient(135deg, #1f8f6b, #27b785); }
+        .admin-tabs-card { padding: 12px; }
+        .admin-tabs {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px;
+            border: 1px solid var(--adm-border);
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .admin-tabs .nav-item {
+            display: block;
+            width: auto;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            overflow: visible;
+        }
+        .admin-tabs .nav-link {
+            min-width: 104px;
+            text-align: center;
+            color: var(--adm-text-2);
+            border-radius: 8px;
+            font-size: .875rem;
+            font-weight: 700;
+            padding: 9px 14px;
+            line-height: 1;
+            border: 1px solid transparent;
+        }
+        .admin-tabs .nav-link:hover {
+            color: var(--adm-tertiary);
+            background: rgba(var(--adm-tertiary-rgb),.06);
+        }
+        .admin-tabs .nav-link.active {
+            background: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(var(--adm-primary-rgb),.22);
+        }
         .admin-modal .modal-content {
-            border: 1px solid rgba(53, 88, 213, 0.08);
-            border-radius: 24px;
+            border: 0;
+            border-radius: var(--adm-radius-lg);
             overflow: hidden;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-            box-shadow: 0 24px 54px rgba(15, 23, 42, 0.15);
+            box-shadow: var(--adm-shadow-lg);
         }
         .admin-modal .modal-header {
-            padding: 16px 18px 14px;
-            border-bottom: 1px solid #e8edf6;
-            background: linear-gradient(135deg, rgba(53, 88, 213, 0.08), rgba(46, 197, 161, 0.08));
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--adm-border);
+            background: var(--adm-card);
         }
         .admin-modal .modal-title {
-            font-size: 1.05rem;
-            font-weight: 800;
-            color: #162338;
+            font-size: .95rem;
+            font-weight: 700;
+            color: var(--adm-text);
         }
         .admin-modal .modal-body {
-            padding: 16px 18px;
-            background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(247,250,255,0.98));
+            padding: 18px 20px;
+            background: var(--adm-card);
         }
-        #eventModal .modal-content {
-            max-height: calc(100vh - 48px);
-        }
+        #eventModal .modal-content { max-height: calc(100vh - 48px); }
         #eventModal .modal-body {
-            max-height: calc(100vh - 178px);
+            max-height: calc(100vh - 170px);
             overflow-y: auto;
             scrollbar-width: thin;
-            scrollbar-color: #9fb2cb #eef4fb;
+            scrollbar-color: var(--adm-border-dark) var(--adm-bg);
         }
-        #eventModal .modal-body::-webkit-scrollbar {
-            width: 10px;
-        }
-        #eventModal .modal-body::-webkit-scrollbar-track {
-            background: #eef4fb;
-            border-radius: 999px;
-        }
-        #eventModal .modal-body::-webkit-scrollbar-thumb {
-            background: #9fb2cb;
-            border-radius: 999px;
-            border: 2px solid #eef4fb;
-        }
+        #eventModal .modal-body::-webkit-scrollbar { width: 6px; }
+        #eventModal .modal-body::-webkit-scrollbar-track { background: var(--adm-bg); }
+        #eventModal .modal-body::-webkit-scrollbar-thumb { background: var(--adm-border-dark); border-radius: 4px; }
         .admin-modal .modal-footer {
-            padding: 14px 18px 16px;
-            border-top: 1px solid #e8edf6;
-            background: rgba(255,255,255,0.88);
+            padding: 12px 20px;
+            border-top: 1px solid var(--adm-border);
+            background: #f8fafc;
         }
         .field-card {
             background: rgba(255,255,255,0.92);
             border: 1px solid #e4ebf5;
-            border-radius: 16px;
+            border-radius: 10px;
             padding: 12px 12px 10px;
             box-shadow: 0 8px 18px rgba(18, 35, 68, 0.04);
             height: 100%;
@@ -425,15 +456,15 @@ admin_render_layout_start([
             border: 1px solid #d9e2f0;
             border-radius: 999px;
             background: #f8fbff;
-            color: #3558d5;
+            color: var(--adm-tertiary);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             transition: .2s ease;
         }
         .field-help-btn:hover {
-            background: #edf2ff;
-            color: #2847b5;
+            background: rgba(var(--adm-tertiary-rgb),.08);
+            color: var(--adm-tertiary);
         }
         .field-help-popover { width: 220px; }
         .field-help-title {
@@ -498,7 +529,7 @@ admin_render_layout_start([
             flex-wrap: wrap;
             padding: 16px;
             border: 1px solid #e4ebf5;
-            border-radius: 18px;
+            border-radius: 10px;
             background: #fff;
             box-shadow: 0 8px 18px rgba(18, 35, 68, 0.04);
             margin-bottom: 18px;
@@ -534,7 +565,7 @@ admin_render_layout_start([
             box-shadow: 0 24px 54px rgba(15, 23, 42, 0.2);
         }
         .event-upload-card .spinner-border {
-            color: #1f8f6b;
+            color: var(--adm-primary);
             width: 2.5rem;
             height: 2.5rem;
         }
@@ -592,16 +623,16 @@ admin_render_layout_start([
             align-items: center;
             justify-content: center;
             border: 1px solid #bfd2ee;
-            color: #0f4c81;
-            background: #f4f8ff;
+            color: var(--adm-tertiary);
+            background: rgba(var(--adm-tertiary-rgb),.08);
         }
         .event-help-btn:hover {
             color: #fff;
-            background: #0f4c81;
-            border-color: #0f4c81;
+            background: var(--adm-tertiary);
+            border-color: var(--adm-tertiary);
         }
         .event-help-offcanvas .offcanvas-header {
-            background: #0f4c81;
+            background: var(--adm-tertiary);
             color: #fff;
         }
         .event-help-offcanvas .help-step {
@@ -661,10 +692,10 @@ HTML,
     </div>
 </div>
 
-<div class="section-card">
-    <ul class="nav nav-pills gap-2">
-        <li class="nav-item"><a class="nav-link <?= $tab === 'general' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=general">General</a></li>
-        <li class="nav-item"><a class="nav-link <?= $tab === 'items' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items">Items</a></li>
+<div class="section-card admin-tabs-card">
+    <ul class="nav admin-tabs">
+        <li class="nav-item"><a class="nav-link <?= $tab === 'general' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=general"><i class="bi bi-sliders me-1"></i>General</a></li>
+        <li class="nav-item"><a class="nav-link <?= $tab === 'items' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items"><i class="bi bi-layers me-1"></i>Items</a></li>
     </ul>
 </div>
 
@@ -764,6 +795,19 @@ HTML,
                 </div>
             </form>
         <?php else: ?>
+            <?php if ($isModal): ?>
+                <div class="alert border-0 mb-4" style="background:#f0f7ff;color:#1a4080;border-radius:12px;font-size:.875rem;">
+                    <strong><i class="bi bi-info-circle me-1"></i>Configuración del Modal informativo</strong><br>
+                    <strong>Opción A — desde esta pestaña (General):</strong> agrega estas claves de configuración:<br>
+                    &nbsp;&nbsp;<code>titulo</code> → título del modal<br>
+                    &nbsp;&nbsp;<code>descripcion</code> → texto del cuerpo<br>
+                    &nbsp;&nbsp;<code>imagen</code> → ruta a la imagen (ej: <code>uploads/modal/imagen.jpg</code>)<br>
+                    &nbsp;&nbsp;<code>boton_texto</code> → texto del botón (dejar vacío para no mostrar)<br>
+                    &nbsp;&nbsp;<code>boton_url</code> → URL del botón<br>
+                    <strong>Opción B — desde la pestaña Items:</strong> agrega un item con imagen, título, descripción y botón.<br>
+                    <strong>Comportamiento:</strong> <code>mostrar</code> → <code>siempre</code> o <code>una_vez</code> (default) · <code>delay_ms</code> → ej: <code>1200</code>
+                </div>
+            <?php endif; ?>
             <form method="post">
                 <input type="hidden" name="accion" value="guardar_seccion">
                 <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
@@ -831,7 +875,7 @@ HTML,
             <div class="admin-event-toolbar">
                 <div class="d-flex gap-2 flex-wrap">
                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar evento</a>
-                    <a href="eventos_descargar_plantilla_1.php?id=<?= (int) $idSeccion ?>" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Descargar plantilla Excel</a>
+                    <a href="eventos_descargar_plantilla.php?id=<?= (int) $idSeccion ?>" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Descargar plantilla Excel</a>
                     <button type="button" class="event-help-btn" data-eventos-help title="Ayuda de carga masiva"><i class="bi bi-question-circle-fill"></i></button>
                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-outline-secondary"><i class="bi bi-layers me-1"></i>Agregar item legacy</a>
                 </div>
@@ -1307,7 +1351,62 @@ HTML,
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <?php if ($isVideoFeatured): ?>
+                        <?php if ($isModal): ?>
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Imagen del modal', 'item_imagen_modal', $section['nombre_interno'], 'imagen', true, 'clear_imagen'); ?>
+                                        <input class="form-control" id="item_imagen_modal" type="file" name="imagen" accept="image/*">
+                                        <?php if (!empty($editingItem['imagen'])): ?>
+                                            <div class="field-note mt-2">
+                                                <img src="<?= cms_e($editingItem['imagen']) ?>" alt="Vista previa" style="max-height:80px;border-radius:8px;border:1px solid #e4ebf5;">
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="field-note">Recomendado: 880 × 340 px. Aparece en la parte superior del modal.</div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título', 'item_titulo_modal', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_modal" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>" placeholder="Bienvenidos al nuevo año escolar">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Mensaje', 'item_descripcion_modal', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_modal" name="descripcion" rows="4" placeholder="Texto que aparecerá en el cuerpo del modal..."><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Texto del botón', 'item_boton1_texto_modal', $section['nombre_interno'], 'boton-1-texto'); ?>
+                                        <input class="form-control" id="item_boton1_texto_modal" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? '') ?>" placeholder="Ver más">
+                                        <div class="field-note">Dejar vacío para no mostrar botón.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL del botón', 'item_boton1_url_modal', $section['nombre_interno'], 'boton-1-url'); ?>
+                                        <input class="form-control" id="item_boton1_url_modal" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>" placeholder="https://...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Visible', 'item_visible_modal', $section['nombre_interno'], 'visible', false); ?>
+                                        <select class="form-select" id="item_visible_modal" name="visible">
+                                            <option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option>
+                                            <option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Orden', 'item_orden_modal', $section['nombre_interno'], 'orden', false); ?>
+                                        <input class="form-control" id="item_orden_modal" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? 1) ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif ($isVideoFeatured): ?>
                             <div class="row g-3">
                                 <div class="col-md-5">
                                     <div class="field-card" data-field-shell>
@@ -1553,7 +1652,7 @@ HTML,
                             </div>
                         <?php endif; ?>
 
-                        <?php if (!$isVideoFeatured): ?>
+                        <?php if (!$isVideoFeatured && !$isModal): ?>
                             <hr class="my-4">
 
                             <div class="row g-3">

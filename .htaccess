@@ -1,7 +1,1 @@
-DirectoryIndex index_1.php index.php
-
-RewriteEngine On
-
-RewriteRule ^admin\.php$ admin_1.php [L,QSA]
-RewriteRule ^preview_contenedor\.php$ preview_contenedor_1.php [L,QSA]
-RewriteRule ^index\.php$ index_1.php [L,QSA]
+DirectoryIndex index.php

@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: index_1.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -39,7 +39,7 @@ try {
                 exit;
             }
             cms_set_flash('success', 'La visibilidad del contenedor fue actualizada.');
-            cms_redirect('admin_1.php?panel=contenedores');
+            cms_redirect('admin.php?panel=contenedores');
         }
 
         if ($action === 'guardar_menu') {
@@ -49,7 +49,7 @@ try {
             $datosDespues = obtenerRegistroAuditoria($db, 'menus', 'id_menu', $savedMenuId);
             registrarAuditoria($db, 'Menú principal', 'menus', $savedMenuId, $idMenuAudit > 0 ? 'editar' : 'crear', $idMenuAudit > 0 ? 'Se modificó un menú principal' : 'Se creó un menú principal', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El menú fue guardado correctamente.');
-            cms_redirect('admin_1.php?panel=menus');
+            cms_redirect('admin.php?panel=menus');
         }
 
         if ($action === 'toggle_menu') {
@@ -60,7 +60,7 @@ try {
             $accionAudit = (int) ($datosDespues['estado'] ?? 0) === 1 ? 'activar' : 'desactivar';
             registrarAuditoria($db, 'Menú principal', 'menus', $idMenuAudit, $accionAudit, 'Se cambió el estado de un menú principal', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El estado del menú fue actualizado.');
-            cms_redirect('admin_1.php?panel=menus');
+            cms_redirect('admin.php?panel=menus');
         }
 
         if ($action === 'guardar_submenu') {
@@ -70,7 +70,7 @@ try {
             $datosDespues = obtenerRegistroAuditoria($db, 'sub_menus', 'id_sub_menu', $savedSubMenuId);
             registrarAuditoria($db, 'Submenús', 'sub_menus', $savedSubMenuId, $idSubMenuAudit > 0 ? 'editar' : 'crear', $idSubMenuAudit > 0 ? 'Se modificó un submenú' : 'Se creó un submenú', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El submenú fue guardado correctamente.');
-            cms_redirect('admin_1.php?panel=submenus');
+            cms_redirect('admin.php?panel=submenus');
         }
 
         if ($action === 'toggle_submenu') {
@@ -81,13 +81,13 @@ try {
             $accionAudit = (int) ($datosDespues['estado'] ?? 0) === 1 ? 'activar' : 'desactivar';
             registrarAuditoria($db, 'Submenús', 'sub_menus', $idSubMenuAudit, $accionAudit, 'Se cambió el estado de un submenú', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El estado del submenú fue actualizado.');
-            cms_redirect('admin_1.php?panel=submenus');
+            cms_redirect('admin.php?panel=submenus');
         }
 
         if ($action === 'guardar_institucion') {
             cms_save_institution($db, $institutionId, $_POST);
             cms_set_flash('success', 'La configuración institucional fue actualizada.');
-            cms_redirect('admin_1.php?panel=configuracion');
+            cms_redirect('admin.php?panel=configuracion');
         }
     }
 } catch (Throwable $e) {
@@ -101,7 +101,7 @@ try {
         exit;
     }
     cms_set_flash('danger', $e->getMessage());
-    cms_redirect('admin_1.php?panel=' . urlencode($panel));
+    cms_redirect('admin.php?panel=' . urlencode($panel));
 }
 
 $flash = cms_get_flash();
@@ -148,129 +148,85 @@ admin_render_layout_start([
     'institution_name' => $institution['nombre'] ?? 'Institución activa',
     'institution_short_name' => $institution['nombre_corto'] ?? ($institution['nombre'] ?? 'Institución'),
     'institution_logo' => $institution['logo_header'] ?? '',
+    'color_primario' => $institution['color_primario'] ?? '',
+    'color_secundario' => $institution['color_secundario'] ?? '',
+    'color_terciario' => $institution['color_terciario'] ?? '',
+    'color_cuaternario' => $institution['color_cuaternario'] ?? '',
     'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
-    'header_actions' => '<a href="index_1.php" target="_blank" class="btn btn-soft"><i class="bi bi-eye me-2"></i>Ver sitio</a>',
+    'header_actions' => '',
     'extra_head' => <<<'HTML'
     <style>
-        .dashboard-grid { display: grid; gap: 18px; }
-        .dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; }
-        .dash-metric {
-            min-height: 118px;
-            border-radius: 22px;
-            padding: 18px;
-            background: #fff;
-            border: 1px solid rgba(219, 228, 239, .9);
-            box-shadow: var(--sp-shadow);
-            display: grid;
-            grid-template-columns: 64px minmax(0, 1fr);
-            gap: 14px;
-            align-items: center;
-        }
-        .dash-metric-icon {
-            width: 64px;
-            height: 64px;
-            border-radius: 18px;
-            display: grid;
-            place-items: center;
-            color: #fff;
-            font-size: 1.6rem;
-            box-shadow: 0 14px 28px rgba(15, 23, 42, .16);
-        }
-        .dash-metric strong { display: block; color: var(--sp-dark); font-size: 2rem; line-height: 1; }
-        .dash-metric span { display: block; color: var(--sp-dark); font-weight: 800; margin-top: 5px; }
-        .dash-metric small { display: block; color: var(--sp-muted); margin-top: 4px; }
-        .dash-green { background: linear-gradient(135deg,#22a568,#54d886); }
-        .dash-blue { background: linear-gradient(135deg,#126de1,#53a2ff); }
-        .dash-gold { background: linear-gradient(135deg,#f0a315,#ffc24a); }
-        .dash-purple { background: linear-gradient(135deg,#7438df,#a95cff); }
-        .dash-rose { background: linear-gradient(135deg,#f43f74,#ff6b91); }
+        /* Dashboard */
+        .dashboard-grid { display: grid; gap: 20px; }
+        .dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
         .dash-panel {
-            background: #fff;
-            border: 1px solid rgba(219, 228, 239, .9);
-            border-radius: 22px;
-            box-shadow: var(--sp-shadow);
+            background: var(--adm-card);
+            border: 1px solid var(--adm-border);
+            border-radius: var(--adm-radius);
+            box-shadow: var(--adm-shadow-sm);
             padding: 18px;
             height: 100%;
         }
-        .dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
-        .dash-panel-title { display: flex; align-items: center; gap: 10px; color: var(--sp-dark); font-size: 1.05rem; font-weight: 800; margin: 0; }
-        .dash-panel-title i { color: var(--sp-primary); }
-        .dash-event-list, .dash-list { display: grid; gap: 10px; }
+        .dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+        .dash-panel-title { display: flex; align-items: center; gap: 8px; font-size: .95rem; font-weight: 700; color: var(--adm-text); margin: 0; }
+        .dash-panel-title i { color: var(--adm-primary); }
+        .dash-event-list, .dash-list { display: flex; flex-direction: column; gap: 10px; }
         .dash-event {
             display: grid;
-            grid-template-columns: 58px minmax(0, 1fr) auto;
+            grid-template-columns: 52px minmax(0,1fr) auto;
             align-items: center;
             gap: 12px;
             padding: 10px;
-            border: 1px solid #edf2f7;
-            border-radius: 16px;
+            border: 1px solid var(--adm-border);
+            border-radius: var(--adm-radius-sm);
             color: inherit;
+            transition: background var(--adm-transition);
         }
+        .dash-event:hover { background: #f8fafc; }
         .dash-event-date {
-            height: 58px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            color: #fff;
-            background: linear-gradient(135deg,#f43f74,#ff7a9c);
-            font-weight: 900;
-            line-height: 1;
+            height: 52px; border-radius: 10px;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg,#e11d48,#fb7185);
+            color: #fff; font-weight: 800; line-height: 1; font-size: .95rem;
         }
-        .dash-event-date small { display: block; font-size: .68rem; margin-top: 4px; }
-        .dash-event strong, .dash-list strong { display: block; color: var(--sp-dark); font-weight: 800; }
-        .dash-event span, .dash-list span { display: block; color: var(--sp-muted); font-size: .84rem; margin-top: 3px; }
-        .dash-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+        .dash-event-date small { display: block; font-size: .62rem; margin-top: 3px; font-weight: 600; }
+        .dash-event strong, .dash-list strong { display: block; color: var(--adm-text); font-weight: 600; font-size: .87rem; }
+        .dash-event span,   .dash-list span   { display: block; color: var(--adm-muted); font-size: .78rem; margin-top: 2px; }
+        .dash-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
         .dash-action {
-            min-height: 86px;
-            border-radius: 18px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            color: var(--sp-dark);
-            background: #f7fbff;
-            border: 1px solid #edf2f7;
-            font-weight: 800;
-            text-align: center;
+            min-height: 80px; border-radius: var(--adm-radius);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px;
+            color: var(--adm-text-2); background: #f8fafc; border: 1px solid var(--adm-border);
+            font-size: .82rem; font-weight: 600; text-align: center;
+            transition: box-shadow var(--adm-transition), background var(--adm-transition);
         }
+        .dash-action:hover { background: var(--adm-primary-soft); border-color: var(--adm-primary); color: var(--adm-primary); }
         .dash-action i {
-            width: 42px;
-            height: 42px;
-            display: grid;
-            place-items: center;
-            border-radius: 14px;
-            color: #fff;
-            background: linear-gradient(135deg,var(--sp-primary),#27b785);
-            font-size: 1.25rem;
+            width: 38px; height: 38px; border-radius: 10px;
+            display: grid; place-items: center;
+            background: linear-gradient(135deg,var(--adm-primary),var(--adm-accent));
+            color: #fff; font-size: 1.1rem;
         }
         .dash-home-row {
             display: grid;
-            grid-template-columns: 24px minmax(0, 1fr) auto auto;
+            grid-template-columns: 20px minmax(0,1fr) auto auto;
             align-items: center;
             gap: 10px;
             padding: 10px 0;
-            border-bottom: 1px solid #edf2f7;
+            border-bottom: 1px solid var(--adm-border);
         }
         .dash-home-row:last-child { border-bottom: 0; }
-        .dash-mini-calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; text-align: center; }
-        .dash-mini-calendar span { color: var(--sp-muted); font-size: .78rem; font-weight: 800; }
+        .dash-mini-calendar { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; text-align: center; }
+        .dash-mini-calendar span { color: var(--adm-muted); font-size: .72rem; font-weight: 700; padding: 2px 0; }
         .dash-mini-calendar b {
-            min-height: 32px;
-            border-radius: 999px;
-            display: grid;
-            place-items: center;
-            color: var(--sp-dark);
-            font-size: .86rem;
+            min-height: 30px; border-radius: 999px;
+            display: grid; place-items: center;
+            color: var(--adm-text); font-size: .8rem; font-weight: 400;
         }
-        .dash-mini-calendar b.has-event { background: var(--sp-primary-soft); color: var(--sp-primary); }
-        .dash-mini-calendar b.today { background: linear-gradient(135deg,var(--sp-primary),#27b785); color: #fff; }
-        @media (max-width: 1399px) { .dashboard-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 767px) {
-            .dashboard-metrics, .dash-actions { grid-template-columns: 1fr; }
-            .dash-metric { grid-template-columns: 52px minmax(0, 1fr); }
-            .dash-metric-icon { width: 52px; height: 52px; border-radius: 15px; }
-        }
+        .dash-mini-calendar b.has-event { background: var(--adm-primary-soft); color: var(--adm-primary); font-weight: 700; }
+        .dash-mini-calendar b.today { background: linear-gradient(135deg,var(--adm-primary),var(--adm-accent)); color: #fff; font-weight: 700; }
+        @media (max-width: 1399px) { .dashboard-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+        @media (max-width: 767px) { .dashboard-metrics, .dash-actions { grid-template-columns: 1fr; } }
     </style>
 HTML,
 ]);
@@ -296,10 +252,10 @@ HTML,
     ?>
     <div class="dashboard-grid">
         <div class="dashboard-metrics">
-            <div class="dash-metric"><div class="dash-metric-icon dash-green"><i class="bi bi-layout-text-window-reverse"></i></div><div><strong><?= count($sections) ?></strong><span>Contenedores</span><small><?= count($visibleSections) ?> visibles</small></div></div>
-            <div class="dash-metric"><div class="dash-metric-icon dash-blue"><i class="bi bi-list-nested"></i></div><div><strong><?= count($menus) ?></strong><span>Menús</span><small>Activos en navegación</small></div></div>
-            <div class="dash-metric"><div class="dash-metric-icon dash-gold"><i class="bi bi-diagram-3"></i></div><div><strong><?= count($submenus) ?></strong><span>Submenús</span><small>Enlaces secundarios</small></div></div>
-            <div class="dash-metric"><div class="dash-metric-icon dash-purple"><i class="bi bi-calendar-event"></i></div><div><strong><?= count($eventsThisMonth) ?></strong><span>Eventos este mes</span><small>Publicados y visibles</small></div></div>
+            <div class="stat-card"><div class="stat-icon green"><i class="bi bi-layout-text-window-reverse"></i></div><div class="stat-body"><strong><?= count($sections) ?></strong><span>Contenedores</span><small><?= count($visibleSections) ?> visibles</small></div></div>
+            <div class="stat-card"><div class="stat-icon blue"><i class="bi bi-list-nested"></i></div><div class="stat-body"><strong><?= count($menus) ?></strong><span>Menús</span><small>Activos en navegación</small></div></div>
+            <div class="stat-card"><div class="stat-icon amber"><i class="bi bi-diagram-3"></i></div><div class="stat-body"><strong><?= count($submenus) ?></strong><span>Submenús</span><small>Enlaces secundarios</small></div></div>
+            <div class="stat-card"><div class="stat-icon purple"><i class="bi bi-calendar-event"></i></div><div class="stat-body"><strong><?= count($eventsThisMonth) ?></strong><span>Eventos este mes</span><small>Publicados y visibles</small></div></div>
         </div>
 
         <div class="row g-4">
@@ -329,7 +285,7 @@ HTML,
                 <div class="dash-panel">
                     <div class="dash-panel-head">
                         <h3 class="dash-panel-title"><i class="bi bi-calendar3"></i>Calendario</h3>
-                        <a class="btn btn-sm btn-soft" href="index_1.php#calendario-eventos-home" target="_blank"><i class="bi bi-box-arrow-up-right"></i></a>
+                        <a class="btn btn-sm btn-soft" href="index.php#calendario-eventos-home" target="_blank"><i class="bi bi-box-arrow-up-right"></i></a>
                     </div>
                     <div class="text-center fw-bold mb-3"><?= $monthNames[(int) date('n') - 1] ?> <?= date('Y') ?></div>
                     <div class="dash-mini-calendar">
@@ -348,8 +304,8 @@ HTML,
                     </div>
                     <div class="dash-actions">
                         <a class="dash-action" href="editar_contenedor.php?id=<?= $eventsSectionId ?>&tab=items&modal=evento"><i class="bi bi-calendar-plus"></i>Evento</a>
-                        <a class="dash-action" href="admin_1.php?panel=menus"><i class="bi bi-list-nested"></i>Menús</a>
-                        <a class="dash-action" href="admin_1.php?panel=configuracion"><i class="bi bi-sliders"></i>Ajustes</a>
+                        <a class="dash-action" href="admin.php?panel=menus"><i class="bi bi-list-nested"></i>Menús</a>
+                        <a class="dash-action" href="admin.php?panel=configuracion"><i class="bi bi-sliders"></i>Ajustes</a>
                     </div>
                 </div>
             </div>
@@ -360,7 +316,7 @@ HTML,
                 <div class="dash-panel">
                     <div class="dash-panel-head">
                         <h3 class="dash-panel-title"><i class="bi bi-house-check"></i>Contenedores del home</h3>
-                        <a class="btn btn-sm btn-soft" href="admin_1.php?panel=contenedores">Ver todos</a>
+                        <a class="btn btn-sm btn-soft" href="admin.php?panel=contenedores">Ver todos</a>
                     </div>
                     <?php foreach (array_slice($sections, 0, 7) as $section): ?>
                         <div class="dash-home-row">
@@ -444,10 +400,10 @@ HTML,
                             </td>
                             <td class="cell-actions">
                                 <div class="table-actions">
-                                    <button type="button" class="btn btn-soft js-preview-btn" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor_1.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">
+                                    <button type="button" class="btn-icon preview js-preview-btn" title="Vista previa" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">
                                         <i class="bi bi-eye"></i>
                                     </button>
-                                    <a class="btn btn-admin-action" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&modo=editar">
+                                    <a class="btn-icon edit" href="editar_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&modo=editar" title="Editar">
                                         <i class="bi bi-pencil-square"></i>
                                     </a>
                                 </div>
@@ -497,7 +453,7 @@ HTML,
                                             </div>
                                         </form>
                                     </td>
-                                    <td><a class="btn btn-sm btn-outline-secondary" href="admin_1.php?panel=menus&menu=<?= (int) $menu['id_menu'] ?>">Editar</a></td>
+                                    <td><a class="btn-icon edit" href="admin.php?panel=menus&menu=<?= (int) $menu['id_menu'] ?>" title="Editar"><i class="bi bi-pencil-square"></i></a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -520,7 +476,7 @@ HTML,
                         </div>
                         <div class="mt-4 d-flex gap-2">
                             <button class="btn btn-premium flex-fill" type="submit">Guardar</button>
-                            <?php if ($editingMenu): ?><a class="btn btn-soft" href="admin_1.php?panel=menus">Cancelar</a><?php endif; ?>
+                            <?php if ($editingMenu): ?><a class="btn btn-soft" href="admin.php?panel=menus">Cancelar</a><?php endif; ?>
                         </div>
                     </form>
                 </div>
@@ -566,7 +522,7 @@ HTML,
                                             </div>
                                         </form>
                                     </td>
-                                    <td><a class="btn btn-sm btn-outline-secondary" href="admin_1.php?panel=submenus&submenu=<?= (int) $submenu['id_sub_menu'] ?>">Editar</a></td>
+                                    <td><a class="btn-icon edit" href="admin.php?panel=submenus&submenu=<?= (int) $submenu['id_sub_menu'] ?>" title="Editar"><i class="bi bi-pencil-square"></i></a></td>
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>
@@ -598,7 +554,7 @@ HTML,
                         </div>
                         <div class="mt-4 d-flex gap-2">
                             <button class="btn btn-premium flex-fill" type="submit">Guardar</button>
-                            <?php if ($editingSubmenu): ?><a class="btn btn-soft" href="admin_1.php?panel=submenus">Cancelar</a><?php endif; ?>
+                            <?php if ($editingSubmenu): ?><a class="btn btn-soft" href="admin.php?panel=submenus">Cancelar</a><?php endif; ?>
                         </div>
                     </form>
                 </div>
@@ -651,36 +607,22 @@ HTML,
     </section>
 <?php endif; ?>
 
-<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-        <div class="modal-content" style="border-radius:24px; overflow:hidden; border:0;">
-            <div class="modal-header">
-                <h5 class="modal-title" id="previewModalLabel">Vista previa del contenedor</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-            </div>
-            <div class="modal-body p-0" style="background:#f8fafc;">
-                <iframe id="previewFrame" title="Vista previa del contenedor" style="width:100%; min-height:70vh; border:0; display:block;" loading="lazy"></iframe>
-            </div>
-        </div>
-    </div>
-</div>
-
 <?php
 admin_render_layout_end([
     'extra_scripts' => <<<'HTML'
     <script>
         $(function () {
-            ['#contenedoresTable', '#menusTable', '#submenusTable'].forEach(function (selector) {
-                if ($(selector).length) {
-                    $(selector).DataTable({
-                        pageLength: 10,
-                        order: [[0, 'asc']],
-                        language: {
-                            url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json'
-                        }
-                    });
-                }
+            var dtConfig = {
+                pageLength: 10,
+                order: [[0, 'asc']],
+                language: { url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json' }
+            };
+            ['#menusTable', '#submenusTable'].forEach(function (selector) {
+                if ($(selector).length) { $(selector).DataTable(dtConfig); }
             });
+            if ($('#contenedoresTable').length) {
+                $('#contenedoresTable').DataTable(Object.assign({}, dtConfig, { pageLength: 25 }));
+            }
 
             $('.js-toggle-seccion').on('change', function () {
                 var checkbox = this;
@@ -691,7 +633,7 @@ admin_render_layout_end([
 
                 checkbox.disabled = true;
 
-                fetch('admin_1.php?panel=contenedores', {
+                fetch('admin.php?panel=contenedores', {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -714,7 +656,7 @@ admin_render_layout_end([
                     .catch(function (error) {
                         checkbox.checked = previousState;
                         label.textContent = previousState ? 'Activo' : 'Oculto';
-                        window.alert(error.message);
+                        adminConfirm({ title: 'Error', msg: error.message, type: 'danger', btnText: 'OK', onConfirm: function(){} });
                     })
                     .finally(function () {
                         checkbox.disabled = false;

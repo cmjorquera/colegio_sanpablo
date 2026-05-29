@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: index_1.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -17,7 +17,7 @@ $section = cms_find_section($site['sections'], $idSeccion);
 
 if (!$section) {
     cms_set_flash('danger', 'No se encontró el contenedor solicitado.');
-    cms_redirect('admin_1.php?panel=contenedores');
+    cms_redirect('admin.php?panel=contenedores');
 }
 
 $institution = $site['institution'];

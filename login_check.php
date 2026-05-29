@@ -99,7 +99,7 @@ try {
 
     registrarAuditoria($db, 'Login administrador', 'usuario', (int) $user['id_usuario'], 'login', 'Login correcto en panel CMS', null, $user);
 
-    echo json_encode(['ok' => true, 'redirect' => 'admin_1.php']);
+    echo json_encode(['ok' => true, 'redirect' => 'admin.php']);
 } catch (Throwable $exception) {
     error_log('login_check.php: ' . $exception->getMessage());
     http_response_code(500);

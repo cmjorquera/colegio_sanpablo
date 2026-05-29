@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: index_1.php');
+    header('Location: index.php');
     exit;
 }
 
@@ -33,26 +33,36 @@ admin_render_layout_start([
     'institution_name' => $site['institution']['nombre'] ?? 'Institución activa',
     'institution_short_name' => $site['institution']['nombre_corto'] ?? ($site['institution']['nombre'] ?? 'Institución'),
     'institution_logo' => $site['institution']['logo_header'] ?? '',
+    'color_primario' => $site['institution']['color_primario'] ?? '',
+    'color_secundario' => $site['institution']['color_secundario'] ?? '',
+    'color_terciario' => $site['institution']['color_terciario'] ?? '',
+    'color_cuaternario' => $site['institution']['color_cuaternario'] ?? '',
     'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
-    'header_actions' => '<a href="admin_1.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver al panel</a>',
+    'header_actions' => '<a href="admin.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver al panel</a>',
     'extra_head' => <<<'HTML'
     <style>
-        .audit-filter-grid { display:grid; grid-template-columns: repeat(5, minmax(140px, 1fr)); gap:12px; }
+        .audit-filter-grid { display:grid; grid-template-columns: repeat(5, minmax(130px,1fr)); gap:12px; align-items:end; }
         .audit-json {
-            background:#0f172a;
-            color:#e2e8f0;
-            border-radius:12px;
-            padding:14px;
-            max-height:340px;
-            overflow:auto;
-            font-size:.82rem;
-            white-space:pre-wrap;
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: var(--adm-radius-sm);
+            padding: 14px;
+            max-height: 320px;
+            overflow: auto;
+            font-size: .8rem;
+            white-space: pre-wrap;
+            line-height: 1.5;
         }
-        .audit-diff-list { display:grid; gap:8px; }
-        .audit-diff-item { border:1px solid #e4ebf5; border-radius:12px; padding:10px; background:#fff; }
-        .audit-diff-item strong { color:#162338; }
-        @media (max-width: 1199px) { .audit-filter-grid { grid-template-columns: repeat(2, minmax(140px, 1fr)); } }
-        @media (max-width: 575px) { .audit-filter-grid { grid-template-columns: 1fr; } }
+        .audit-diff-list { display: grid; gap: 8px; }
+        .audit-diff-item {
+            border: 1px solid var(--adm-border);
+            border-radius: var(--adm-radius-sm);
+            padding: 10px 12px;
+            background: var(--adm-card);
+        }
+        .audit-diff-item strong { color: var(--adm-text); font-size: .85rem; }
+        @media (max-width: 1199px) { .audit-filter-grid { grid-template-columns: repeat(2, minmax(130px,1fr)); } }
+        @media (max-width: 575px)  { .audit-filter-grid { grid-template-columns: 1fr; } }
     </style>
 HTML,
 ]);
@@ -159,7 +169,7 @@ HTML,
                         <td><?= cms_e((string) ($log['id_registro'] ?? '')) ?></td>
                         <td><div style="min-width:240px;white-space:normal;"><?= cms_e($log['descripcion'] ?? '') ?></div></td>
                         <td><?= cms_e($log['ip_usuario'] ?? '') ?></td>
-                        <td><button type="button" class="btn btn-sm btn-outline-secondary js-audit-detail" data-log-id="<?= $logId ?>"><i class="bi bi-eye me-1"></i>Ver detalle</button></td>
+                        <td><button type="button" class="btn-icon preview js-audit-detail" data-log-id="<?= $logId ?>" title="Ver detalle"><i class="bi bi-eye"></i></button></td>
                     </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -167,25 +177,25 @@ HTML,
     </div>
 </section>
 
-<div class="offcanvas offcanvas-end" tabindex="-1" id="auditDetailCanvas" aria-labelledby="auditDetailTitle" style="width:min(760px, 100vw);">
-    <div class="offcanvas-header" style="background:#0f4c81;color:#fff;">
+<div class="offcanvas offcanvas-end" tabindex="-1" id="auditDetailCanvas" aria-labelledby="auditDetailTitle" style="width:min(760px,100vw);">
+    <div class="offcanvas-header" style="background:var(--adm-sidebar-bg);color:#fff;padding:18px 22px;">
         <div>
-            <h5 class="offcanvas-title" id="auditDetailTitle">Detalle de auditoría</h5>
-            <small id="auditDetailSubtitle"></small>
+            <h5 class="offcanvas-title" id="auditDetailTitle" style="color:#fff;font-size:1rem;font-weight:700;margin:0;">Detalle de auditoría</h5>
+            <small id="auditDetailSubtitle" style="color:rgba(255,255,255,.55);font-size:.8rem;"></small>
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
     </div>
-    <div class="offcanvas-body bg-light">
+    <div class="offcanvas-body" style="background:var(--adm-bg);padding:22px;">
         <div id="auditGeneral" class="mb-3"></div>
-        <h6>Comparación</h6>
+        <h6 style="font-size:.82rem;font-weight:700;color:var(--adm-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;">Comparación de cambios</h6>
         <div id="auditDiff" class="audit-diff-list mb-3"></div>
         <div class="row g-3">
             <div class="col-lg-6">
-                <h6>Datos antes</h6>
+                <h6 style="font-size:.82rem;font-weight:700;color:var(--adm-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Datos antes</h6>
                 <pre class="audit-json" id="auditBefore">{}</pre>
             </div>
             <div class="col-lg-6">
-                <h6>Datos después</h6>
+                <h6 style="font-size:.82rem;font-weight:700;color:var(--adm-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Datos después</h6>
                 <pre class="audit-json" id="auditAfter">{}</pre>
             </div>
         </div>
@@ -258,13 +268,13 @@ admin_render_layout_end([
                     return;
                 }
                 $('#auditDetailSubtitle').text((log.fecha_hora || '') + ' · ' + (log.accion || ''));
+                var rows = [
+                    ['Módulo', log.modulo], ['Tabla', (log.tabla_afectada || '') + ' #' + (log.id_registro || '')],
+                    ['Descripción', log.descripcion], ['IP', log.ip_usuario], ['User agent', log.user_agent]
+                ];
                 $('#auditGeneral').html(
-                    '<div class="section-card mb-0">' +
-                    '<div><strong>Módulo:</strong> ' + escapeHtml(log.modulo || '') + '</div>' +
-                    '<div><strong>Tabla:</strong> ' + escapeHtml(log.tabla_afectada || '') + ' #' + escapeHtml(log.id_registro || '') + '</div>' +
-                    '<div><strong>Descripción:</strong> ' + escapeHtml(log.descripcion || '') + '</div>' +
-                    '<div><strong>IP:</strong> ' + escapeHtml(log.ip_usuario || '') + '</div>' +
-                    '<div><strong>User agent:</strong> ' + escapeHtml(log.user_agent || '') + '</div>' +
+                    '<div class="section-card mb-3" style="padding:14px 16px;">' +
+                    rows.map(function(r){ return '<div style="padding:6px 0;border-bottom:1px solid var(--adm-border);font-size:.85rem;display:flex;gap:8px;"><strong style="min-width:100px;color:var(--adm-muted);font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;">' + r[0] + '</strong><span>' + escapeHtml(r[1] || '—') + '</span></div>'; }).join('') +
                     '</div>'
                 );
                 $('#auditBefore').text(prettyAudit(log.datos_antes));

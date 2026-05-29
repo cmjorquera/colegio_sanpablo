@@ -412,7 +412,7 @@ $secondaryColor = $institution['color_secundario'] ?? '#E9A629';
         <div class="container-fluid">
             <div class="d-flex align-items-center justify-content-between">
                 <div class="sp-logo py-2">
-                    <a href="index_1.php">
+                    <a href="index.php">
                         <img src="<?= e($institution['logo_header'] ?? 'assets/images/logo/logo.svg') ?>" alt="Colegio San Pablo" onerror="this.src='assets/images/logo/logo.svg'">
                     </a>
                 </div>
@@ -465,7 +465,7 @@ $secondaryColor = $institution['color_secundario'] ?? '#E9A629';
                 <div>
                     <h2>Evento no disponible</h2>
                     <p class="text-muted mb-4">El evento solicitado no existe o no se encuentra publicado.</p>
-                    <a href="index_1.php#calendario-eventos-home" class="event-back-btn" style="max-width:260px;"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
+                    <a href="index.php#calendario-eventos-home" class="event-back-btn" style="max-width:260px;"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
                 </div>
             </div>
         <?php else: ?>
@@ -556,7 +556,7 @@ $secondaryColor = $institution['color_secundario'] ?? '#E9A629';
                         <?php if ($event['attachment'] !== ''): ?>
                             <a href="<?= e($event['attachment']) ?>" class="event-file-btn" target="_blank" rel="noopener"><i class="fa-regular fa-file-lines"></i>Ver archivo adjunto</a>
                         <?php endif; ?>
-                        <a href="index_1.php#calendario-eventos-home" class="event-back-btn"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
+                        <a href="index.php#calendario-eventos-home" class="event-back-btn"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
                     </aside>
                 </div>
             </div>

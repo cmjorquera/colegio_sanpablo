@@ -184,6 +184,14 @@ function cms_default_sections(): array
             'orden' => 10,
             'observacion' => 'Este es el contenedor del footer. Aqui se muestran logo, descripcion institucional, enlaces rapidos, contacto, redes sociales y datos principales del sitio.',
         ],
+        [
+            'nombre_interno' => 'modal_informativo',
+            'titulo_admin' => 'Modal informativo',
+            'tipo_seccion' => 'modal',
+            'variante' => 'imagen_texto',
+            'orden' => 99,
+            'observacion' => 'Modal emergente que se muestra al cargar la pagina. Configurable con imagen, titulo, descripcion y boton.',
+        ],
     ];
 }
 
@@ -234,6 +242,21 @@ function cms_sync_sections(mysqli $db, int $institutionId): void
     $selectStmt->close();
     $insertStmt->close();
     $updateStmt->close();
+
+    // Limpieza: elimina la sección renombrada modal_bienvenida si no tiene ítems
+    $stmtClean = $db->prepare(
+        "DELETE s FROM seccion s
+          WHERE s.nombre_interno = 'modal_bienvenida'
+            AND s.id_institucion = ?
+            AND NOT EXISTS (
+                SELECT 1 FROM seccion_item si WHERE si.id_seccion = s.id_seccion
+            )"
+    );
+    if ($stmtClean) {
+        $stmtClean->bind_param('i', $institutionId);
+        $stmtClean->execute();
+        $stmtClean->close();
+    }
 }
 
 function cms_get_preview_target(string $name): string
@@ -250,17 +273,19 @@ function cms_get_preview_target(string $name): string
         'galeria_home' => '#galeria',
         'faq_home' => '#faq',
         'about_home' => '#about',
-        'footer_principal' => '#footer-principal',
+        'footer_principal'  => '#footer-principal',
+        'modal_informativo' => '#modal-informativo',
+        'modal_bienvenida'  => '#modal-informativo',
     ];
 
-    return 'index_1.php' . ($anchors[$name] ?? '');
+    return 'index.php' . ($anchors[$name] ?? '');
 }
 
 function cms_get_component_path(string $name): ?string
 {
     $fallbackComponents = [
-        'header_principal' => 'header',
-        'calendario_eventos_home' => 'calendario_eventos_home_1',
+        'header_principal'    => 'header',
+        'modal_bienvenida'    => 'modal_informativo',
     ];
 
     $path = __DIR__ . '/../componentes/' . $name . '.php';

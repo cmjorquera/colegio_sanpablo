@@ -752,6 +752,170 @@ Las flechas del calendario publico actualizan el mes mediante fetch sobre el mis
 
 El enlace con cal_mes y #calendario-eventos-home se mantiene como fallback para navegadores sin JavaScript.
 
+--------------------------------------------------
+MÓDULO ANALÍTICA DE ACCESOS
+--------------------------------------------------
+
+Archivo creado:
+
+analitica.php
+
+Archivos modificados:
+
+includes/admin_layout.php
+
+Nav items agregado:
+
+'analitica' => ['href' => 'analitica.php', 'icon' => 'bi-bar-chart-line', 'label' => 'Analítica']
+
+Nav group agregado:
+
+'ANALÍTICA' => ['analitica']
+
+Fuente de datos:
+
+Tabla: auditoria_log con LEFT JOIN a usuario.
+
+No se crearon tablas nuevas. Todos los campos usados están definidos en qaseduc_colegio_spablo.sql.
+
+Campos de auditoria_log usados:
+
+id_log, id_usuario, id_institucion, modulo, tabla_afectada, accion, descripcion, datos_antes, datos_despues, ip_usuario, user_agent, fecha_hora
+
+Campos de usuario usados (vía LEFT JOIN):
+
+nombre, apellido, usuario, email
+
+Secciones del módulo:
+
+1. KPIs (4 tarjetas):
+   - Total logins (accion = 'login')
+   - Usuarios activos últimos 7 días (DISTINCT id_usuario, INTERVAL 7 DAY)
+   - IPs únicas (DISTINCT ip_usuario)
+   - Total de acciones registradas + fecha de la última
+
+2. Gráfico de línea (Chart.js 4.x desde CDN):
+   - Actividad diaria de los últimos 30 días
+   - Rellena días sin registros con 0 en PHP
+
+3. Historial de accesos:
+   - Filtra accion IN ('login','logout')
+   - Columnas: fecha, usuario, acción, IP, navegador, OS
+   - DataTables ordenado por fecha DESC
+
+4. Actividad por usuario:
+   - COUNT(*) AS total_acciones, MAX(fecha_hora) AS ultima_accion
+   - GROUP BY id_usuario
+   - DataTables
+
+5. IPs registradas:
+   - COUNT(*) AS total, MAX(fecha_hora) AS ultima
+   - GROUP BY ip_usuario
+   - Limitado a 30 IPs
+   - DataTables
+
+6. Acciones por módulo:
+   - COUNT(*), COUNT(DISTINCT id_usuario), MAX(fecha_hora)
+   - GROUP BY modulo
+   - DataTables
+
+Parseo de User Agent:
+
+Función anl_parse_ua(string $ua): array
+PHP puro, sin librerías externas.
+Detecta: Edge, Opera, Chrome, Firefox, Safari, IE
+Detecta OS: Windows 10/11, 8.1, 7, macOS, iOS (iPhone/iPad), Android, Linux
+
+Patrón de archivo:
+
+Igual que auditoria_log.php:
+session_start → protección → requires → cms_get_connection → cms_get_site_data → auditoriaTablaLista → queries → admin_render_layout_start → HTML → admin_render_layout_end
+
+Usa variables CSS del admin: --adm-primary, --adm-secondary, --adm-border, --adm-muted, --adm-surface, --adm-text.
+
+--------------------------------------------------
+PANEL MENUS Y SUBMENUS - REDISEÑO CON DRAG-DROP Y MODAL
+--------------------------------------------------
+
+Archivos modificados:
+
+admin.php
+includes/cms_helpers.php
+
+Tablas usadas:
+
+menus
+sub_menus
+
+Cambios en cms_helpers.php:
+
+Se eliminó el campo orden del UPDATE en cms_save_menu(). El orden ya no se edita manualmente: se asigna automáticamente por MAX(orden)+1 en INSERT.
+
+Se eliminó el campo orden del UPDATE en cms_save_submenu(). El orden ya no se edita manualmente: se asigna automáticamente por MAX(orden)+1 dentro del mismo id_menu en INSERT.
+
+Se agregaron dos nuevas funciones:
+
+cms_reorder_menus(mysqli $db, array $ids): void
+  → actualiza el campo orden de cada fila en menus según la posición en el array recibido (1-based).
+
+cms_reorder_submenus(mysqli $db, array $ids): void
+  → actualiza el campo orden de cada fila en sub_menus según la posición en el array recibido (1-based).
+
+Cambios en admin.php (lógica POST):
+
+Se agregaron dos nuevos handlers:
+
+accion = reorder_menus
+  → recibe items[] (array de id_menu en orden deseado) y llama cms_reorder_menus().
+  → responde JSON si es AJAX.
+
+accion = reorder_submenus
+  → recibe items[] (array de id_sub_menu en orden deseado) y llama cms_reorder_submenus().
+  → responde JSON si es AJAX.
+
+Cambios en admin.php (panel menus, panel=menus):
+
+Se eliminó el layout de dos columnas (tabla + formulario lateral).
+Se eliminó el input de Orden del formulario de menús.
+La tabla ahora es de ancho completo con una columna de drag handle (≡) al inicio.
+El tbody tiene id="menusSortableTbody" para SortableJS.
+Cada fila tiene data-id con el id_menu.
+El botón de editar ya no es un enlace href a ?menu=ID. Ahora es un <button> con data-attributes (data-id, data-nombre, data-url, data-icono, data-estado) que llama a la función JS abrirModalMenu(this).
+El botón Nuevo menú abre el mismo modal vacío mediante abrirModalMenu(null).
+Se agregó un modal Bootstrap (#modalMenu) con campos Nombre, URL, Ícono y switch Activo. Sin campo Orden.
+
+Cambios en admin.php (panel submenus, panel=submenus):
+
+Se eliminó el layout de dos columnas (tabla + formulario lateral).
+Se eliminó el input de Orden del formulario de submenús.
+Los submenús ahora se agrupan por menú padre. Cada grupo tiene su propio tbody con clase submenusSortableTbody y atributo data-id-menu.
+El reorden es por grupo: al soltar un elemento, se envía solo el array de ids del grupo correspondiente.
+Cada fila de submenú tiene data-attributes para el modal (data-id, data-id-menu, data-nombre, data-url, data-icono, data-estado).
+El botón de editar llama a abrirModalSubmenu(this).
+El botón Nuevo submenú abre abrirModalSubmenu(null) con el modal vacío.
+Se agregó un modal Bootstrap (#modalSubmenu) con campos Menú padre (select), Nombre, URL, Ícono y switch Activo. Sin campo Orden.
+
+Cambios en admin.php (JavaScript):
+
+Se eliminó la inicialización de DataTables para #menusTable y #submenusTable.
+Se agregó SortableJS desde CDN (sortablejs@1.15.2).
+Se inicializa SortableJS en #menusSortableTbody para reordenar menús vía AJAX.
+Se inicializa SortableJS en cada .submenusSortableTbody para reordenar submenús por grupo vía AJAX.
+Se agregaron las funciones globales abrirModalMenu(btn) y abrirModalSubmenu(btn) que pueblan y muestran los modales Bootstrap correspondientes.
+
+Flujo administrativo:
+
+Crear menú → botón Nuevo menú → modal vacío → POST accion=guardar_menu (sin orden).
+Editar menú → botón ✎ → modal pre-poblado → POST accion=guardar_menu (sin orden).
+Reordenar menús → drag & drop → AJAX accion=reorder_menus → cms_reorder_menus().
+Toggle activo/inactivo → switch → POST accion=toggle_menu (sin cambio).
+
+Mismo flujo para submenús con la adición del selector de menú padre.
+
+Flujo público:
+
+Sin cambios. El header sigue leyendo menus y sub_menus ordenados por orden ASC.
+
 La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.
 
 La base actual incluye además la tabla:
@@ -1374,6 +1538,251 @@ seccion_config
 seccion_item
 institucion
 
+--------------------------------------------------
+# MEJORA ADMIN CONTENEDORES - ORDEN Y RESUMEN
+
+Archivos modificados:
+
+admin.php
+includes/cms_helpers.php
+editar_contenedor.php
+ajax/guardar_orden_contenedores.php
+logica/migracion_20260531_seccion_actualizado.sql
+logica/prompt_desarrollo_contenedores.txt
+
+Tabla usada:
+
+seccion
+
+Campos usados:
+
+id_seccion
+nombre_interno
+titulo_admin
+observacion
+tipo_seccion
+visible
+estado
+orden
+fecha_creacion
+actualizado_en
+actualizado_por
+
+La tabla seccion de la base actual tenia fecha_creacion, pero no actualizado_en.
+Se agrega migracion segura para incorporar:
+
+actualizado_en DATETIME NULL
+actualizado_por INT NULL
+
+actualizado_por apunta logicamente a usuario.id_usuario, pero no se fuerza FK para mantener
+compatibilidad con bases existentes.
+
+Pagina publica actual:
+
+index.php
+
+Todos los contenedores actuales se administran para la pagina principal index.php.
+No se usa la columna "Pagina publica" porque todos apuntan a index.php.
+No existe boton "Nuevo contenedor" en esta etapa. La logica de nuevos componentes
+pagados/descargables queda pendiente para una etapa posterior.
+
+Contenedores fijos:
+
+topbar
+header_principal
+menu_principal
+footer_principal
+modal_informativo
+
+Estos contenedores no se pueden arrastrar. En el listado admin deben mostrar candado
+o estado "Fijo".
+
+Contenedores movibles:
+
+hero_principal
+noticias_home
+calendario_eventos_home
+video_destacado_home
+galeria_home
+faq_home
+about_home
+
+Solo estos contenedores pueden cambiar su orden visual dentro del administrador.
+
+Reglas de la pantalla CMS > Contenedores del sitio:
+
+- Mantiene el CSS y estilo actual del panel.
+- Agrega tarjetas superiores de resumen:
+  Total de contenedores activos, visibles, ocultos y ultima actualizacion general.
+- Cambia el encabezado "Observacion" por "Que controla".
+- Agrega la columna "Ultima modificacion".
+- La columna "Ultima modificacion" muestra actualizado_en y usuario cuando existe.
+  Si no hay dato real, usa el fallback visual "Sin registro".
+- Mantiene las acciones actuales:
+  Ver / preview, Editar y Activar / ocultar visible.
+- Mantiene DataTables con buscador. Para evitar conflicto con drag and drop, el listado
+  de contenedores usa DataTables sin ordenamiento interactivo ni paginacion.
+
+Reglas del endpoint de ordenamiento:
+
+Archivo:
+
+ajax/guardar_orden_contenedores.php
+
+- Valida sesion admin.
+- Recibe JSON con un array items que contiene id_seccion y orden.
+- Usa la conexion existente del proyecto via cms_get_connection().
+- Valida que todos los id_seccion pertenezcan a la institucion activa.
+- Permite ordenar solo los contenedores movibles.
+- Rechaza intentos de mover topbar, header_principal, menu_principal, footer_principal
+  o modal_informativo.
+- Al guardar el nuevo orden actualiza solamente el campo orden de la tabla seccion.
+- No modifica nombre_interno, tipo_seccion, variante ni archivos de componentes.
+- Responde JSON con ok true/false y mensaje de error cuando corresponde.
+
+Regla importante de sincronizacion:
+
+cms_sync_sections() ya no debe sobrescribir el campo orden de secciones existentes.
+El orden por defecto se usa solo al insertar secciones nuevas. Esto evita que el
+orden guardado por el administrador se pierda en la siguiente carga del CMS o de index.php.
+
+--------------------------------------------------
+GALERIA HOME ADMIN - VISTA DE CARDS CON DRAG-AND-DROP
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+La galería se administraba via la tabla general de items (texto, sin imágenes visibles).
+Se reemplaza por una vista de cards visuales igual que el carrusel principal.
+
+Ajuste aplicado:
+
+- Se agrega $isGalleryAdmin = ($section['tipo_seccion'] ?? '') === 'gallery'.
+- La galería ya NO cae en la tabla general de items. Se excluye con !$isGalleryAdmin.
+- Se agrega un branch elseif ($isGalleryAdmin) que renderiza un grid de cards con:
+  - Imagen a ancho completo (carousel-admin-media).
+  - Badge Activo/Oculto clickeable vía AJAX (js-toggle-badge, mismo handler del carrusel).
+  - Menú 3 puntos con Editar (link a modal=item&item=ID) y Eliminar.
+  - Mensaje vacío cuando no hay items.
+- Drag-and-drop con SortableJS en #gallerySortable → guarda vía reorder_items AJAX.
+- Notify auto-cierre al guardar orden.
+
+Tablas usadas:
+
+seccion_item
+
+Campos usados:
+
+titulo → alt/caption de la imagen
+descripcion → descripción interna
+imagen → archivo subido
+url → enlace al hacer clic en la imagen
+visible → si/no
+orden → posición en la galería
+
+Flujo admin:
+
+Agregar item → modal con imagen, título/alt, descripción, url, visible.
+Editar → mismo modal con datos precargados (vía URL param item=ID).
+Orden → drag-and-drop visual, guarda automáticamente.
+Activar/Desactivar → badge clickeable en la card.
+Eliminar → 3 puntos → Eliminar (con confirm).
+
+--------------------------------------------------
+VIDEO DESTACADO ADMIN - RESTRICCIONES DE UI
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+El contenedor video_destacado_home está diseñado para UN SOLO video. No tiene sentido
+que el administrador pueda agregar más items ni cambiar el orden de la sección en la página.
+
+Ajuste aplicado:
+
+- El botón "Agregar item" se oculta cuando $isVideoFeatured es true.
+  La condición pasa de !$isEventsCalendar a !$isEventsCalendar && !$isVideoFeatured.
+- El campo "Orden" en la pestaña General se oculta para $isVideoFeatured.
+  Se conserva como input oculto igual que en $isCarouselAdmin.
+- El ancho de Observación se amplía a col-md-9 cuando no se muestra Orden.
+- Se elimina la state-switch-track sobrante que quedaba del switch de Visible.
+
+Tablas usadas:
+
+seccion
+
+Regla:
+
+El contenedor video tipo video solo permite editar el item existente (pencil en la tabla),
+no agregar nuevos. Si necesita cambiar el video, edita el único item.
+
+--------------------------------------------------
+CARRUSEL ADMIN - MENÚ 3 PUNTOS CON VISTA PREVIA
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+El menú de 3 puntos de cada card del carrusel solo tenía Editar y Eliminar.
+Se agrega la opción Mostrar modal para previsualizar el slide inline.
+
+Ajuste aplicado:
+
+- El dropdown de 3 puntos ahora tiene tres opciones: Editar, Mostrar modal, Eliminar.
+- Mostrar modal abre el modal #carouselItemPreviewModal con imagen, título, etiqueta,
+  descripcion y badge de estado del slide.
+- Se usa el patrón data-item-* en el botón para pasar los datos del item al modal via JS.
+- El modal tiene un botón Editar que lleva a la URL de edición del item.
+- Se agrega un separador dropdown-divider entre Mostrar modal y Eliminar.
+- El modal de vista previa solo se renderiza cuando $isCarouselAdmin es true.
+- El handler JS de .js-carousel-preview se inicializa en el bloque $(function(){}).
+
+Tablas usadas:
+
+seccion
+seccion_item
+
+--------------------------------------------------
+AJUSTE CARRUSEL ADMIN - GENERAL, SWITCHES Y CARDS
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+En "Carrusel principal" el orden de la seccion no debe editarse desde la pantalla general,
+porque la ubicacion del bloque dentro del home es fija. Ademas los valores si/no deben verse
+como switches y los slides deben administrarse con una vista mas visual.
+
+Ajuste aplicado:
+
+- En la configuracion general del carrusel se elimina el campo visible de orden, pero se conserva
+  el valor actual en un input oculto para no mover la seccion.
+- Visible del contenedor pasa a switch Si/No con el mismo patron visual usado en Topbar.
+- Las configuraciones cuyo valor actual sea si/no se muestran como switch y guardan el valor
+  en seccion_config.
+- Los items del carrusel dejan de duplicarse en tabla y se muestran como cards.
+- Cada card centra la imagen del slide en la parte superior.
+- Las acciones del slide pasan a menu de tres puntos con Editar y Eliminar.
+- El delete conserva confirmacion antes de borrar.
+
+Tablas usadas:
+
+seccion
+seccion_config
+seccion_item
+
 Flujo publico:
 
 index.php incluye el componente segun la seccion visible modal_informativo. El modal respeta:
@@ -1440,3 +1849,149 @@ Regla:
 
 Para evitar pestañazos, el modal no debe depender solo de ocultamiento visual con JS. La
 segunda carga debe resolverse antes del render desde componentes/modal_informativo.php.
+
+--------------------------------------------------
+REDISENO VISUAL ADMIN - COLORES INSTITUCIONALES
+--------------------------------------------------
+
+Archivos modificados:
+
+includes/admin_layout.php
+admin.php
+editar_contenedor.php
+auditoria_log.php
+index.php
+
+Archivo nuevo:
+
+modal_informativo_payload.php
+
+Motivo:
+
+La administracion usaba colores fijos verdes y las pestañas del editor de contenedores
+heredaban estilos globales de .nav-item, quedando una debajo de la otra. Se requiere una
+interfaz administrativa mas elegante, sobria y basada en los colores institucionales.
+
+Ajuste aplicado:
+
+- includes/admin_layout.php ahora toma color_primario, color_secundario, color_terciario y
+  color_cuaternario desde la tabla institucion.
+- Esos colores alimentan variables CSS globales del admin: botones, sidebar activo, avatar,
+  badges, iconos, foco de formularios, paginacion y DataTables.
+- editar_contenedor.php usa pestañas horizontales compactas General / Items con iconos y
+  estilo institucional.
+- Se reemplazan verdes/azules fijos de botones de carga, ayudas, spinners y acciones por
+  variables institucionales.
+- Las tablas administrativas mantienen .table-modern pero con encabezado, filas, buscador,
+  paginacion y hover mas cercanos al estilo sobrio del ejemplo visual entregado.
+- admin.php, editar_contenedor.php y auditoria_log.php pasan los colores institucionales al
+  layout base.
+- index.php deja de renderizar el modal informativo dentro del HTML inicial y lo solicita
+  de forma diferida a modal_informativo_payload.php para evitar pestañazos de primer paint.
+
+Tablas usadas:
+
+institucion
+seccion
+seccion_config
+seccion_item
+
+Regla:
+
+Los nuevos estilos del panel administrativo deben usar los colores de institucion, no colores
+fijos ajenos a la identidad del colegio.
+
+--------------------------------------------------
+SWITCHES ADMIN - MIGRACIÓN A BOOTSTRAP FORM-SWITCH
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+Los switches personalizados (state-switch con track de gradiente y texto Si/No)
+fueron reemplazados por el Bootstrap form-switch estándar en todo el editor.
+
+Ajuste aplicado:
+
+- Se eliminó todo el CSS de .state-switch-track, .state-switch::before/::after
+  y variantes is-compact, is-readonly, gradiente, etc.
+- La clase .state-switch se conserva como selector JS pero ya no tiene estilos propios.
+- Todos los spans de .state-switch ahora también tienen form-check form-switch mb-0.
+- Se eliminaron todos los <span class="state-switch-track"> del HTML.
+- Se agrega padding-left:0 y margin-left:0 al form-check dentro de setting-toggle
+  y table-check para mantener el alineamiento del switch a la derecha del card.
+- El color del switch activo hereda de admin_layout.php:
+  .form-check-input:checked → background-color: var(--adm-primary)
+  (usa el color institucional).
+
+Campo imagen_mobile eliminado del modal de items:
+
+- El campo "Imagen mobile" fue quitado del formulario de items de tipo carousel/hero.
+- Las imágenes deben diseñarse responsivas desde el origen.
+- El campo Imagen pasa de col-md-6 a col-md-8.
+- El campo imagen_mobile sigue existiendo en la tabla seccion_item pero ya no se
+  expone en el formulario admin para no confundir al usuario.
+
+--------------------------------------------------
+AJUSTE TOPBAR ADMIN - VISIBILIDAD, CONFIRMACION E ICONOS
+
+Archivos modificados:
+
+editar_contenedor.php
+componentes/topbar.php
+
+Motivo:
+
+El editor de "Topbar superior" mostraba campos poco claros para el administrador, especialmente
+orden en la configuracion general y selects Si/No para valores booleanos. Tambien era incomodo
+pedir manualmente la clase Font Awesome para cada red social.
+
+Ajuste aplicado:
+
+- Se elimina el campo orden de la configuracion general del Topbar. El backend conserva el orden
+  existente de la seccion para no alterar la posicion del contenedor.
+- Visible, mostrar direccion, mostrar telefono, mostrar correo, mostrar redes y mostrar boton
+  ingresar pasan a controles tipo check Si/No.
+- Los checks del Topbar se muestran como switch con texto interno Si/No. Si esta activo usa
+  color institucional y si esta apagado queda gris.
+- El guardado general del Topbar muestra un modal de confirmacion antes de enviar el formulario.
+- En el listado de redes sociales, la columna visible se muestra como switch Si/No y permite
+  activar/desactivar la red social desde la tabla.
+- El switch de visibilidad de redes sociales se guarda por AJAX, sin recargar la pagina y sin
+  mostrar alerta verde de validacion, para evitar pestañeos.
+- En el modal de red social se agregan presets con imagenes locales para Instagram, Facebook,
+  YouTube y Twitter desde assets/redes_sociales.
+- La clase del icono se autodetecta desde el nombre o la URL cuando coincide con redes comunes.
+- La clase tecnica del icono no se muestra al administrador. El formulario guarda el valor en
+  un input oculto y el usuario solo elige el logo de la red social.
+- En la tabla de redes sociales se muestra el logo de la red, no la clase Font Awesome.
+- componentes/topbar.php soporta iconos guardados como rutas de imagen y mantiene compatibilidad
+  con clases antiguas, mapeandolas a las imagenes locales cuando corresponda.
+- En el index/topbar publico las redes sociales se muestran como botones circulares elegantes,
+  con sombra suave y logo centrado, evitando circulos grises con imagenes pequenas.
+- Se incorpora LinkedIn usando el archivo local assets/redes_sociales/linkeding.png y se mapea
+  tanto en el admin como en componentes/topbar.php.
+- En la tabla admin de redes sociales, las acciones usan iconos ojo/editar/eliminar en vez de
+  botones de texto.
+- Al guardar una red social se muestra modal de confirmacion de exito con el texto
+  "La red social fue guardada correctamente.".
+- El layout administrativo aplica el estado colapsado del sidebar antes del primer render usando
+  localStorage y una clase temprana en html, para que al recargar se mantenga colapsado sin
+  pestañeo visual.
+- Los botones principales del admin, pestañas activas y switches activos usan un gradiente
+  institucional construido con institucion.color_primario, color_secundario, color_terciario y
+  color_cuaternario.
+- El editor de contenedor agrega una tercera accion tipo pestana llamada "Vista previa", que abre
+  el mismo modal de preview usado por el boton ojo del listado de contenedores.
+- El orden se mantiene solo en los items de redes sociales porque define cuales son las primeras
+  redes visibles en el sitio.
+
+Tablas usadas:
+
+seccion
+seccion_config
+seccion_item
+institucion

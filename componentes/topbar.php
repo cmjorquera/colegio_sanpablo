@@ -19,6 +19,65 @@ $redesTopbar = array_values(array_filter(
 ));
 $redesTopbar = array_slice($redesTopbar, 0, 4);
 
+if (!function_exists('sp_topbar_icon_is_image')) {
+    function sp_topbar_icon_is_image(string $icon): bool
+    {
+        return (bool) preg_match('/\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i', $icon);
+    }
+}
+if (!function_exists('sp_topbar_resolve_social_icon')) {
+    function sp_topbar_resolve_social_icon(string $icon, string $source = ''): string
+    {
+        $icon = trim($icon);
+        if ($icon !== '' && sp_topbar_icon_is_image($icon)) {
+            return $icon;
+        }
+
+        $options = [
+            'instagram' => 'assets/redes_sociales/instagram.jpg',
+            'insta' => 'assets/redes_sociales/instagram.jpg',
+            'facebook' => 'assets/redes_sociales/facebook.jpg',
+            'fb' => 'assets/redes_sociales/facebook.jpg',
+            'youtube' => 'assets/redes_sociales/youtube.png',
+            'youtu.be' => 'assets/redes_sociales/youtube.png',
+            'twitter' => 'assets/redes_sociales/twitter.png',
+            'x.com' => 'assets/redes_sociales/twitter.png',
+            'linkedin' => 'assets/redes_sociales/linkeding.png',
+            'linkeding' => 'assets/redes_sociales/linkeding.png',
+        ];
+        $haystack = strtolower(trim($icon . ' ' . $source));
+        foreach ($options as $key => $path) {
+            if ($haystack !== '' && strpos($haystack, $key) !== false) {
+                return $path;
+            }
+        }
+
+        return $icon;
+    }
+}
+if (!function_exists('sp_topbar_social_slug')) {
+    function sp_topbar_social_slug(string $icon, string $source = ''): string
+    {
+        $haystack = strtolower(trim($icon . ' ' . $source));
+        $map = [
+            'instagram' => ['instagram', 'insta'],
+            'facebook' => ['facebook', 'fb'],
+            'youtube' => ['youtube', 'youtu.be'],
+            'twitter' => ['twitter', 'x.com'],
+            'linkedin' => ['linkedin', 'linkeding'],
+        ];
+        foreach ($map as $slug => $keys) {
+            foreach ($keys as $key) {
+                if ($haystack !== '' && strpos($haystack, $key) !== false) {
+                    return $slug;
+                }
+            }
+        }
+
+        return 'generic';
+    }
+}
+
 $contactos = [];
 if ($mostrarDireccion && $direccion !== '') {
     $contactos[] = [
@@ -39,6 +98,54 @@ if ($mostrarEmail && $email !== '') {
     ];
 }
 ?>
+<style>
+    .sp-topbar-socials {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .sp-social-link {
+        width: 34px;
+        height: 34px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(255, 255, 255, .96);
+        color: #fff;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, .18);
+        transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
+        overflow: hidden;
+    }
+    .sp-social-link:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 22px rgba(0, 0, 0, .24);
+        filter: brightness(1.03);
+    }
+    .sp-social-link img {
+        width: 25px;
+        height: 25px;
+        display: block;
+        object-fit: contain;
+    }
+    .sp-social-link i {
+        font-size: 1rem;
+    }
+    .sp-social-instagram,
+    .sp-social-facebook,
+    .sp-social-youtube,
+    .sp-social-twitter,
+    .sp-social-linkedin { background: rgba(255, 255, 255, .96); }
+    .sp-social-generic { background: rgba(255, 255, 255, .16); }
+    .sp-social-youtube img,
+    .sp-social-instagram img,
+    .sp-social-facebook img,
+    .sp-social-twitter img,
+    .sp-social-linkedin img {
+        width: 25px;
+        height: 25px;
+    }
+</style>
 <div class="sp-topbar d-none d-md-block" id="topbar" style=" background: var(--sp-negro);color: #e0e0e0;padding: 8px 0;   font-size: 13px;">
     <div class="container-fluid px-4">
         <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
@@ -59,13 +166,19 @@ if ($mostrarEmail && $email !== '') {
                 <?php endif; ?>
                 <?php if ($mostrarRedes && $redesTopbar): ?>
                     <?php if ($mostrarBotonIngresar): ?><span class="sep">|</span><?php endif; ?>
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="sp-topbar-socials">
                         <?php foreach ($redesTopbar as $red): ?>
                             <?php $urlRed = trim((string) ($red['descripcion'] ?? '')); ?>
                             <?php if ($urlRed === '') { continue; } ?>
+                            <?php $iconoRed = sp_topbar_resolve_social_icon((string) ($red['icono'] ?? ''), (string) (($red['titulo'] ?? '') . ' ' . ($red['descripcion'] ?? ''))); ?>
+                            <?php $socialSlug = sp_topbar_social_slug($iconoRed, (string) (($red['titulo'] ?? '') . ' ' . ($red['descripcion'] ?? ''))); ?>
                             <a href="<?= e($urlRed) ?>" target="_blank" rel="noopener" title="<?= e($red['titulo'] ?? 'Red social') ?>" aria-label="<?= e($red['titulo'] ?? 'Red social') ?>" 
-                            class="d-inline-flex align-items-center justify-content-center rounded-circle" style="width:32px;height:32px;background:rgba(255,255,255,.14); color:#e0e0e0;;">
-                                <i class="<?= e($red['icono'] ?: 'fas fa-link') ?>"></i>
+                            class="sp-social-link sp-social-<?= e($socialSlug) ?>">
+                                <?php if ($iconoRed !== '' && sp_topbar_icon_is_image($iconoRed)): ?>
+                                    <img src="<?= e($iconoRed) ?>" alt="<?= e($red['titulo'] ?? 'Red social') ?>">
+                                <?php else: ?>
+                                    <i class="<?= e($iconoRed ?: 'fas fa-link') ?>"></i>
+                                <?php endif; ?>
                             </a>
                         <?php endforeach; ?>
                     </div>

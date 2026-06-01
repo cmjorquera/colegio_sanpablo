@@ -101,6 +101,37 @@ function cms_get_institution_id(mysqli $db): int
     return 1;
 }
 
+function cms_section_fixed_names(): array
+{
+    return ['topbar', 'header_principal', 'menu_principal', 'footer_principal', 'modal_informativo'];
+}
+
+function cms_section_movable_names(): array
+{
+    return ['hero_principal', 'noticias_home', 'calendario_eventos_home', 'video_destacado_home', 'galeria_home', 'faq_home', 'about_home'];
+}
+
+function cms_section_is_fixed(string $name): bool
+{
+    return in_array($name, cms_section_fixed_names(), true);
+}
+
+function cms_section_is_movable(string $name): bool
+{
+    return in_array($name, cms_section_movable_names(), true);
+}
+
+function cms_ensure_section_tracking_columns(mysqli $db): void
+{
+    if (!cms_column_exists($db, 'seccion', 'actualizado_en')) {
+        $db->query('ALTER TABLE seccion ADD COLUMN actualizado_en DATETIME NULL AFTER fecha_creacion');
+    }
+
+    if (!cms_column_exists($db, 'seccion', 'actualizado_por')) {
+        $db->query('ALTER TABLE seccion ADD COLUMN actualizado_por INT NULL AFTER actualizado_en');
+    }
+}
+
 function cms_default_sections(): array
 {
     return [
@@ -200,10 +231,11 @@ function cms_sync_sections(mysqli $db, int $institutionId): void
     if (!cms_column_exists($db, 'seccion', 'observacion')) {
         $db->query("ALTER TABLE seccion ADD COLUMN observacion TEXT NULL AFTER orden");
     }
+    cms_ensure_section_tracking_columns($db);
 
     $selectStmt = $db->prepare('SELECT id_seccion FROM seccion WHERE id_institucion = ? AND nombre_interno = ? LIMIT 1');
     $insertStmt = $db->prepare('INSERT INTO seccion (id_institucion, nombre_interno, titulo_admin, tipo_seccion, variante, visible, orden, observacion) VALUES (?, ?, ?, ?, ?, \'si\', ?, ?)');
-    $updateStmt = $db->prepare('UPDATE seccion SET titulo_admin = ?, tipo_seccion = ?, variante = ?, orden = ?, observacion = ? WHERE id_seccion = ?');
+    $updateStmt = $db->prepare('UPDATE seccion SET titulo_admin = ?, tipo_seccion = ?, variante = ?, observacion = ? WHERE id_seccion = ?');
 
     foreach (cms_default_sections() as $section) {
         $name = $section['nombre_interno'];
@@ -215,11 +247,10 @@ function cms_sync_sections(mysqli $db, int $institutionId): void
         if ($row) {
             $idSeccion = (int) $row['id_seccion'];
             $updateStmt->bind_param(
-                'sssisi',
+                'ssssi',
                 $section['titulo_admin'],
                 $section['tipo_seccion'],
                 $section['variante'],
-                $section['orden'],
                 $section['observacion'],
                 $idSeccion
             );
@@ -394,11 +425,17 @@ function cms_find_section(array $sections, int $idSeccion): ?array
 
 function cms_list_sections_admin(mysqli $db, int $institutionId): array
 {
+    cms_ensure_section_tracking_columns($db);
+
     $sql = "SELECT s.*, COUNT(si.id_item) AS total_items
+                   , u.nombre AS actualizado_por_nombre
+                   , u.apellido AS actualizado_por_apellido
+                   , u.usuario AS actualizado_por_usuario
+                   , u.email AS actualizado_por_email
             FROM seccion s
             LEFT JOIN seccion_item si ON si.id_seccion = s.id_seccion
+            LEFT JOIN usuario u ON u.id_usuario = s.actualizado_por
             WHERE s.id_institucion = ?
-              AND s.nombre_interno <> 'menu_principal'
             GROUP BY s.id_seccion
             ORDER BY s.orden ASC, s.id_seccion ASC";
     $stmt = $db->prepare($sql);
@@ -1095,20 +1132,24 @@ function cms_list_calendar_days(mysqli $db, string $dateFrom, string $dateTo): a
 
 function cms_toggle_section_visibility(mysqli $db, int $idSeccion): void
 {
-    $stmt = $db->prepare("UPDATE seccion SET visible = IF(visible = 'si', 'no', 'si') WHERE id_seccion = ?");
-    $stmt->bind_param('i', $idSeccion);
+    cms_ensure_section_tracking_columns($db);
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
+    $stmt = $db->prepare("UPDATE seccion SET visible = IF(visible = 'si', 'no', 'si'), actualizado_en = NOW(), actualizado_por = ? WHERE id_seccion = ?");
+    $stmt->bind_param('ii', $idUsuario, $idSeccion);
     $stmt->execute();
     $stmt->close();
 }
 
 function cms_save_section(mysqli $db, int $idSeccion, array $post): void
 {
+    cms_ensure_section_tracking_columns($db);
     $visible = (($post['visible'] ?? 'no') === 'si') ? 'si' : 'no';
     $orden = max(1, (int) ($post['orden'] ?? 1));
     $observacion = trim((string) ($post['observacion'] ?? ''));
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
 
-    $stmt = $db->prepare('UPDATE seccion SET visible = ?, orden = ?, observacion = ? WHERE id_seccion = ?');
-    $stmt->bind_param('sisi', $visible, $orden, $observacion, $idSeccion);
+    $stmt = $db->prepare('UPDATE seccion SET visible = ?, orden = ?, observacion = ?, actualizado_en = NOW(), actualizado_por = ? WHERE id_seccion = ?');
+    $stmt->bind_param('sisii', $visible, $orden, $observacion, $idUsuario, $idSeccion);
     $stmt->execute();
     $stmt->close();
 
@@ -1283,7 +1324,6 @@ function cms_save_menu(mysqli $db, array $post): int
     $nombre = trim((string) ($post['nombre'] ?? ''));
     $url = trim((string) ($post['url'] ?? ''));
     $icono = trim((string) ($post['icono'] ?? ''));
-    $orden = max(0, (int) ($post['orden'] ?? 0));
     $estado = isset($post['estado']) ? 1 : 0;
 
     if ($nombre === '') {
@@ -1291,9 +1331,11 @@ function cms_save_menu(mysqli $db, array $post): int
     }
 
     if ($idMenu > 0) {
-        $stmt = $db->prepare('UPDATE menus SET nombre = ?, url = ?, icono = ?, orden = ?, estado = ? WHERE id_menu = ?');
-        $stmt->bind_param('sssiii', $nombre, $url, $icono, $orden, $estado, $idMenu);
+        $stmt = $db->prepare('UPDATE menus SET nombre = ?, url = ?, icono = ?, estado = ? WHERE id_menu = ?');
+        $stmt->bind_param('sssii', $nombre, $url, $icono, $estado, $idMenu);
     } else {
+        $res = $db->query('SELECT COALESCE(MAX(orden), 0) + 1 AS next_orden FROM menus');
+        $orden = $res ? (int) $res->fetch_assoc()['next_orden'] : 1;
         $stmt = $db->prepare('INSERT INTO menus (nombre, url, icono, orden, estado) VALUES (?, ?, ?, ?, ?)');
         $stmt->bind_param('sssii', $nombre, $url, $icono, $orden, $estado);
     }
@@ -1312,6 +1354,23 @@ function cms_toggle_menu(mysqli $db, int $idMenu): void
     $stmt->close();
 }
 
+function cms_delete_menu(mysqli $db, int $idMenu): void
+{
+    if ($idMenu <= 0) {
+        throw new RuntimeException('Menú no válido para eliminar.');
+    }
+
+    $stmtSubs = $db->prepare('DELETE FROM sub_menus WHERE id_menu = ?');
+    $stmtSubs->bind_param('i', $idMenu);
+    $stmtSubs->execute();
+    $stmtSubs->close();
+
+    $stmt = $db->prepare('DELETE FROM menus WHERE id_menu = ?');
+    $stmt->bind_param('i', $idMenu);
+    $stmt->execute();
+    $stmt->close();
+}
+
 function cms_save_submenu(mysqli $db, array $post): int
 {
     $idSubMenu = (int) ($post['id_sub_menu'] ?? 0);
@@ -1319,7 +1378,6 @@ function cms_save_submenu(mysqli $db, array $post): int
     $nombre = trim((string) ($post['nombre'] ?? ''));
     $url = trim((string) ($post['url'] ?? ''));
     $icono = trim((string) ($post['icono'] ?? ''));
-    $orden = max(0, (int) ($post['orden'] ?? 0));
     $estado = isset($post['estado']) ? 1 : 0;
 
     if ($idMenu < 1 || $nombre === '') {
@@ -1327,9 +1385,11 @@ function cms_save_submenu(mysqli $db, array $post): int
     }
 
     if ($idSubMenu > 0) {
-        $stmt = $db->prepare('UPDATE sub_menus SET id_menu = ?, nombre = ?, url = ?, icono = ?, orden = ?, estado = ? WHERE id_sub_menu = ?');
-        $stmt->bind_param('isssiii', $idMenu, $nombre, $url, $icono, $orden, $estado, $idSubMenu);
+        $stmt = $db->prepare('UPDATE sub_menus SET id_menu = ?, nombre = ?, url = ?, icono = ?, estado = ? WHERE id_sub_menu = ?');
+        $stmt->bind_param('isssii', $idMenu, $nombre, $url, $icono, $estado, $idSubMenu);
     } else {
+        $res = $db->query('SELECT COALESCE(MAX(orden), 0) + 1 AS next_orden FROM sub_menus WHERE id_menu = ' . $idMenu);
+        $orden = $res ? (int) $res->fetch_assoc()['next_orden'] : 1;
         $stmt = $db->prepare('INSERT INTO sub_menus (id_menu, nombre, url, icono, orden, estado, fecha_creacion, hora_creacion, ip_creacion) VALUES (?, ?, ?, ?, ?, ?, CURDATE(), CURTIME(), ?)');
         $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
         $stmt->bind_param('isssiis', $idMenu, $nombre, $url, $icono, $orden, $estado, $ip);
@@ -1349,6 +1409,30 @@ function cms_toggle_submenu(mysqli $db, int $idSubMenu): void
     $stmt->close();
 }
 
+function cms_reorder_menus(mysqli $db, array $ids): void
+{
+    foreach ($ids as $index => $idMenu) {
+        if ($idMenu <= 0) { continue; }
+        $orden = $index + 1;
+        $stmt = $db->prepare('UPDATE menus SET orden = ? WHERE id_menu = ?');
+        $stmt->bind_param('ii', $orden, $idMenu);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
+function cms_reorder_submenus(mysqli $db, array $ids): void
+{
+    foreach ($ids as $index => $idSubMenu) {
+        if ($idSubMenu <= 0) { continue; }
+        $orden = $index + 1;
+        $stmt = $db->prepare('UPDATE sub_menus SET orden = ? WHERE id_sub_menu = ?');
+        $stmt->bind_param('ii', $orden, $idSubMenu);
+        $stmt->execute();
+        $stmt->close();
+    }
+}
+
 function cms_save_institution(mysqli $db, int $institutionId, array $post): void
 {
     $current = null;
@@ -1361,33 +1445,55 @@ function cms_save_institution(mysqli $db, int $institutionId, array $post): void
     }
 
     $logoHeader = cms_upload_image('logo_header', 'institucion', $current['logo_header'] ?? null);
-    $favicon = cms_upload_image('favicon', 'institucion', $current['favicon'] ?? null);
+    $logoFooter = cms_upload_image('logo_footer', 'institucion', $current['logo_footer'] ?? null);
+    $favicon    = cms_upload_image('favicon',     'institucion', $current['favicon']     ?? null);
 
-    $stmt = $db->prepare('UPDATE institucion
-        SET nombre = ?, email = ?, telefono = ?, direccion = ?, logo_header = ?, favicon = ?, facebook = ?, instagram = ?, color_primario = ?, color_secundario = ?
+    $s = static fn(string $k): string => trim((string) ($post[$k] ?? ''));
+
+    $stmt = $db->prepare('UPDATE institucion SET
+        nombre = ?, nombre_corto = ?, eslogan = ?, descripcion_corta = ?,
+        email = ?, email_soporte = ?, telefono = ?, whatsapp = ?,
+        direccion = ?, ciudad = ?,
+        facebook = ?, instagram = ?, youtube = ?, linkedin = ?,
+        color_primario = ?, color_secundario = ?, color_terciario = ?, color_cuaternario = ?,
+        logo_header = ?, logo_footer = ?, favicon = ?,
+        meta_title = ?, meta_description = ?,
+        texto_footer = ?, copyright = ?
         WHERE id_institucion = ?');
 
-    $nombre = trim((string) ($post['nombre'] ?? ''));
-    $email = trim((string) ($post['email'] ?? ''));
-    $telefono = trim((string) ($post['telefono'] ?? ''));
-    $direccion = trim((string) ($post['direccion'] ?? ''));
-    $facebook = trim((string) ($post['facebook'] ?? ''));
-    $instagram = trim((string) ($post['instagram'] ?? ''));
-    $colorPrimario = trim((string) ($post['color_primario'] ?? ''));
-    $colorSecundario = trim((string) ($post['color_secundario'] ?? ''));
+    $nombre          = $s('nombre');
+    $nombreCorto     = $s('nombre_corto');
+    $eslogan         = $s('eslogan');
+    $descripcionCorta= $s('descripcion_corta');
+    $email           = $s('email');
+    $emailSoporte    = $s('email_soporte');
+    $telefono        = $s('telefono');
+    $whatsapp        = $s('whatsapp');
+    $direccion       = $s('direccion');
+    $ciudad          = $s('ciudad');
+    $facebook        = $s('facebook');
+    $instagram       = $s('instagram');
+    $youtube         = $s('youtube');
+    $linkedin        = $s('linkedin');
+    $colorPrimario   = $s('color_primario');
+    $colorSecundario = $s('color_secundario');
+    $colorTerciario  = $s('color_terciario');
+    $colorCuaternario= $s('color_cuaternario');
+    $metaTitle       = $s('meta_title');
+    $metaDesc        = $s('meta_description');
+    $textoFooter     = $s('texto_footer');
+    $copyright       = $s('copyright');
 
     $stmt->bind_param(
-        'ssssssssssi',
-        $nombre,
-        $email,
-        $telefono,
-        $direccion,
-        $logoHeader,
-        $favicon,
-        $facebook,
-        $instagram,
-        $colorPrimario,
-        $colorSecundario,
+        'sssssssssssssssssssssssssi',
+        $nombre, $nombreCorto, $eslogan, $descripcionCorta,
+        $email, $emailSoporte, $telefono, $whatsapp,
+        $direccion, $ciudad,
+        $facebook, $instagram, $youtube, $linkedin,
+        $colorPrimario, $colorSecundario, $colorTerciario, $colorCuaternario,
+        $logoHeader, $logoFooter, $favicon,
+        $metaTitle, $metaDesc,
+        $textoFooter, $copyright,
         $institutionId
     );
     $stmt->execute();

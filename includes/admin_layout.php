@@ -6,9 +6,9 @@ function admin_nav_items(): array
         'dashboard'    => ['href' => 'admin.php?panel=dashboard',    'icon' => 'bi-grid-1x2',               'label' => 'Dashboard'],
         'contenedores' => ['href' => 'admin.php?panel=contenedores', 'icon' => 'bi-layout-text-window-reverse', 'label' => 'Contenedores'],
         'menus'        => ['href' => 'admin.php?panel=menus',        'icon' => 'bi-list-nested',             'label' => 'Menús'],
-        'submenus'     => ['href' => 'admin.php?panel=submenus',     'icon' => 'bi-diagram-3',              'label' => 'Submenús'],
         'configuracion'=> ['href' => 'admin.php?panel=configuracion','icon' => 'bi-sliders2-vertical',      'label' => 'Configuración'],
         'auditoria'    => ['href' => 'auditoria_log.php',              'icon' => 'bi-clock-history',          'label' => 'Auditoría / Logs'],
+        'analitica'    => ['href' => 'analitica.php',                'icon' => 'bi-bar-chart-line',         'label' => 'Analítica'],
     ];
 }
 
@@ -16,8 +16,9 @@ function admin_nav_groups(): array
 {
     return [
         'PRINCIPAL'     => ['dashboard', 'contenedores'],
-        'GESTIÓN'       => ['menus', 'submenus'],
+        'GESTIÓN'       => ['menus'],
         'SISTEMA'       => ['configuracion', 'auditoria'],
+        'ANALÍTICA'     => ['analitica'],
     ];
 }
 
@@ -67,6 +68,11 @@ function admin_render_layout_start(array $options = []): void
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= cms_e($title) ?></title>
+    <script>
+        if (localStorage.getItem('adminSidebarCollapsed') === '1') {
+            document.documentElement.classList.add('adm-sidebar-collapsed');
+        }
+    </script>
     <link rel="stylesheet" href="assets/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.8/css/dataTables.bootstrap5.min.css">
@@ -86,6 +92,8 @@ function admin_render_layout_start(array $options = []): void
             --adm-tertiary-rgb: <?= cms_e($admTertiaryRgb) ?>;
             --adm-danger-brand: <?= cms_e($admQuaternary) ?>;
             --adm-danger-brand-rgb: <?= cms_e($admQuaternaryRgb) ?>;
+            --adm-brand-gradient: linear-gradient(90deg, var(--adm-primary) 0%, var(--adm-secondary) 34%, var(--adm-tertiary) 68%, var(--adm-danger-brand) 100%);
+            --adm-brand-gradient-soft: linear-gradient(135deg, rgba(var(--adm-primary-rgb),.14), rgba(var(--adm-secondary-rgb),.13), rgba(var(--adm-tertiary-rgb),.12), rgba(var(--adm-danger-brand-rgb),.13));
             --adm-accent:      <?= cms_e($admSecondary) ?>;
             --adm-bg:          #f3f6fa;
             --adm-card:        #ffffff;
@@ -268,17 +276,28 @@ function admin_render_layout_start(array $options = []): void
         .sidebar-collapse-btn .collapse-label { overflow: hidden; }
 
         /* ─── Collapsed state ───────────────────────────────────── */
-        .admin-shell.collapsed .admin-sidebar { width: var(--adm-sidebar-col); }
+        .admin-shell.collapsed .admin-sidebar,
+        .adm-sidebar-collapsed .admin-shell .admin-sidebar { width: var(--adm-sidebar-col); }
         .admin-shell.collapsed .sidebar-brand-text,
         .admin-shell.collapsed .nav-group-label,
         .admin-shell.collapsed .nav-item-label,
-        .admin-shell.collapsed .collapse-label { display: none; }
-        .admin-shell.collapsed .sidebar-brand { padding: 20px 12px 16px; justify-content: center; }
-        .admin-shell.collapsed .nav-item { justify-content: center; padding: 10px; }
-        .admin-shell.collapsed .nav-item-icon { width: auto; font-size: 1.15rem; }
-        .admin-shell.collapsed .sidebar-collapse-btn { justify-content: center; padding: 9px; }
-        .admin-shell.collapsed .sidebar-collapse-btn .collapse-icon { transform: rotate(180deg); }
-        .admin-shell.collapsed .sidebar-bottom .nav-item { justify-content: center; padding: 9px; }
+        .admin-shell.collapsed .collapse-label,
+        .adm-sidebar-collapsed .admin-shell .sidebar-brand-text,
+        .adm-sidebar-collapsed .admin-shell .nav-group-label,
+        .adm-sidebar-collapsed .admin-shell .nav-item-label,
+        .adm-sidebar-collapsed .admin-shell .collapse-label { display: none; }
+        .admin-shell.collapsed .sidebar-brand,
+        .adm-sidebar-collapsed .admin-shell .sidebar-brand { padding: 20px 12px 16px; justify-content: center; }
+        .admin-shell.collapsed .nav-item,
+        .adm-sidebar-collapsed .admin-shell .nav-item { justify-content: center; padding: 10px; }
+        .admin-shell.collapsed .nav-item-icon,
+        .adm-sidebar-collapsed .admin-shell .nav-item-icon { width: auto; font-size: 1.15rem; }
+        .admin-shell.collapsed .sidebar-collapse-btn,
+        .adm-sidebar-collapsed .admin-shell .sidebar-collapse-btn { justify-content: center; padding: 9px; }
+        .admin-shell.collapsed .sidebar-collapse-btn .collapse-icon,
+        .adm-sidebar-collapsed .admin-shell .sidebar-collapse-btn .collapse-icon { transform: rotate(180deg); }
+        .admin-shell.collapsed .sidebar-bottom .nav-item,
+        .adm-sidebar-collapsed .admin-shell .sidebar-bottom .nav-item { justify-content: center; padding: 9px; }
 
         /* ─── Content area ──────────────────────────────────────── */
         .admin-content {
@@ -473,29 +492,58 @@ function admin_render_layout_start(array $options = []): void
 
         /* ─── Buttons ─────────────────────────────────────────────── */
         .btn-soft {
-            background: var(--adm-primary-soft);
-            color: var(--adm-primary);
-            border: 1px solid rgba(var(--adm-primary-rgb),.12);
-            font-weight: 600;
+            background:
+                linear-gradient(#fff, #fff) padding-box,
+                var(--adm-brand-gradient) border-box;
+            color: var(--adm-text-2);
+            border: 1px solid transparent;
+            font-weight: 700;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, .06);
         }
-        .btn-soft:hover { background: rgba(var(--adm-primary-rgb),.16); color: var(--adm-secondary); }
+        .btn-soft:hover {
+            background:
+                var(--adm-brand-gradient-soft) padding-box,
+                var(--adm-brand-gradient) border-box;
+            color: var(--adm-text);
+        }
 
         .btn-premium {
-            background: linear-gradient(135deg, var(--adm-primary), var(--adm-secondary));
+            position: relative;
+            background: var(--adm-brand-gradient);
             color: #fff;
             border: none;
-            font-weight: 600;
-            box-shadow: 0 4px 14px rgba(var(--adm-primary-rgb),.3);
+            font-weight: 800;
+            box-shadow: 0 12px 24px rgba(var(--adm-primary-rgb),.24);
+            overflow: hidden;
         }
-        .btn-premium:hover { color: #fff; filter: brightness(1.05); box-shadow: 0 6px 18px rgba(var(--adm-primary-rgb),.35); }
+        .btn-premium::after {
+            content: "";
+            position: absolute;
+            inset: 1px;
+            border-radius: inherit;
+            background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+            pointer-events: none;
+        }
+        .btn-premium:hover { color: #fff; filter: brightness(1.04); box-shadow: 0 14px 28px rgba(var(--adm-primary-rgb),.30); transform: translateY(-1px); }
 
         .btn-admin-action {
-            background: var(--adm-tertiary);
+            position: relative;
+            background: var(--adm-brand-gradient);
             color: #fff;
             border: none;
-            font-weight: 600;
+            font-weight: 800;
+            box-shadow: 0 12px 24px rgba(var(--adm-primary-rgb),.22);
+            overflow: hidden;
         }
-        .btn-admin-action:hover { background: #125ca4; color: #fff; }
+        .btn-admin-action::after {
+            content: "";
+            position: absolute;
+            inset: 1px;
+            border-radius: inherit;
+            background: linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,0));
+            pointer-events: none;
+        }
+        .btn-admin-action:hover { color: #fff; filter: brightness(1.04); box-shadow: 0 14px 28px rgba(var(--adm-primary-rgb),.30); transform: translateY(-1px); }
         .btn-success,
         .btn-outline-success:hover {
             background-color: var(--adm-tertiary) !important;
@@ -616,13 +664,38 @@ function admin_render_layout_start(array $options = []): void
         .alert-info    { background: #dbeafe; border-color: #bfdbfe; color: #1e40af; }
 
         /* ─── DataTables overrides ───────────────────────────────── */
+        div.dataTables_wrapper {
+            font-size: .86rem;
+        }
+        div.dataTables_wrapper .row:first-child {
+            align-items: center;
+            padding: 14px 14px 12px;
+            border: 1px solid var(--adm-border);
+            border-bottom: 0;
+            border-radius: 10px 10px 0 0;
+            background: #fff;
+            margin: 0;
+        }
+        div.dataTables_wrapper .row:first-child + .row {
+            margin: 0;
+        }
+        div.dataTables_wrapper .dataTables_filter {
+            text-align: right;
+        }
+        div.dataTables_wrapper .dataTables_filter label,
+        div.dataTables_wrapper .dataTables_length label {
+            color: var(--adm-muted);
+            font-size: .82rem;
+            font-weight: 600;
+        }
         div.dataTables_wrapper .dataTables_filter input,
         div.dataTables_wrapper .dataTables_length select {
             border: 1px solid var(--adm-border);
-            border-radius: var(--adm-radius-sm);
-            padding: 6px 10px;
+            border-radius: 8px;
+            padding: 7px 11px;
             font-size: .83rem;
             color: var(--adm-text);
+            background: #fff;
         }
         div.dataTables_wrapper .dataTables_filter input:focus,
         div.dataTables_wrapper .dataTables_length select:focus {
@@ -630,10 +703,32 @@ function admin_render_layout_start(array $options = []): void
             box-shadow: 0 0 0 3px rgba(var(--adm-primary-rgb),.12);
             outline: none;
         }
+        div.dataTables_wrapper .row:last-child {
+            align-items: center;
+            padding: 12px 14px;
+            border: 1px solid var(--adm-border);
+            border-top: 0;
+            border-radius: 0 0 10px 10px;
+            background: #fff;
+            margin: 0;
+        }
         div.dataTables_wrapper .dataTables_info,
         div.dataTables_wrapper .dataTables_length { font-size: .82rem; color: var(--adm-muted); }
         .page-item.active .page-link { background: var(--adm-primary); border-color: var(--adm-primary); }
-        .page-link { color: var(--adm-primary); border-radius: var(--adm-radius-sm) !important; }
+        .page-link {
+            color: var(--adm-tertiary);
+            border-radius: 8px !important;
+            min-width: 34px;
+            text-align: center;
+            border-color: var(--adm-border);
+            margin: 0 2px;
+            font-size: .82rem;
+        }
+        .page-link:hover {
+            color: var(--adm-tertiary);
+            background: rgba(var(--adm-tertiary-rgb),.07);
+            border-color: rgba(var(--adm-tertiary-rgb),.22);
+        }
 
         /* ─── Modals ─────────────────────────────────────────────── */
         .modal-content {
@@ -686,16 +781,26 @@ function admin_render_layout_start(array $options = []): void
                 transition: transform var(--adm-transition), width var(--adm-transition);
             }
             .admin-sidebar.mobile-open { transform: translateX(0); }
-            .admin-shell.collapsed .admin-sidebar { width: var(--adm-sidebar-w); }
+            .admin-shell.collapsed .admin-sidebar,
+            .adm-sidebar-collapsed .admin-shell .admin-sidebar { width: var(--adm-sidebar-w); }
             .admin-shell.collapsed .sidebar-brand-text,
             .admin-shell.collapsed .nav-group-label,
             .admin-shell.collapsed .nav-item-label,
-            .admin-shell.collapsed .collapse-label { display: block; }
-            .admin-shell.collapsed .sidebar-brand { padding: 20px 18px 16px; justify-content: flex-start; }
-            .admin-shell.collapsed .nav-item { justify-content: flex-start; padding: 10px 12px; }
-            .admin-shell.collapsed .nav-item-icon { width: 20px; font-size: 1.05rem; }
-            .admin-shell.collapsed .sidebar-collapse-btn { justify-content: flex-start; padding: 9px 12px; }
-            .admin-shell.collapsed .sidebar-bottom .nav-item { justify-content: flex-start; padding: 9px 12px; }
+            .admin-shell.collapsed .collapse-label,
+            .adm-sidebar-collapsed .admin-shell .sidebar-brand-text,
+            .adm-sidebar-collapsed .admin-shell .nav-group-label,
+            .adm-sidebar-collapsed .admin-shell .nav-item-label,
+            .adm-sidebar-collapsed .admin-shell .collapse-label { display: block; }
+            .admin-shell.collapsed .sidebar-brand,
+            .adm-sidebar-collapsed .admin-shell .sidebar-brand { padding: 20px 18px 16px; justify-content: flex-start; }
+            .admin-shell.collapsed .nav-item,
+            .adm-sidebar-collapsed .admin-shell .nav-item { justify-content: flex-start; padding: 10px 12px; }
+            .admin-shell.collapsed .nav-item-icon,
+            .adm-sidebar-collapsed .admin-shell .nav-item-icon { width: 20px; font-size: 1.05rem; }
+            .admin-shell.collapsed .sidebar-collapse-btn,
+            .adm-sidebar-collapsed .admin-shell .sidebar-collapse-btn { justify-content: flex-start; padding: 9px 12px; }
+            .admin-shell.collapsed .sidebar-bottom .nav-item,
+            .adm-sidebar-collapsed .admin-shell .sidebar-bottom .nav-item { justify-content: flex-start; padding: 9px 12px; }
             .header-menu-toggle { display: inline-flex; }
             .admin-page { padding: 16px; }
         }
@@ -812,6 +917,22 @@ function admin_render_layout_end(array $options = []): void
     </div>
 </div>
 
+<!-- ─── Modal: Notificación auto-cierre ───────────────────────── -->
+<div class="modal fade" id="notifyModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:360px;">
+        <div class="modal-content" style="border-radius:18px;overflow:hidden;">
+            <div class="modal-body" style="padding:32px 28px 22px;text-align:center;">
+                <div class="modal-confirm-icon info" id="notifyModalIcon" style="margin-bottom:12px;">
+                    <i class="bi bi-check-circle-fill" id="notifyModalIconEl"></i>
+                </div>
+                <h5 class="modal-confirm-title" id="notifyModalTitle"></h5>
+                <p class="modal-confirm-msg" id="notifyModalMsg" style="margin-bottom:16px;"></p>
+                <div id="notifyProgress" style="height:3px;border-radius:2px;background:var(--adm-brand-gradient);transform-origin:left;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- ─── Modal: Confirmación ───────────────────────────────────── -->
 <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
@@ -873,6 +994,7 @@ function admin_render_layout_end(array $options = []): void
 </div>
 
 <script src="assets/js/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="assets/js/bootstrap.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
@@ -887,6 +1009,7 @@ function admin_render_layout_end(array $options = []): void
     /* Restore collapsed state */
     if (shell && localStorage.getItem('adminSidebarCollapsed') === '1') {
         shell.classList.add('collapsed');
+        document.documentElement.classList.add('adm-sidebar-collapsed');
     }
 
     /* Desktop collapse */
@@ -894,7 +1017,9 @@ function admin_render_layout_end(array $options = []): void
         toggle.addEventListener('click', function () {
             if (!shell) return;
             shell.classList.toggle('collapsed');
-            localStorage.setItem('adminSidebarCollapsed', shell.classList.contains('collapsed') ? '1' : '0');
+            var isCollapsed = shell.classList.contains('collapsed');
+            document.documentElement.classList.toggle('adm-sidebar-collapsed', isCollapsed);
+            localStorage.setItem('adminSidebarCollapsed', isCollapsed ? '1' : '0');
         });
     }
 
@@ -905,6 +1030,35 @@ function admin_render_layout_end(array $options = []): void
             overlay.style.display = sidebar.classList.contains('mobile-open') ? 'block' : 'none';
         });
     }
+
+    /* notifyModal: auto-closing notification (no buttons) */
+    window.adminNotify = function (opts) {
+        var icon   = document.getElementById('notifyModalIcon');
+        var iconEl = document.getElementById('notifyModalIconEl');
+        var titleEl= document.getElementById('notifyModalTitle');
+        var msgEl  = document.getElementById('notifyModalMsg');
+        var bar    = document.getElementById('notifyProgress');
+
+        var type = opts.type || 'info';
+        var icons = { success: 'bi-check-circle-fill', info: 'bi-info-circle-fill', danger: 'bi-x-circle-fill' };
+        icon.className   = 'modal-confirm-icon ' + type;
+        iconEl.className = 'bi ' + (icons[type] || icons.info);
+        titleEl.textContent = opts.title || '';
+        msgEl.textContent   = opts.msg   || '';
+
+        var delay = opts.autoClose !== undefined ? opts.autoClose : 3000;
+        if (bar) {
+            bar.style.transition = 'none';
+            bar.style.transform  = 'scaleX(1)';
+            void bar.offsetWidth;
+            bar.style.transition = 'transform ' + (delay / 1000) + 's linear';
+            bar.style.transform  = 'scaleX(0)';
+        }
+
+        var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('notifyModal'));
+        modal.show();
+        if (delay > 0) { setTimeout(function () { modal.hide(); }, delay); }
+    };
 
     /* confirmModal helper (global) */
     window.adminConfirm = function (opts) {

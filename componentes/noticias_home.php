@@ -27,7 +27,7 @@ if (!empty($institution['color_primario']) && preg_match('/^#(?:[0-9a-fA-F]{3}){
         <div class="noticias-slider-wrap">
             <!-- Flecha anterior -->
             <button class="noticias-nav-btn noticias-prev" id="noticias-prev" aria-label="Noticias anteriores">
-                <i class="fa-solid fa-chevron-left"></i>
+                <i class="fas fa-chevron-left"></i>
             </button>
 
             <div class="swiper noticias-swiper" id="noticias-swiper">
@@ -68,7 +68,7 @@ if (!empty($institution['color_primario']) && preg_match('/^#(?:[0-9a-fA-F]{3}){
 
             <!-- Flecha siguiente -->
             <button class="noticias-nav-btn noticias-next" id="noticias-next" aria-label="Noticias siguientes">
-                <i class="fa-solid fa-chevron-right"></i>
+                <i class="fas fa-chevron-right"></i>
             </button>
         </div>
     </div>
@@ -129,11 +129,17 @@ if (!empty($institution['color_primario']) && preg_match('/^#(?:[0-9a-fA-F]{3}){
 
 <script>
 (function () {
+    var totalSlides = <?= count($newsItems) ?>;
+
     function initNoticiasSwiper() {
-        if (!window.Swiper) { return; }
+        if (!window.Swiper) {
+            setTimeout(initNoticiasSwiper, 80);
+            return;
+        }
         new Swiper('#noticias-swiper', {
             slidesPerView: 1.15,
             spaceBetween: 16,
+            loop: totalSlides > 4,
             navigation: {
                 nextEl: '#noticias-next',
                 prevEl: '#noticias-prev',

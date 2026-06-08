@@ -46,3 +46,76 @@ Incluye sitio público, panel CMS administrativo, gestión de menús, contenedor
 ├── logica/                    # Scripts SQL, documentación y modelo de datos
 ├── PDF/                       # Librería FPDF
 └── PHPMailer/                 # Librería para envío de correos
+```
+
+## Requisitos
+
+- PHP 8.0 o superior recomendado.
+- MySQL o MariaDB.
+- Servidor local como XAMPP, Laragon, WAMP o similar.
+- Navegador moderno.
+
+## Instalación local
+
+1. Clonar el repositorio.
+
+```bash
+git clone <url-del-repositorio>
+```
+
+2. Copiar el proyecto dentro del directorio del servidor local.
+
+```text
+htdocs/colegio_sanpablo
+```
+
+3. Crear la base de datos MySQL.
+
+```sql
+CREATE DATABASE qaseduc_colegio_spablo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+```
+
+4. Importar el archivo SQL ubicado en:
+
+```text
+logica/qaseduc_colegio_spablo.sql
+```
+
+5. Configurar las credenciales de conexión en:
+
+```text
+class/conexion.php
+```
+
+6. Abrir el sitio desde el navegador.
+
+```text
+http://localhost/colegio_sanpablo/
+```
+
+## Acceso al panel administrativo
+
+El panel CMS se encuentra en:
+
+```text
+http://localhost/colegio_sanpablo/admin.php
+```
+
+El acceso requiere una sesión administrativa válida.
+
+## Ramas
+
+- `main`: versión estable / producción.
+- `qa`: rama de pruebas y validación.
+
+## Seguridad
+
+- No subir credenciales reales al repositorio.
+- Revisar la configuración de conexión antes de publicar el proyecto.
+- Mantener respaldos de la base de datos antes de realizar cambios importantes.
+- Verificar permisos de escritura en la carpeta `uploads/`.
+- Restringir el acceso al panel administrativo.
+
+## Autor
+
+Cristian Jorquera

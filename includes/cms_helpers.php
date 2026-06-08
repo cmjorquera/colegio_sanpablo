@@ -103,12 +103,12 @@ function cms_get_institution_id(mysqli $db): int
 
 function cms_section_fixed_names(): array
 {
-    return ['topbar', 'header_principal', 'menu_principal', 'footer_principal', 'modal_informativo'];
+    return ['topbar', 'header_principal', 'footer_principal', 'modal_informativo'];
 }
 
 function cms_section_movable_names(): array
 {
-    return ['hero_principal', 'noticias_home', 'calendario_eventos_home', 'video_destacado_home', 'galeria_home', 'faq_home', 'about_home'];
+    return ['hero_principal', 'noticias_home', 'calendario_eventos_home', 'video_destacado_home', 'galeria_home', 'faq_home', 'about_home', 'estadisticas_home'];
 }
 
 function cms_section_is_fixed(string $name): bool
@@ -208,6 +208,14 @@ function cms_default_sections(): array
             'observacion' => 'Bloque institucional de presentacion con imagen principal, video y descripcion.',
         ],
         [
+            'nombre_interno' => 'estadisticas_home',
+            'titulo_admin' => 'Estadisticas home',
+            'tipo_seccion' => 'content',
+            'variante' => 'contadores_animados',
+            'orden' => 9,
+            'observacion' => 'Contenedor administrable de datos destacados con contadores animados al entrar en pantalla.',
+        ],
+        [
             'nombre_interno' => 'footer_principal',
             'titulo_admin' => 'Footer principal',
             'tipo_seccion' => 'footer',
@@ -219,9 +227,9 @@ function cms_default_sections(): array
             'nombre_interno' => 'modal_informativo',
             'titulo_admin' => 'Modal informativo',
             'tipo_seccion' => 'modal',
-            'variante' => 'imagen_texto',
+            'variante' => 'bienvenida',
             'orden' => 99,
-            'observacion' => 'Modal emergente que se muestra al cargar la pagina. Configurable con imagen, titulo, descripcion y boton.',
+            'observacion' => 'Modal administrable que se muestra al cargar el sitio por primera vez o cuando cambia su contenido.',
         ],
     ];
 }
@@ -274,19 +282,100 @@ function cms_sync_sections(mysqli $db, int $institutionId): void
     $insertStmt->close();
     $updateStmt->close();
 
-    // Limpieza: elimina la sección renombrada modal_bienvenida si no tiene ítems
-    $stmtClean = $db->prepare(
-        "DELETE s FROM seccion s
-          WHERE s.nombre_interno = 'modal_bienvenida'
-            AND s.id_institucion = ?
-            AND NOT EXISTS (
-                SELECT 1 FROM seccion_item si WHERE si.id_seccion = s.id_seccion
-            )"
+    cms_remove_legacy_menu_principal_section($db, $institutionId);
+    cms_sync_modal_informativo_defaults($db, $institutionId);
+}
+
+function cms_remove_legacy_menu_principal_section(mysqli $db, int $institutionId): void
+{
+    $stmtConfigs = $db->prepare(
+        "DELETE sc FROM seccion_config sc
+         INNER JOIN seccion s ON s.id_seccion = sc.id_seccion
+         WHERE s.id_institucion = ? AND s.nombre_interno = 'menu_principal'"
     );
-    if ($stmtClean) {
-        $stmtClean->bind_param('i', $institutionId);
-        $stmtClean->execute();
-        $stmtClean->close();
+    if ($stmtConfigs) {
+        $stmtConfigs->bind_param('i', $institutionId);
+        $stmtConfigs->execute();
+        $stmtConfigs->close();
+    }
+
+    $stmtItems = $db->prepare(
+        "DELETE si FROM seccion_item si
+         INNER JOIN seccion s ON s.id_seccion = si.id_seccion
+         WHERE s.id_institucion = ? AND s.nombre_interno = 'menu_principal'"
+    );
+    if ($stmtItems) {
+        $stmtItems->bind_param('i', $institutionId);
+        $stmtItems->execute();
+        $stmtItems->close();
+    }
+
+    $stmtSection = $db->prepare("DELETE FROM seccion WHERE id_institucion = ? AND nombre_interno = 'menu_principal'");
+    if ($stmtSection) {
+        $stmtSection->bind_param('i', $institutionId);
+        $stmtSection->execute();
+        $stmtSection->close();
+    }
+}
+
+function cms_sync_modal_informativo_defaults(mysqli $db, int $institutionId): void
+{
+    $stmtSection = $db->prepare("SELECT id_seccion FROM seccion WHERE id_institucion = ? AND nombre_interno = 'modal_informativo' LIMIT 1");
+    if (!$stmtSection) {
+        return;
+    }
+
+    $stmtSection->bind_param('i', $institutionId);
+    $stmtSection->execute();
+    $result = $stmtSection->get_result();
+    $section = $result ? $result->fetch_assoc() : null;
+    $stmtSection->close();
+
+    if (!$section) {
+        return;
+    }
+
+    $idSeccion = (int) $section['id_seccion'];
+    $stmtCount = $db->prepare('SELECT COUNT(*) AS total FROM seccion_item WHERE id_seccion = ?');
+    if (!$stmtCount) {
+        return;
+    }
+
+    $stmtCount->bind_param('i', $idSeccion);
+    $stmtCount->execute();
+    $countResult = $stmtCount->get_result();
+    $totalItems = (int) (($countResult ? $countResult->fetch_assoc()['total'] : 0));
+    $stmtCount->close();
+
+    if ($totalItems > 0) {
+        return;
+    }
+
+    $titulo = 'Bienvenido a la version 2025';
+    $descripcion = "Hemos renovado nuestro sitio web para que toda la comunidad del **Colegio San Pablo** pueda informarse y conectarse de forma mas simple y rapida.\n\nNueva organizacion del menu por niveles educativos.\nAcceso directo a **Mi San Pablo** para familias, estudiantes, funcionarios y docentes.\nSeccion de noticias y comunicaciones actualizada durante el ano.\nDiseno adaptado para celulares, tablets y computadores.\n\nTe invitamos a recorrer el sitio y guardarlo en tus favoritos para mantenerte siempre informado. Gracias por ser parte de nuestra comunidad.";
+    $botonTexto = 'Comenzar a navegar';
+    $botonUrl = '#';
+    $orden = 1;
+
+    $stmtItem = $db->prepare('INSERT INTO seccion_item (id_seccion, titulo, descripcion, boton_1_texto, boton_1_url, visible, orden) VALUES (?, ?, ?, ?, ?, \'si\', ?)');
+    if ($stmtItem) {
+        $stmtItem->bind_param('issssi', $idSeccion, $titulo, $descripcion, $botonTexto, $botonUrl, $orden);
+        $stmtItem->execute();
+        $stmtItem->close();
+    }
+
+    $defaults = [
+        'mostrar' => 'una_vez',
+        'delay_ms' => '650',
+        'color_boton' => '#ef4444',
+    ];
+    $stmtConfig = $db->prepare('INSERT INTO seccion_config (id_seccion, clave, valor) VALUES (?, ?, ?)');
+    if ($stmtConfig) {
+        foreach ($defaults as $clave => $valor) {
+            $stmtConfig->bind_param('iss', $idSeccion, $clave, $valor);
+            $stmtConfig->execute();
+        }
+        $stmtConfig->close();
     }
 }
 
@@ -295,8 +384,6 @@ function cms_get_preview_target(string $name): string
     $anchors = [
         'topbar' => '#topbar',
         'header_principal' => '#header-principal',
-        // Compatibilidad legacy: la navegación vive dentro de header_principal.
-        'menu_principal' => '#header-principal',
         'hero_principal' => '#hero-principal',
         'noticias_home' => '#noticias',
         'calendario_eventos_home' => '#calendario-eventos-home',
@@ -304,9 +391,9 @@ function cms_get_preview_target(string $name): string
         'galeria_home' => '#galeria',
         'faq_home' => '#faq',
         'about_home' => '#about',
+        'estadisticas_home' => '#estadisticas',
         'footer_principal'  => '#footer-principal',
         'modal_informativo' => '#modal-informativo',
-        'modal_bienvenida'  => '#modal-informativo',
     ];
 
     return 'index.php' . ($anchors[$name] ?? '');
@@ -316,7 +403,6 @@ function cms_get_component_path(string $name): ?string
 {
     $fallbackComponents = [
         'header_principal'    => 'header',
-        'modal_bienvenida'    => 'modal_informativo',
     ];
 
     $path = __DIR__ . '/../componentes/' . $name . '.php';
@@ -354,6 +440,7 @@ function cms_get_site_data(mysqli $db): array
     $resSubs = $db->query("SELECT id_sub_menu, id_menu, nombre, url, icono, orden FROM sub_menus WHERE estado = 1 ORDER BY id_menu ASC, orden ASC, id_sub_menu ASC");
     if ($resSubs) {
         while ($row = $resSubs->fetch_assoc()) {
+            $row['url'] = cms_submenu_public_url($row);
             $arrSubs[(int) $row['id_menu']][] = $row;
         }
         $resSubs->free();
@@ -504,13 +591,44 @@ function cms_get_menu(mysqli $db, int $idMenu): ?array
 
 function cms_list_menus(mysqli $db): array
 {
-    $result = $db->query('SELECT * FROM menus ORDER BY orden ASC, id_menu ASC');
+    $sql = "SELECT m.*,
+                   COALESCE(ms.total_submenus, 0) AS total_submenus,
+                   u.nombre AS actualizado_por_nombre,
+                   u.apellido AS actualizado_por_apellido,
+                   u.usuario AS actualizado_por_usuario,
+                   u.email AS actualizado_por_email
+            FROM menus m
+            LEFT JOIN (
+                SELECT id_menu, COUNT(*) AS total_submenus
+                FROM sub_menus
+                GROUP BY id_menu
+            ) ms ON ms.id_menu = m.id_menu
+            LEFT JOIN usuario u ON u.id_usuario = m.actualizado_por
+            ORDER BY m.orden ASC, m.id_menu ASC";
+    $result = $db->query($sql);
     return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
 }
 
 function cms_get_submenu(mysqli $db, int $idSubMenu): ?array
 {
-    $stmt = $db->prepare('SELECT * FROM sub_menus WHERE id_sub_menu = ? LIMIT 1');
+    cms_ensure_submenu_page_tables($db);
+    $stmt = $db->prepare("SELECT sm.*, m.nombre AS menu_padre,
+                                 sp.id_pagina AS pagina_id, sp.titulo AS pagina_titulo,
+                                 sp.bajada AS pagina_bajada, sp.contenido AS pagina_contenido,
+                                 sp.imagen_hero AS pagina_imagen_hero,
+                                 sp.hero_video_url AS pagina_hero_video_url,
+                                 sp.hero_video_archivo AS pagina_hero_video_archivo,
+                                 sp.imagen_secundaria AS pagina_imagen_secundaria,
+                                 sp.video_url AS pagina_video_url,
+                                 sp.video_archivo AS pagina_video_archivo,
+                                 sp.boton_texto AS pagina_boton_texto,
+                                 sp.boton_url AS pagina_boton_url,
+                                 sp.meta_title AS pagina_meta_title,
+                                 sp.meta_description AS pagina_meta_description
+                          FROM sub_menus sm
+                          INNER JOIN menus m ON m.id_menu = sm.id_menu
+                          LEFT JOIN sub_menu_paginas sp ON sp.id_sub_menu = sm.id_sub_menu
+                          WHERE sm.id_sub_menu = ? LIMIT 1");
     $stmt->bind_param('i', $idSubMenu);
     $stmt->execute();
     $result = $stmt->get_result();
@@ -521,12 +639,308 @@ function cms_get_submenu(mysqli $db, int $idSubMenu): ?array
 
 function cms_list_submenus(mysqli $db): array
 {
-    $sql = 'SELECT sm.*, m.nombre AS menu_padre
+    cms_ensure_submenu_page_tables($db);
+    $sql = 'SELECT sm.*, m.nombre AS menu_padre,
+                   sp.id_pagina AS pagina_id,
+                   sp.titulo AS pagina_titulo,
+                   sp.bajada AS pagina_bajada,
+                   sp.contenido AS pagina_contenido,
+                   sp.imagen_hero AS pagina_imagen_hero,
+                   sp.hero_video_url AS pagina_hero_video_url,
+                   sp.hero_video_archivo AS pagina_hero_video_archivo,
+                   sp.imagen_secundaria AS pagina_imagen_secundaria,
+                   sp.video_url AS pagina_video_url,
+                   sp.video_archivo AS pagina_video_archivo,
+                   sp.boton_texto AS pagina_boton_texto,
+                   sp.boton_url AS pagina_boton_url,
+                   sp.meta_title AS pagina_meta_title,
+                   sp.meta_description AS pagina_meta_description
             FROM sub_menus sm
             INNER JOIN menus m ON m.id_menu = sm.id_menu
+            LEFT JOIN sub_menu_paginas sp ON sp.id_sub_menu = sm.id_sub_menu
             ORDER BY m.orden ASC, sm.orden ASC, sm.id_sub_menu ASC';
     $result = $db->query($sql);
-    return $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    foreach ($rows as &$row) {
+        $row['url_publica'] = cms_submenu_public_url($row);
+        $row['pagina_media'] = cms_list_submenu_page_media($db, (int) $row['id_sub_menu']);
+    }
+    unset($row);
+    return $rows;
+}
+
+function cms_ensure_submenu_page_tables(mysqli $db): void
+{
+    $db->query("CREATE TABLE IF NOT EXISTS sub_menu_paginas (
+        id_pagina INT NOT NULL AUTO_INCREMENT,
+        id_sub_menu INT NOT NULL,
+        titulo VARCHAR(180) DEFAULT NULL,
+        bajada VARCHAR(300) DEFAULT NULL,
+        contenido MEDIUMTEXT NULL,
+        imagen_hero VARCHAR(255) DEFAULT NULL,
+        hero_video_url VARCHAR(500) DEFAULT NULL,
+        hero_video_archivo VARCHAR(255) DEFAULT NULL,
+        imagen_secundaria VARCHAR(255) DEFAULT NULL,
+        video_url VARCHAR(500) DEFAULT NULL,
+        video_archivo VARCHAR(255) DEFAULT NULL,
+        boton_texto VARCHAR(150) DEFAULT NULL,
+        boton_url VARCHAR(255) DEFAULT NULL,
+        meta_title VARCHAR(180) DEFAULT NULL,
+        meta_description VARCHAR(300) DEFAULT NULL,
+        actualizado_en DATETIME DEFAULT NULL,
+        actualizado_por INT DEFAULT NULL,
+        PRIMARY KEY (id_pagina),
+        UNIQUE KEY uq_sub_menu_paginas_submenu (id_sub_menu)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+
+    if (!cms_column_exists($db, 'sub_menu_paginas', 'hero_video_url')) {
+        $db->query('ALTER TABLE sub_menu_paginas ADD COLUMN hero_video_url VARCHAR(500) DEFAULT NULL AFTER imagen_hero');
+    }
+
+    if (!cms_column_exists($db, 'sub_menu_paginas', 'hero_video_archivo')) {
+        $db->query('ALTER TABLE sub_menu_paginas ADD COLUMN hero_video_archivo VARCHAR(255) DEFAULT NULL AFTER hero_video_url');
+    }
+
+    $db->query("CREATE TABLE IF NOT EXISTS sub_menu_pagina_media (
+        id_media INT NOT NULL AUTO_INCREMENT,
+        id_sub_menu INT NOT NULL,
+        tipo ENUM('imagen','video','youtube') NOT NULL DEFAULT 'imagen',
+        archivo VARCHAR(255) DEFAULT NULL,
+        url VARCHAR(500) DEFAULT NULL,
+        titulo VARCHAR(180) DEFAULT NULL,
+        descripcion VARCHAR(300) DEFAULT NULL,
+        visible TINYINT(1) NOT NULL DEFAULT 1,
+        orden INT NOT NULL DEFAULT 0,
+        creado_en TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (id_media),
+        KEY idx_sub_menu_pagina_media_submenu (id_sub_menu)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
+}
+
+function cms_submenu_public_url(array $submenu): string
+{
+    $url = trim((string) ($submenu['url'] ?? ''));
+    if ($url !== '' && $url !== '#') {
+        return $url;
+    }
+
+    return 'pagina_submenu.php?id=' . (int) ($submenu['id_sub_menu'] ?? 0);
+}
+
+function cms_list_submenu_page_media(mysqli $db, int $idSubMenu): array
+{
+    cms_ensure_submenu_page_tables($db);
+    $stmt = $db->prepare('SELECT * FROM sub_menu_pagina_media WHERE id_sub_menu = ? ORDER BY orden ASC, id_media ASC');
+    if (!$stmt) {
+        return [];
+    }
+    $stmt->bind_param('i', $idSubMenu);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $stmt->close();
+    return $rows;
+}
+
+function cms_get_public_submenu_page(mysqli $db, int $idSubMenu): ?array
+{
+    cms_ensure_submenu_page_tables($db);
+    $stmt = $db->prepare("SELECT sm.*, m.nombre AS menu_padre, m.id_menu,
+                                 sp.titulo AS pagina_titulo, sp.bajada AS pagina_bajada,
+                                 sp.contenido AS pagina_contenido,
+                                 sp.imagen_hero AS pagina_imagen_hero,
+                                 sp.hero_video_url AS pagina_hero_video_url,
+                                 sp.hero_video_archivo AS pagina_hero_video_archivo,
+                                 sp.imagen_secundaria AS pagina_imagen_secundaria,
+                                 sp.video_url AS pagina_video_url,
+                                 sp.video_archivo AS pagina_video_archivo,
+                                 sp.boton_texto AS pagina_boton_texto,
+                                 sp.boton_url AS pagina_boton_url,
+                                 sp.meta_title AS pagina_meta_title,
+                                 sp.meta_description AS pagina_meta_description
+                          FROM sub_menus sm
+                          INNER JOIN menus m ON m.id_menu = sm.id_menu
+                          LEFT JOIN sub_menu_paginas sp ON sp.id_sub_menu = sm.id_sub_menu
+                          WHERE sm.id_sub_menu = ? AND sm.estado = 1 LIMIT 1");
+    if (!$stmt) {
+        return null;
+    }
+    $stmt->bind_param('i', $idSubMenu);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $row = $result ? $result->fetch_assoc() : null;
+    $stmt->close();
+    if (!$row) {
+        return null;
+    }
+    $row['pagina_media'] = cms_list_submenu_page_media($db, $idSubMenu);
+    return $row;
+}
+
+function cms_list_sibling_submenus(mysqli $db, int $idMenu): array
+{
+    $stmt = $db->prepare('SELECT * FROM sub_menus WHERE id_menu = ? AND estado = 1 ORDER BY orden ASC, id_sub_menu ASC');
+    if (!$stmt) {
+        return [];
+    }
+    $stmt->bind_param('i', $idMenu);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $rows = $result ? $result->fetch_all(MYSQLI_ASSOC) : [];
+    $stmt->close();
+    foreach ($rows as &$row) {
+        $row['url_publica'] = cms_submenu_public_url($row);
+    }
+    unset($row);
+    return $rows;
+}
+
+function cms_save_submenu_page(mysqli $db, int $idSubMenu, array $post): void
+{
+    cms_ensure_submenu_page_tables($db);
+    $current = null;
+    $stmtCurrent = $db->prepare('SELECT * FROM sub_menu_paginas WHERE id_sub_menu = ? LIMIT 1');
+    if ($stmtCurrent) {
+        $stmtCurrent->bind_param('i', $idSubMenu);
+        $stmtCurrent->execute();
+        $result = $stmtCurrent->get_result();
+        $current = $result ? $result->fetch_assoc() : null;
+        $stmtCurrent->close();
+    }
+
+    $folder = 'submenus/' . $idSubMenu;
+    $imagenHero = cms_upload_image('pagina_imagen_hero', $folder, $current['imagen_hero'] ?? null);
+    $heroVideoArchivo = cms_upload_file('pagina_hero_video_archivo', $folder, ['mp4', 'webm', 'mov', 'm4v'], $current['hero_video_archivo'] ?? null);
+    $imagenSecundaria = cms_upload_image('pagina_imagen_secundaria', $folder, $current['imagen_secundaria'] ?? null);
+    $videoArchivo = cms_upload_file('pagina_video_archivo', $folder, ['mp4', 'webm', 'mov', 'm4v'], $current['video_archivo'] ?? null);
+
+    $titulo = trim((string) ($post['pagina_titulo'] ?? ''));
+    $bajada = trim((string) ($post['pagina_bajada'] ?? ''));
+    $contenido = trim((string) ($post['pagina_contenido'] ?? ''));
+    $heroVideoUrl = trim((string) ($post['pagina_hero_video_url'] ?? ''));
+    $videoUrl = trim((string) ($post['pagina_video_url'] ?? ''));
+    $botonTexto = trim((string) ($post['pagina_boton_texto'] ?? ''));
+    $botonUrl = trim((string) ($post['pagina_boton_url'] ?? ''));
+    $metaTitle = trim((string) ($post['pagina_meta_title'] ?? ''));
+    $metaDescription = trim((string) ($post['pagina_meta_description'] ?? ''));
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
+
+    if ($current) {
+        $stmt = $db->prepare('UPDATE sub_menu_paginas
+            SET titulo = ?, bajada = ?, contenido = ?, imagen_hero = ?, hero_video_url = ?, hero_video_archivo = ?, imagen_secundaria = ?,
+                video_url = ?, video_archivo = ?, boton_texto = ?, boton_url = ?,
+                meta_title = ?, meta_description = ?, actualizado_en = NOW(), actualizado_por = ?
+            WHERE id_sub_menu = ?');
+        $stmt->bind_param(
+            'sssssssssssssii',
+            $titulo,
+            $bajada,
+            $contenido,
+            $imagenHero,
+            $heroVideoUrl,
+            $heroVideoArchivo,
+            $imagenSecundaria,
+            $videoUrl,
+            $videoArchivo,
+            $botonTexto,
+            $botonUrl,
+            $metaTitle,
+            $metaDescription,
+            $idUsuario,
+            $idSubMenu
+        );
+    } else {
+        $stmt = $db->prepare('INSERT INTO sub_menu_paginas
+            (id_sub_menu, titulo, bajada, contenido, imagen_hero, hero_video_url, hero_video_archivo, imagen_secundaria, video_url, video_archivo,
+             boton_texto, boton_url, meta_title, meta_description, actualizado_en, actualizado_por)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)');
+        $stmt->bind_param(
+            'isssssssssssssi',
+            $idSubMenu,
+            $titulo,
+            $bajada,
+            $contenido,
+            $imagenHero,
+            $heroVideoUrl,
+            $heroVideoArchivo,
+            $imagenSecundaria,
+            $videoUrl,
+            $videoArchivo,
+            $botonTexto,
+            $botonUrl,
+            $metaTitle,
+            $metaDescription,
+            $idUsuario
+        );
+    }
+    $stmt->execute();
+    $stmt->close();
+
+    cms_save_submenu_page_media($db, $idSubMenu, $post, $folder);
+}
+
+function cms_save_submenu_page_media(mysqli $db, int $idSubMenu, array $post, string $folder): void
+{
+    $deleteIds = array_map('intval', $post['delete_media'] ?? []);
+    foreach ($deleteIds as $idMedia) {
+        if ($idMedia <= 0) {
+            continue;
+        }
+        $stmt = $db->prepare('DELETE FROM sub_menu_pagina_media WHERE id_media = ? AND id_sub_menu = ?');
+        if ($stmt) {
+            $stmt->bind_param('ii', $idMedia, $idSubMenu);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+
+    $galleryImage = cms_upload_image('pagina_galeria_imagen', $folder, null);
+    if ($galleryImage) {
+        $res = $db->query('SELECT COALESCE(MAX(orden), 0) + 1 AS next_orden FROM sub_menu_pagina_media WHERE id_sub_menu = ' . $idSubMenu);
+        $orden = $res ? (int) $res->fetch_assoc()['next_orden'] : 1;
+        $titulo = trim((string) ($post['pagina_galeria_titulo'] ?? ''));
+        $stmt = $db->prepare("INSERT INTO sub_menu_pagina_media (id_sub_menu, tipo, archivo, titulo, visible, orden) VALUES (?, 'imagen', ?, ?, 1, ?)");
+        if ($stmt) {
+            $stmt->bind_param('issi', $idSubMenu, $galleryImage, $titulo, $orden);
+            $stmt->execute();
+            $stmt->close();
+        }
+    }
+}
+
+function cms_menu_icon_class(string $name, ?string $icon): string
+{
+    $icon = trim((string) $icon);
+    if ($icon !== '') {
+        return $icon;
+    }
+
+    $fallback = [
+        'Inicio' => 'bi bi-house-door',
+        'Institucional' => 'bi bi-building',
+        'Maternal' => 'bi bi-balloon-heart',
+        'Inicial' => 'bi bi-palette',
+        'Primaria' => 'bi bi-book',
+        '3er Ciclo EBI' => 'bi bi-journal-text',
+        'Bachillerato' => 'bi bi-mortarboard',
+        'Libre Asistido' => 'bi bi-people',
+        'Confesionalidad' => 'bi bi-cross',
+        'Biblioteca' => 'bi bi-book-half',
+        'Mi San Pablo' => 'bi bi-star',
+    ];
+
+    return $fallback[trim($name)] ?? 'bi bi-list-nested';
+}
+
+function cms_menu_display_url(?string $name, ?string $url): string
+{
+    $name = trim((string) $name);
+    $url = trim((string) $url);
+    if (strcasecmp($name, 'Inicio') === 0) {
+        return '/';
+    }
+
+    return $url !== '' ? $url : '#';
 }
 
 function cms_normalize_filename(string $name): string
@@ -1325,19 +1739,21 @@ function cms_save_menu(mysqli $db, array $post): int
     $url = trim((string) ($post['url'] ?? ''));
     $icono = trim((string) ($post['icono'] ?? ''));
     $estado = isset($post['estado']) ? 1 : 0;
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
 
     if ($nombre === '') {
         throw new RuntimeException('El nombre del menu es obligatorio.');
     }
 
     if ($idMenu > 0) {
-        $stmt = $db->prepare('UPDATE menus SET nombre = ?, url = ?, icono = ?, estado = ? WHERE id_menu = ?');
-        $stmt->bind_param('sssii', $nombre, $url, $icono, $estado, $idMenu);
+        $stmt = $db->prepare('UPDATE menus SET nombre = ?, url = ?, icono = ?, estado = ?, actualizado_en = NOW(), actualizado_por = ? WHERE id_menu = ?');
+        $stmt->bind_param('sssiii', $nombre, $url, $icono, $estado, $idUsuario, $idMenu);
     } else {
         $res = $db->query('SELECT COALESCE(MAX(orden), 0) + 1 AS next_orden FROM menus');
         $orden = $res ? (int) $res->fetch_assoc()['next_orden'] : 1;
-        $stmt = $db->prepare('INSERT INTO menus (nombre, url, icono, orden, estado) VALUES (?, ?, ?, ?, ?)');
-        $stmt->bind_param('sssii', $nombre, $url, $icono, $orden, $estado);
+        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+        $stmt = $db->prepare('INSERT INTO menus (nombre, url, icono, orden, estado, fecha_creacion, hora_creacion, ip_creacion, actualizado_en, actualizado_por) VALUES (?, ?, ?, ?, ?, CURDATE(), CURTIME(), ?, NOW(), ?)');
+        $stmt->bind_param('sssiisi', $nombre, $url, $icono, $orden, $estado, $ip, $idUsuario);
     }
 
     $stmt->execute();
@@ -1348,8 +1764,9 @@ function cms_save_menu(mysqli $db, array $post): int
 
 function cms_toggle_menu(mysqli $db, int $idMenu): void
 {
-    $stmt = $db->prepare('UPDATE menus SET estado = IF(estado = 1, 0, 1) WHERE id_menu = ?');
-    $stmt->bind_param('i', $idMenu);
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
+    $stmt = $db->prepare('UPDATE menus SET estado = IF(estado = 1, 0, 1), actualizado_en = NOW(), actualizado_por = ? WHERE id_menu = ?');
+    $stmt->bind_param('ii', $idUsuario, $idMenu);
     $stmt->execute();
     $stmt->close();
 }
@@ -1373,20 +1790,22 @@ function cms_delete_menu(mysqli $db, int $idMenu): void
 
 function cms_save_submenu(mysqli $db, array $post): int
 {
+    cms_ensure_submenu_page_tables($db);
     $idSubMenu = (int) ($post['id_sub_menu'] ?? 0);
     $idMenu = (int) ($post['id_menu'] ?? 0);
     $nombre = trim((string) ($post['nombre'] ?? ''));
     $url = trim((string) ($post['url'] ?? ''));
     $icono = trim((string) ($post['icono'] ?? ''));
     $estado = isset($post['estado']) ? 1 : 0;
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
 
     if ($idMenu < 1 || $nombre === '') {
         throw new RuntimeException('El submenu debe tener menu padre y nombre.');
     }
 
     if ($idSubMenu > 0) {
-        $stmt = $db->prepare('UPDATE sub_menus SET id_menu = ?, nombre = ?, url = ?, icono = ?, estado = ? WHERE id_sub_menu = ?');
-        $stmt->bind_param('isssii', $idMenu, $nombre, $url, $icono, $estado, $idSubMenu);
+        $stmt = $db->prepare('UPDATE sub_menus SET id_menu = ?, nombre = ?, url = ?, icono = ?, estado = ?, actualizado_en = NOW(), actualizado_por = ? WHERE id_sub_menu = ?');
+        $stmt->bind_param('isssiii', $idMenu, $nombre, $url, $icono, $estado, $idUsuario, $idSubMenu);
     } else {
         $res = $db->query('SELECT COALESCE(MAX(orden), 0) + 1 AS next_orden FROM sub_menus WHERE id_menu = ' . $idMenu);
         $orden = $res ? (int) $res->fetch_assoc()['next_orden'] : 1;
@@ -1398,13 +1817,26 @@ function cms_save_submenu(mysqli $db, array $post): int
     $stmt->execute();
     $savedId = $idSubMenu > 0 ? $idSubMenu : (int) $db->insert_id;
     $stmt->close();
+
+    if ($url === '' || $url === '#') {
+        $internalUrl = cms_submenu_public_url(['id_sub_menu' => $savedId, 'url' => '']);
+        $stmtUrl = $db->prepare('UPDATE sub_menus SET url = ? WHERE id_sub_menu = ?');
+        if ($stmtUrl) {
+            $stmtUrl->bind_param('si', $internalUrl, $savedId);
+            $stmtUrl->execute();
+            $stmtUrl->close();
+        }
+    }
+
+    cms_save_submenu_page($db, $savedId, $post);
     return $savedId;
 }
 
 function cms_toggle_submenu(mysqli $db, int $idSubMenu): void
 {
-    $stmt = $db->prepare('UPDATE sub_menus SET estado = IF(estado = 1, 0, 1) WHERE id_sub_menu = ?');
-    $stmt->bind_param('i', $idSubMenu);
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
+    $stmt = $db->prepare('UPDATE sub_menus SET estado = IF(estado = 1, 0, 1), actualizado_en = NOW(), actualizado_por = ? WHERE id_sub_menu = ?');
+    $stmt->bind_param('ii', $idUsuario, $idSubMenu);
     $stmt->execute();
     $stmt->close();
 }

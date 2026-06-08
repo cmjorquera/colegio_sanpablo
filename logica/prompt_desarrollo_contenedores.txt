@@ -1377,12 +1377,12 @@ Los overrides de FullCalendar se agregan en el <style> inline del componente
 porque necesitan los valores PHP de los colores institucionales.
 
 --------------------------------------------------
-CONTENEDOR modal_bienvenida
+CONTENEDOR ELIMINADO
 --------------------------------------------------
 
 Seccion en tabla seccion:
 
-nombre_interno = modal_bienvenida
+nombre_interno = eliminado
 tipo_seccion = modal
 orden = 99
 
@@ -1391,7 +1391,7 @@ del sitio que llame a cms_get_site_data() (incluyendo index.php y editar_contene
 
 Archivo del componente publico:
 
-componentes/modal_bienvenida.php
+componentes/eliminado.php
 
 Tablas usadas:
 
@@ -1451,17 +1451,17 @@ Pestaña Items:
 
 Archivos modificados además del componente:
 
-includes/cms_helpers.php → se agregó modal_informativo a cms_default_sections(), preview targets y fallback en cms_get_component_path()
+includes/cms_helpers.php → referencia eliminada del sistema de contenedores
 editar_contenedor.php → se agregó $isModal y formulario específico para tipo modal
 
 NOTA DE MIGRACIÓN:
-El componente se creó primero como modal_bienvenida y luego se renombró a modal_informativo.
-En la BD puede existir una sección antigua con nombre_interno = modal_bienvenida.
+El componente fue eliminado.
+La BD no debe conservar esta sección antigua.
 El sistema maneja esto con dos mecanismos:
-1. cms_get_component_path() tiene fallback: modal_bienvenida → modal_informativo
-2. componentes/modal_bienvenida.php redirige con include a modal_informativo.php
-3. modal_informativo.php tiene guard PHP (define MODAL_INFORMATIVO_RENDERED) para no duplicar
-El admin puede eliminar la sección modal_bienvenida antigua si aparece en la lista.
+1. Fallback eliminado.
+2. Archivo eliminado.
+3. Render eliminado.
+El admin ya no debe mostrar esta sección antigua.
 
 --------------------------------------------------
 CONTENEDOR noticias_home - CARRUSEL CON SWIPER
@@ -1512,7 +1512,7 @@ AJUSTE MODAL INFORMATIVO - EVITAR PESTAÑAZO
 
 Archivo modificado:
 
-componentes/modal_informativo.php
+componentes/eliminado.php
 
 Motivo:
 
@@ -1537,6 +1537,231 @@ seccion
 seccion_config
 seccion_item
 institucion
+
+--------------------------------------------------
+LIMPIEZA CONTENEDOR LEGACY MENU_PRINCIPAL
+--------------------------------------------------
+
+Archivos modificados:
+
+index.php
+includes/cms_helpers.php
+logica/qaseduc_colegio_spablo.sql
+logica/prompt_desarrollo_contenedores.txt
+
+Archivo eliminado:
+
+componentes/menu_principal.php
+
+Motivo:
+
+El contenedor menu_principal era una compatibilidad legacy. La navegacion publica ya vive
+dentro de header_principal y se renderiza desde componentes/header.php usando las tablas
+menus y sub_menus. Activar menu_principal desde el panel no renderizaba menu propio y
+confundia al administrador.
+
+Ajuste aplicado:
+
+- menu_principal se elimina del dump qaseduc_colegio_spablo.sql.
+- menu_principal se elimina de la lista de contenedores fijos del CMS.
+- menu_principal se elimina del mapa de preview.
+- index.php ya no necesita saltar explicitamente menu_principal.
+- Se elimina componentes/menu_principal.php porque solo contenia un comentario legacy.
+- cms_sync_sections() ejecuta una limpieza segura de la seccion legacy menu_principal y
+  sus posibles registros en seccion_config y seccion_item para que no reaparezca en bases
+  ya instaladas.
+
+Regla actual:
+
+El menu publico del sitio debe administrarse desde el modulo Menus/Submenus y se renderiza
+solo dentro del contenedor header_principal. No recrear menu_principal como contenedor de
+seccion.
+
+Tablas usadas:
+
+seccion
+menus
+sub_menus
+
+--------------------------------------------------
+PAGINAS DINAMICAS PARA SUBMENUS
+--------------------------------------------------
+
+Objetivo:
+
+Cada sub_menu activo puede abrir una pagina interna administrable sin crear archivos PHP
+individuales por submenu. La navegacion sigue en menus/sub_menus y el contenido editorial
+vive en tablas propias.
+
+Archivos modificados:
+
+admin.php
+includes/cms_helpers.php
+logica/qaseduc_colegio_spablo.sql
+logica/prompt_desarrollo_contenedores.txt
+
+Archivo nuevo:
+
+pagina_submenu.php
+
+Tablas nuevas:
+
+sub_menu_paginas
+sub_menu_pagina_media
+
+Tablas relacionadas:
+
+menus
+sub_menus
+institucion
+
+Regla de responsabilidad:
+
+menus controla el menu padre.
+sub_menus controla la navegacion, nombre, orden, estado y URL.
+sub_menu_paginas controla el contenido editorial de la pagina interna del submenu.
+sub_menu_pagina_media controla imagenes de galeria y multimedia adicional.
+
+Campos principales de sub_menu_paginas:
+
+id_sub_menu
+titulo
+bajada
+contenido
+imagen_hero
+hero_video_url
+hero_video_archivo
+imagen_secundaria
+video_url
+video_archivo
+boton_texto
+boton_url
+meta_title
+meta_description
+actualizado_en
+actualizado_por
+
+Campos principales de sub_menu_pagina_media:
+
+id_sub_menu
+tipo
+archivo
+url
+titulo
+descripcion
+visible
+orden
+
+Flujo administrativo:
+
+En el panel Menus/Submenus, el mismo boton editar del submenu abre un modal ampliado.
+El modal permite editar:
+
+- datos del enlace: menu padre, nombre, URL, icono y estado.
+- pagina: titulo, bajada, contenido, boton opcional.
+- multimedia: imagen hero, imagen secundaria, video local, URL YouTube/Vimeo y galeria.
+- video hero: URL o archivo local para reemplazar visualmente la imagen del hero superior.
+- SEO: meta title y meta description.
+
+Si el campo URL del submenu queda vacio o en #, cms_save_submenu() asigna automaticamente:
+
+pagina_submenu.php?id=ID_SUB_MENU
+
+Si el administrador escribe una URL externa o interna manual, se conserva esa URL.
+
+Flujo publico:
+
+pagina_submenu.php?id=ID_SUB_MENU carga:
+
+- header_principal con menus y sub_menus.
+- hero con imagen administrable o fallback assets/images/frontis_01.jpg.
+- hero con video administrable cuando existe hero_video_url o hero_video_archivo.
+- titulo y bajada desde sub_menu_paginas, con fallback al nombre del submenu.
+- contenido principal administrable en columna izquierda.
+- imagen secundaria y galeria en columna derecha como carrusel.
+- video embebido YouTube/Vimeo o video local debajo del bloque texto/imagenes.
+- footer_principal dinamico.
+
+Reglas:
+
+No crear un archivo por submenu.
+No guardar textos largos ni multimedia directamente en sub_menus.
+Los submenus existentes con URL NULL o # deben poder abrir pagina_submenu.php mediante
+cms_submenu_public_url() incluso antes de ser guardados nuevamente.
+
+Ajuste UX posterior:
+
+- El editor de submenu deja de abrirse como modal centrado y pasa a abrirse como
+  offcanvas-bottom desde la parte inferior del panel administrativo.
+- El offcanvas ocupa 78vh en escritorio y usa scroll interno para editar paginas largas.
+- En mobile el offcanvas usa 82vh para mejorar la edicion.
+- El offcanvas organiza la edicion en pestanas horizontales propias: Datos, Pagina,
+  Multimedia y SEO. Los datos basicos del submenu ya no quedan encima de las pestanas.
+- En pagina_submenu.php se elimina la navegacion lateral de submenus hermanos para dejar el
+  contenido principal centrado y sin el bloque lateral marcado visualmente como sobrante.
+
+--------------------------------------------------
+CONTENEDOR MODAL INFORMATIVO - VERSION ADMINISTRABLE
+
+Objetivo:
+
+Crear un modal de bienvenida/noticia importante administrable desde el CMS. Debe aparecer al
+cargar el sitio por primera vez y permitir cambiar su contenido en el futuro sin tocar codigo.
+
+Contenedor:
+
+nombre_interno = modal_informativo
+titulo_admin = Modal informativo
+tipo_seccion = modal
+variante = bienvenida
+orden = 99
+
+Archivos:
+
+componentes/modal_informativo.php
+includes/cms_helpers.php
+editar_contenedor.php
+
+Tablas usadas:
+
+seccion
+seccion_item
+seccion_config
+
+Mapeo de seccion_item:
+
+titulo          -> titulo principal del modal.
+descripcion     -> cuerpo del mensaje. Soporta **texto en negrita**.
+imagen          -> imagen superior opcional.
+boton_1_texto   -> texto del boton principal.
+boton_1_url     -> URL del boton. Si es # solo cierra el modal.
+visible         -> activa/desactiva el item.
+orden           -> prioridad si hay mas de un item visible.
+
+Mapeo de seccion_config:
+
+mostrar      -> una_vez o siempre. Default: una_vez.
+delay_ms     -> retardo antes de abrir el modal. Default: 650.
+color_boton  -> color hexadecimal del boton principal. Default: #ef4444.
+
+Comportamiento publico:
+
+- El modal se renderiza oculto para evitar pestañeos visuales.
+- Se abre por JavaScript despues del retardo configurado.
+- Si mostrar = una_vez, se guarda en localStorage con una clave basada en el hash del contenido.
+- Si cambia titulo, descripcion, imagen o boton, cambia el hash y el modal vuelve a mostrarse
+  como nuevo.
+- Cierra con boton X, click en fondo, tecla ESC o boton principal.
+- No depende de endpoints AJAX ni payload externo.
+
+Contenido inicial:
+
+cms_sync_sections() crea automaticamente un item inicial si el contenedor no tiene items:
+
+Titulo: Bienvenido a la version 2025.
+Boton: Comenzar a navegar.
+Mensaje: bienvenida al nuevo sitio, menu por niveles, acceso a Mi San Pablo, noticias actualizadas
+y diseno responsivo.
 
 --------------------------------------------------
 # MEJORA ADMIN CONTENEDORES - ORDEN Y RESUMEN
@@ -1592,7 +1817,7 @@ topbar
 header_principal
 menu_principal
 footer_principal
-modal_informativo
+contenedor_eliminado
 
 Estos contenedores no se pueden arrastrar. En el listado admin deben mostrar candado
 o estado "Fijo".
@@ -1635,7 +1860,7 @@ ajax/guardar_orden_contenedores.php
 - Valida que todos los id_seccion pertenezcan a la institucion activa.
 - Permite ordenar solo los contenedores movibles.
 - Rechaza intentos de mover topbar, header_principal, menu_principal, footer_principal
-  o modal_informativo.
+  o contenedor_eliminado.
 - Al guardar el nuevo orden actualiza solamente el campo orden de la tabla seccion.
 - No modifica nombre_interno, tipo_seccion, variante ni archivos de componentes.
 - Responde JSON con ok true/false y mensaje de error cuando corresponde.
@@ -1785,7 +2010,7 @@ seccion_item
 
 Flujo publico:
 
-index.php incluye el componente segun la seccion visible modal_informativo. El modal respeta:
+index.php ya no incluye este componente eliminado.
 mostrar = una_vez o siempre, delay_ms, sessionStorage para visto por sesion y localStorage para
 "No volver a mostrar" durante 7 dias.
 
@@ -1827,7 +2052,7 @@ MODAL INFORMATIVO - CAMBIO A COOKIE DE SERVIDOR
 
 Archivo modificado:
 
-componentes/modal_informativo.php
+componentes/eliminado.php
 
 Motivo:
 
@@ -1848,7 +2073,7 @@ Ajuste aplicado:
 Regla:
 
 Para evitar pestañazos, el modal no debe depender solo de ocultamiento visual con JS. La
-segunda carga debe resolverse antes del render desde componentes/modal_informativo.php.
+segunda carga eliminada junto con el render.
 
 --------------------------------------------------
 REDISENO VISUAL ADMIN - COLORES INSTITUCIONALES
@@ -1864,7 +2089,7 @@ index.php
 
 Archivo nuevo:
 
-modal_informativo_payload.php
+payload_eliminado.php
 
 Motivo:
 
@@ -1887,7 +2112,7 @@ Ajuste aplicado:
 - admin.php, editar_contenedor.php y auditoria_log.php pasan los colores institucionales al
   layout base.
 - index.php deja de renderizar el modal informativo dentro del HTML inicial y lo solicita
-  de forma diferida a modal_informativo_payload.php para evitar pestañazos de primer paint.
+  se retiro la carga diferida asociada al componente eliminado.
 
 Tablas usadas:
 

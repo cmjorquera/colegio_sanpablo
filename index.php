@@ -69,10 +69,6 @@ try {
         <?php
         $sectionName = $section['nombre_interno'] ?? '';
 
-        if (in_array($sectionName, ['menu_principal', 'modal_informativo', 'modal_bienvenida'], true)) {
-            continue;
-        }
-
         $component = cms_get_component_path($sectionName);
 
         if ($component) {
@@ -92,102 +88,6 @@ try {
     <script src="assets/js/parallax.js"></script>
     <script src="assets/js/jquery.waypoints.js"></script>
     <script src="assets/js/script.js"></script>
-    <script>
-        window.addEventListener('load', function () {
-            fetch('modal_informativo_payload.php', {
-                credentials: 'same-origin',
-                cache: 'no-store'
-            })
-                .then(function (response) {
-                    if (response.status === 204) {
-                        return null;
-                    }
-                    if (!response.ok) {
-                        throw new Error('Modal informativo no disponible');
-                    }
-                    return response.text();
-                })
-                .then(function (html) {
-                    if (!html) {
-                        return;
-                    }
-
-                    var host = document.createElement('div');
-                    host.innerHTML = html;
-                    document.body.appendChild(host);
-
-                    var el = host.querySelector('#sp-mi');
-                    if (!el) {
-                        host.remove();
-                        return;
-                    }
-
-                    var delay = parseInt(el.getAttribute('data-delay') || '0', 10);
-                    var mode = el.getAttribute('data-mode') || 'una_vez';
-                    var dismissKey = el.getAttribute('data-dismiss-key') || '';
-                    var xBtn = host.querySelector('#sp-mi-x');
-                    var dBtn = host.querySelector('#sp-mi-dismiss');
-                    var bg = host.querySelector('.sp-mi-bg');
-
-                    function setCookie(name, value, seconds) {
-                        if (!name) {
-                            return;
-                        }
-                        var cookie = encodeURIComponent(name) + '=' + encodeURIComponent(value) + '; path=/; SameSite=Lax';
-                        if (seconds) {
-                            cookie += '; Max-Age=' + seconds;
-                        }
-                        document.cookie = cookie;
-                    }
-
-                    function openModal() {
-                        el.hidden = false;
-                        el.offsetHeight;
-                        el.classList.add('sp-mi-open');
-                        el.setAttribute('aria-hidden', 'false');
-                        document.body.style.overflow = 'hidden';
-                    }
-
-                    function closeModal(remove) {
-                        el.classList.remove('sp-mi-open');
-                        el.setAttribute('aria-hidden', 'true');
-                        document.body.style.overflow = '';
-                        setTimeout(function () {
-                            if (remove) {
-                                host.remove();
-                            } else {
-                                el.hidden = true;
-                            }
-                        }, 180);
-                    }
-
-                    function dismissModal() {
-                        setCookie(dismissKey, String(Date.now()), 7 * 86400);
-                        closeModal(true);
-                    }
-
-                    if (xBtn) {
-                        xBtn.addEventListener('click', function () { closeModal(true); });
-                    }
-                    if (dBtn) {
-                        dBtn.addEventListener('click', dismissModal);
-                    }
-                    if (bg) {
-                        bg.addEventListener('click', function () { closeModal(true); });
-                    }
-                    document.addEventListener('keydown', function (event) {
-                        if (event.key === 'Escape' && el.classList.contains('sp-mi-open')) {
-                            closeModal(true);
-                        }
-                    });
-
-                    setTimeout(openModal, Math.max(0, delay));
-                })
-                .catch(function () {
-                    // El modal es auxiliar; si falla, no debe afectar la pagina.
-                });
-        });
-    </script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var carouselEl = document.getElementById('heroCarousel');

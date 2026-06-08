@@ -157,6 +157,30 @@ foreach ($submenus as $_sub) {
     $submenusByMenu[$_sub['id_menu']][] = $_sub;
 }
 unset($_sub);
+$menuSummary = [
+    'total_menus' => count($menus),
+    'total_submenus' => count($submenus),
+    'total_active' => 0,
+    'last_update' => null,
+    'last_user' => '',
+];
+foreach ($menus as $menuSummaryRow) {
+    if ((int) ($menuSummaryRow['estado'] ?? 0) === 1) {
+        $menuSummary['total_active']++;
+    }
+    $updatedCandidate = trim((string) ($menuSummaryRow['actualizado_en'] ?? ''));
+    $createdCandidate = trim((string) ($menuSummaryRow['fecha_creacion'] ?? ''));
+    $candidate = $updatedCandidate !== '' ? $updatedCandidate : $createdCandidate;
+    if ($candidate !== '' && ($menuSummary['last_update'] === null || strtotime($candidate) > strtotime((string) $menuSummary['last_update']))) {
+        $menuSummary['last_update'] = $candidate;
+        $menuUser = trim((string) (($menuSummaryRow['actualizado_por_nombre'] ?? '') . ' ' . ($menuSummaryRow['actualizado_por_apellido'] ?? '')));
+        if ($menuUser === '') {
+            $menuUser = (string) ($menuSummaryRow['actualizado_por_usuario'] ?? $menuSummaryRow['actualizado_por_email'] ?? '');
+        }
+        $menuSummary['last_user'] = $menuUser;
+    }
+}
+unset($menuSummaryRow);
 $editingMenu = isset($_GET['menu']) ? cms_get_menu($db, (int) $_GET['menu']) : null;
 $editingSubmenu = isset($_GET['submenu']) ? cms_get_submenu($db, (int) $_GET['submenu']) : null;
 $visibleSections = array_values(array_filter($sections, static fn($section) => ($section['visible'] ?? '') === 'si'));
@@ -292,6 +316,128 @@ admin_render_layout_start([
         .cms-row-movable.sortable-chosen { box-shadow: 0 12px 28px rgba(15, 23, 42, .14); }
         .cms-last-update strong { display: block; color: var(--adm-text); font-size: .84rem; font-weight: 700; }
         .cms-last-update span { display: block; color: var(--adm-muted); font-size: .75rem; margin-top: 2px; }
+        .cms-list-shell.table-responsive { overflow: visible; }
+        .cms-list-shell .dataTables_wrapper > .row:first-child {
+            align-items: center;
+            margin: 0;
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--adm-border);
+            background: #fff;
+        }
+        .cms-list-shell .dataTables_wrapper > .row:first-child .col-sm-12 {
+            padding-left: 0;
+            padding-right: 0;
+        }
+        .cms-list-shell .dataTables_length label,
+        .cms-list-shell .dataTables_filter label {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0;
+            color: var(--adm-text-2);
+            font-size: .82rem;
+            font-weight: 600;
+        }
+        .cms-list-shell .dataTables_filter { text-align: right; }
+        .cms-list-shell .dataTables_filter input {
+            min-height: 34px;
+            border-radius: 8px;
+            border-color: var(--adm-border);
+            box-shadow: none;
+            margin-left: 4px;
+        }
+        .cms-list-shell .dataTables_length select {
+            min-height: 34px;
+            border-radius: 8px;
+            border-color: var(--adm-border);
+            box-shadow: none;
+        }
+        .cms-list-shell .dataTables_wrapper > .row:last-child {
+            align-items: center;
+            margin: 0;
+            padding: 10px 14px;
+            border-top: 1px solid var(--adm-border);
+            background: #fff;
+            color: var(--adm-muted);
+            font-size: .82rem;
+        }
+        .cms-list-table thead th {
+            background: #f8fafc;
+            color: var(--adm-muted);
+            font-size: .72rem;
+            font-weight: 800;
+            letter-spacing: .04em;
+            padding-top: 10px;
+            padding-bottom: 10px;
+        }
+        .cms-list-table tbody td {
+            padding-top: 10px;
+            padding-bottom: 10px;
+            font-size: .84rem;
+        }
+        .cms-list-table tbody tr:hover { background: #fbfdff; }
+        .cms-item-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0;
+        }
+        .cms-item-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 9px;
+            display: inline-grid;
+            place-items: center;
+            flex: 0 0 34px;
+            color: var(--adm-primary);
+            background: var(--adm-primary-soft);
+            border: 1px solid rgba(var(--adm-primary-rgb), .12);
+        }
+        .cms-item-copy strong {
+            display: block;
+            color: var(--adm-text);
+            font-size: .88rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+        .cms-item-copy code {
+            display: block;
+            color: var(--adm-muted);
+            font-size: .74rem;
+            margin-top: 2px;
+        }
+        .cms-muted-text {
+            max-width: 620px;
+            color: var(--adm-text-2);
+            line-height: 1.35;
+            white-space: normal;
+        }
+        .cms-last-update strong,
+        .cms-last-update span {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .cms-last-update strong {
+            color: var(--adm-text-2);
+            font-size: .78rem;
+            font-weight: 700;
+        }
+        .cms-last-update span {
+            color: var(--adm-muted);
+            font-size: .75rem;
+            margin-top: 3px;
+        }
+        .cms-row-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .cms-list-table .badge-soft {
+            border-radius: 7px;
+            padding: 5px 9px;
+            font-size: .74rem;
+        }
         @media (max-width: 1399px) { .dashboard-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
         @media (max-width: 1199px) { .cms-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
         @media (max-width: 767px) { .dashboard-metrics, .dash-actions, .cms-summary-grid { grid-template-columns: 1fr; } }
@@ -441,8 +587,8 @@ HTML,
                 <p>Panel general de bloques de index.php. Los contenedores fijos permanecen bloqueados.</p>
             </div>
         </div>
-        <div class="table-responsive">
-            <table class="table table-modern align-middle" id="contenedoresTable">
+        <div class="table-responsive cms-list-shell">
+            <table class="table table-modern cms-list-table align-middle" id="contenedoresTable">
                 <thead>
                     <tr>
                         <th>Orden</th>
@@ -460,6 +606,10 @@ HTML,
                             $sectionName = (string) ($section['nombre_interno'] ?? '');
                             $isMovableSection = cms_section_is_movable($sectionName);
                             $isFixedSection = cms_section_is_fixed($sectionName);
+                            $sectionIcon = trim((string) ($section['icono_admin'] ?? ''));
+                            if ($sectionIcon === '') {
+                                $sectionIcon = 'bi-layout-text-window';
+                            }
                             $updatedAt = trim((string) ($section['actualizado_en'] ?? ''));
                             $updatedUser = trim((string) (($section['actualizado_por_nombre'] ?? '') . ' ' . ($section['actualizado_por_apellido'] ?? '')));
                             if ($updatedUser === '') {
@@ -481,19 +631,24 @@ HTML,
                                 </div>
                             </td>
                             <td>
-                                <strong><?= cms_e($section['titulo_admin']) ?></strong>
-                                <div><code style="font-size:.76rem;color:var(--adm-muted);"><?= cms_e($sectionName) ?></code></div>
+                                <div class="cms-item-title">
+                                    <span class="cms-item-icon"><i class="bi <?= cms_e($sectionIcon) ?>"></i></span>
+                                    <span class="cms-item-copy">
+                                        <strong><?= cms_e($section['titulo_admin']) ?></strong>
+                                        <code><?= cms_e($sectionName) ?></code>
+                                    </span>
+                                </div>
                             </td>
-                            <td><div class="text-muted" style="min-width:280px; white-space:normal;"><?= cms_e($section['observacion'] ?? '') ?></div></td>
+                            <td><div class="cms-muted-text"><?= cms_e($section['observacion'] ?? '') ?></div></td>
                             <td><span class="badge-soft dark"><?= cms_e($section['tipo_seccion']) ?></span></td>
                             <td>
                                 <div class="cms-last-update">
                                     <?php if ($updatedAt !== ''): ?>
-                                        <strong><?= cms_e(date('d-m-Y H:i', strtotime($updatedAt))) ?></strong>
-                                        <span><?= $updatedUser !== '' ? cms_e($updatedUser) : 'Usuario no registrado' ?></span>
+                                        <strong><i class="bi bi-calendar3"></i><?= cms_e(date('d-m-Y H:i', strtotime($updatedAt))) ?></strong>
+                                        <span><i class="bi bi-person"></i><?= $updatedUser !== '' ? cms_e($updatedUser) : 'Usuario no registrado' ?></span>
                                     <?php else: ?>
-                                        <strong>Sin registro</strong>
-                                        <span>Sin modificación real</span>
+                                        <strong><i class="bi bi-calendar3"></i>Sin registro</strong>
+                                        <span><i class="bi bi-person"></i>Sin modificación real</span>
                                     <?php endif; ?>
                                 </div>
                             </td>
@@ -508,7 +663,7 @@ HTML,
                                 </form>
                             </td>
                             <td class="cell-actions">
-                                <div class="table-actions">
+                                <div class="cms-row-actions">
                                     <button type="button" class="btn-icon preview js-preview-btn" title="Vista previa" data-preview-title="<?= cms_e($section['titulo_admin']) ?>" data-preview-url="preview_contenedor.php?id=<?= (int) $section['id_seccion'] ?>&embed=1">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -526,11 +681,26 @@ HTML,
 <?php elseif ($panel === 'menus'): ?>
 <style>
 .mnu-list { display:flex; flex-direction:column; gap:6px; }
-.mnu-card { border:1px solid var(--adm-border); border-radius:10px; background:#fff; overflow:hidden; transition:box-shadow .15s; }
+.mnu-card { border:1px solid var(--adm-border); border-radius:0; background:#fff; overflow:hidden; transition:box-shadow .15s; }
+.mnu-card:first-child { border-top-left-radius:10px; border-top-right-radius:10px; }
+.mnu-card:last-child { border-bottom-left-radius:10px; border-bottom-right-radius:10px; }
+.mnu-card + .mnu-card { margin-top:-1px; }
 .mnu-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
 .mnu-card.sortable-ghost { opacity:.28; border:2px dashed var(--adm-primary); }
 .mnu-card.sortable-chosen { box-shadow:0 10px 28px rgba(0,0,0,.12); }
-.mnu-row { display:grid; grid-template-columns:36px 1fr 180px 90px 130px 38px 38px 54px; align-items:center; padding:10px 14px; gap:10px; min-height:52px; }
+.mnu-head,
+.mnu-row { display:grid; grid-template-columns:36px 54px minmax(190px,1.1fr) minmax(130px,.75fr) 130px 130px 180px 138px 46px; align-items:center; gap:10px; }
+.mnu-head { padding:10px 14px; border:1px solid var(--adm-border); border-bottom:0; border-radius:10px 10px 0 0; background:#f8fafc; color:var(--adm-muted); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.mnu-row { padding:9px 14px; min-height:58px; }
+.mnu-order { color:var(--adm-text-2); font-weight:700; font-size:.84rem; }
+.mnu-name { display:flex; align-items:center; gap:10px; min-width:0; font-weight:800; font-size:.9rem; color:var(--adm-text); }
+.mnu-icon { width:34px; height:34px; border-radius:9px; display:inline-grid; place-items:center; color:var(--adm-primary); background:var(--adm-primary-soft); flex:0 0 34px; }
+.mnu-url code { display:block; color:var(--adm-text-2); font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.mnu-sub-badge { display:inline-flex; align-items:center; gap:5px; width:max-content; border-radius:7px; padding:5px 9px; background:#f1f5f9; color:var(--adm-primary); font-size:.76rem; font-weight:700; }
+.mnu-updated strong, .mnu-updated span { display:flex; align-items:center; gap:6px; line-height:1.25; }
+.mnu-updated strong { color:var(--adm-text-2); font-size:.78rem; font-weight:600; }
+.mnu-updated span { color:var(--adm-muted); font-size:.76rem; margin-top:3px; }
+.mnu-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
 .mnu-expand-btn { border:none; background:none; padding:5px 8px; border-radius:7px; cursor:pointer; color:var(--adm-muted); display:flex; align-items:center; gap:5px; transition:background .15s; }
 .mnu-expand-btn:hover { background:var(--adm-surface); color:var(--adm-text); }
 .mnu-expand-btn .expand-icon { font-size:.78rem; transition:transform .22s ease; }
@@ -546,7 +716,87 @@ HTML,
 .mnu-sub-table .sub-toggle { width:130px; }
 .mnu-sub-table .sub-edit { width:38px; }
 .mnu-sub-footer { padding:8px 14px 10px 8px; }
+.submenu-editor-canvas {
+    height: 78vh !important;
+    max-height: 78vh;
+    border-radius: 18px 18px 0 0;
+    border-top: 1px solid var(--adm-border);
+    box-shadow: 0 -18px 48px rgba(15, 23, 42, .18);
+}
+.submenu-editor-form {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.submenu-editor-header {
+    flex: 0 0 auto;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--adm-border);
+}
+.submenu-editor-body {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    padding: 20px 24px;
+}
+.submenu-editor-footer {
+    flex: 0 0 auto;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 14px 24px;
+    border-top: 1px solid var(--adm-border);
+    background: #fff;
+}
+.submenu-editor-tabs {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0 0 14px;
+    border-bottom: 1px solid var(--adm-border);
+}
+.submenu-editor-tabs li {
+    display: block;
+    margin: 0;
+    padding: 0;
+}
+.submenu-editor-tabs button {
+    border: 1px solid transparent;
+    border-radius: 999px;
+    background: #fff;
+    padding: 8px 14px;
+    font-weight: 700;
+    color: var(--adm-muted);
+    line-height: 1.2;
+}
+.submenu-editor-tabs button.active {
+    border-color: rgba(240,160,0,.35);
+    background: rgba(240,160,0,.12);
+    color: var(--adm-primary);
+}
+@media (max-width: 1199px) {
+    .mnu-head { display:none; }
+    .mnu-row { grid-template-columns:32px 42px minmax(0,1fr) auto; }
+    .mnu-row > .mnu-url,
+    .mnu-row > .mnu-submenus,
+    .mnu-row > .mnu-state,
+    .mnu-row > .mnu-updated { grid-column:3 / 5; }
+    .mnu-actions { justify-content:flex-start; }
+    .submenu-editor-canvas {
+        height: 82vh !important;
+        max-height: 82vh;
+    }
+}
 </style>
+    <div class="cms-summary-grid">
+        <div class="stat-card"><div class="stat-icon blue"><i class="bi bi-list-ul"></i></div><div class="stat-body"><strong><?= (int) $menuSummary['total_menus'] ?></strong><span>Menús principales</span><small>Total de menús configurados</small></div></div>
+        <div class="stat-card"><div class="stat-icon green"><i class="bi bi-diagram-3"></i></div><div class="stat-body"><strong><?= (int) $menuSummary['total_submenus'] ?></strong><span>Submenús</span><small>Total de todos los submenús</small></div></div>
+        <div class="stat-card"><div class="stat-icon amber"><i class="bi bi-check-circle"></i></div><div class="stat-body"><strong><?= (int) $menuSummary['total_active'] ?></strong><span>Menús activos</span><small>Menús visibles en el sitio</small></div></div>
+        <div class="stat-card"><div class="stat-icon purple"><i class="bi bi-calendar3"></i></div><div class="stat-body"><strong style="font-size:1.05rem;"><?= $menuSummary['last_update'] ? cms_e(date('d/m/Y H:i', strtotime((string) $menuSummary['last_update']))) : 'Sin registro' ?></strong><span>Última modificación general</span><small><?= $menuSummary['last_user'] !== '' ? 'Por ' . cms_e($menuSummary['last_user']) : 'Sin usuario registrado' ?></small></div></div>
+    </div>
     <section class="section-card">
         <div class="section-head">
             <div>
@@ -558,38 +808,73 @@ HTML,
             </div>
         </div>
         <div class="mnu-list" id="menusSortableList">
+            <div class="mnu-head" aria-hidden="true">
+                <span></span>
+                <span>Orden</span>
+                <span>Menú</span>
+                <span>URL / Destino</span>
+                <span>Submenús</span>
+                <span>Estado</span>
+                <span>Última modificación</span>
+                <span>Acciones</span>
+                <span></span>
+            </div>
             <?php foreach ($menus as $menu): ?>
-                <?php $menuSubs = $submenusByMenu[$menu['id_menu']] ?? []; $subCount = count($menuSubs); ?>
+                <?php
+                    $menuSubs = $submenusByMenu[$menu['id_menu']] ?? [];
+                    $subCount = (int) ($menu['total_submenus'] ?? count($menuSubs));
+                    $menuName = (string) ($menu['nombre'] ?? '');
+                    $menuIcon = cms_menu_icon_class($menuName, $menu['icono'] ?? '');
+                    $menuUrl = cms_menu_display_url($menuName, $menu['url'] ?? '');
+                    $menuUpdatedAt = trim((string) ($menu['actualizado_en'] ?? ''));
+                    $menuUpdatedUser = trim((string) (($menu['actualizado_por_nombre'] ?? '') . ' ' . ($menu['actualizado_por_apellido'] ?? '')));
+                    if ($menuUpdatedUser === '') {
+                        $menuUpdatedUser = (string) ($menu['actualizado_por_usuario'] ?? $menu['actualizado_por_email'] ?? '');
+                    }
+                ?>
                 <div class="mnu-card" data-id="<?= (int) $menu['id_menu'] ?>">
                     <div class="mnu-row">
                         <div><i class="bi bi-grip-vertical menu-drag-handle" style="cursor:grab;color:var(--adm-muted);font-size:1.15rem;"></i></div>
-                        <div style="font-weight:600;font-size:.93rem;"><?= cms_e($menu['nombre']) ?></div>
-                        <div><code style="font-size:.78rem;color:var(--adm-muted);"><?= cms_e($menu['url']) ?: '—' ?></code></div>
-                        <div style="font-size:.82rem;color:var(--adm-muted);"><?= cms_e($menu['icono']) ?: '—' ?></div>
-                        <div>
+                        <div class="mnu-order"><?= (int) $menu['orden'] ?></div>
+                        <div class="mnu-name">
+                            <span class="mnu-icon"><i class="<?= cms_e($menuIcon) ?>"></i></span>
+                            <span><?= cms_e($menuName) ?></span>
+                        </div>
+                        <div class="mnu-url"><code><?= cms_e($menuUrl) ?></code></div>
+                        <div class="mnu-submenus">
+                            <span class="mnu-sub-badge"><i class="bi bi-folder2-open"></i><?= $subCount ?> submenú<?= $subCount === 1 ? '' : 's' ?></span>
+                        </div>
+                        <div class="mnu-state">
                             <div class="form-check form-switch d-inline-flex align-items-center gap-2">
                                 <input class="form-check-input js-menu-toggle" type="checkbox" role="switch"
                                     data-id="<?= (int) $menu['id_menu'] ?>"
-                                    data-nombre="<?= cms_e($menu['nombre']) ?>"
+                                    data-nombre="<?= cms_e($menuName) ?>"
                                     <?= (int) $menu['estado'] === 1 ? 'checked' : '' ?>>
                                 <label class="form-check-label" style="font-size:.84rem;"><?= (int) $menu['estado'] === 1 ? 'Activo' : 'Inactivo' ?></label>
                             </div>
                         </div>
-                        <div>
+                        <div class="mnu-updated">
+                            <?php if ($menuUpdatedAt !== ''): ?>
+                                <strong><i class="bi bi-calendar3"></i><?= cms_e(date('d/m/Y H:i', strtotime($menuUpdatedAt))) ?></strong>
+                                <span><i class="bi bi-person"></i><?= $menuUpdatedUser !== '' ? cms_e($menuUpdatedUser) : 'Usuario no registrado' ?></span>
+                            <?php else: ?>
+                                <strong><i class="bi bi-calendar3"></i>Sin registro</strong>
+                                <span><i class="bi bi-person"></i>Sin modificación real</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mnu-actions">
                             <button class="btn-icon edit" title="Editar menú"
                                 data-id="<?= (int) $menu['id_menu'] ?>"
-                                data-nombre="<?= cms_e($menu['nombre']) ?>"
+                                data-nombre="<?= cms_e($menuName) ?>"
                                 data-url="<?= cms_e($menu['url']) ?>"
                                 data-icono="<?= cms_e($menu['icono']) ?>"
                                 data-estado="<?= (int) $menu['estado'] ?>"
                                 onclick="abrirModalMenu(this)">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
-                        </div>
-                        <div>
                             <button type="button" class="btn-icon delete js-menu-delete" title="Eliminar menú"
                                 data-id="<?= (int) $menu['id_menu'] ?>"
-                                data-nombre="<?= cms_e($menu['nombre']) ?>"
+                                data-nombre="<?= cms_e($menuName) ?>"
                                 data-sub-count="<?= (int) $subCount ?>">
                                 <i class="bi bi-trash"></i>
                             </button>
@@ -632,6 +917,20 @@ HTML,
                                             data-url="<?= cms_e($sub['url']) ?>"
                                             data-icono="<?= cms_e($sub['icono']) ?>"
                                             data-estado="<?= (int) $sub['estado'] ?>"
+                                            data-pagina-titulo="<?= cms_e($sub['pagina_titulo'] ?? '') ?>"
+                                            data-pagina-bajada="<?= cms_e($sub['pagina_bajada'] ?? '') ?>"
+                                            data-pagina-contenido="<?= cms_e($sub['pagina_contenido'] ?? '') ?>"
+                                            data-pagina-imagen-hero="<?= cms_e($sub['pagina_imagen_hero'] ?? '') ?>"
+                                            data-pagina-hero-video-url="<?= cms_e($sub['pagina_hero_video_url'] ?? '') ?>"
+                                            data-pagina-hero-video-archivo="<?= cms_e($sub['pagina_hero_video_archivo'] ?? '') ?>"
+                                            data-pagina-imagen-secundaria="<?= cms_e($sub['pagina_imagen_secundaria'] ?? '') ?>"
+                                            data-pagina-video-url="<?= cms_e($sub['pagina_video_url'] ?? '') ?>"
+                                            data-pagina-video-archivo="<?= cms_e($sub['pagina_video_archivo'] ?? '') ?>"
+                                            data-pagina-boton-texto="<?= cms_e($sub['pagina_boton_texto'] ?? '') ?>"
+                                            data-pagina-boton-url="<?= cms_e($sub['pagina_boton_url'] ?? '') ?>"
+                                            data-pagina-meta-title="<?= cms_e($sub['pagina_meta_title'] ?? '') ?>"
+                                            data-pagina-meta-description="<?= cms_e($sub['pagina_meta_description'] ?? '') ?>"
+                                            data-pagina-media="<?= cms_e(json_encode($sub['pagina_media'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
                                             onclick="abrirModalSubmenu(this)">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
@@ -654,7 +953,7 @@ HTML,
 
     <!-- Modal Menú -->
     <div class="modal fade" id="modalMenu" tabindex="-1" aria-labelledby="modalMenuLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
                 <form method="post" id="formModalMenu">
                     <input type="hidden" name="accion" value="guardar_menu">
@@ -690,52 +989,142 @@ HTML,
         </div>
     </div>
 
-    <!-- Modal Submenú -->
-    <div class="modal fade" id="modalSubmenu" tabindex="-1" aria-labelledby="modalSubmenuLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <form method="post" id="formModalSubmenu">
+    <!-- Offcanvas Submenú -->
+    <div class="offcanvas offcanvas-bottom submenu-editor-canvas" id="modalSubmenu" tabindex="-1" aria-labelledby="modalSubmenuLabel">
+                <form method="post" id="formModalSubmenu" enctype="multipart/form-data" class="submenu-editor-form">
                     <input type="hidden" name="accion" value="guardar_submenu">
                     <input type="hidden" name="return_panel" value="menus">
                     <input type="hidden" name="id_sub_menu" id="modalSubmenuId" value="0">
-                    <div class="modal-header">
+                    <div class="offcanvas-header submenu-editor-header">
                         <h5 class="modal-title" id="modalSubmenuLabel">Submenú</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Menú padre <span class="text-danger">*</span></label>
-                            <select class="form-select" name="id_menu" id="modalSubmenuIdMenu" required>
-                                <option value="">Seleccione</option>
-                                <?php foreach ($menus as $menu): ?>
-                                    <option value="<?= (int) $menu['id_menu'] ?>"><?= cms_e($menu['nombre']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                            <input class="form-control" name="nombre" id="modalSubmenuNombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">URL</label>
-                            <input class="form-control" name="url" id="modalSubmenuUrl" placeholder="#">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Ícono <small class="text-muted">(clase Bootstrap Icons)</small></label>
-                            <input class="form-control" name="icono" id="modalSubmenuIcono" placeholder="bi-file-text">
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="estado" id="modalSubmenuEstado">
-                            <label class="form-check-label" for="modalSubmenuEstado">Activo</label>
+                    <div class="offcanvas-body submenu-editor-body">
+                        <ul class="submenu-editor-tabs" role="tablist">
+                            <li role="presentation"><button class="active" type="button" data-bs-toggle="tab" data-bs-target="#submenuTabDatos" role="tab">Datos</button></li>
+                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabContenido" role="tab">Página</button></li>
+                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabMedia" role="tab">Multimedia</button></li>
+                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabSeo" role="tab">SEO</button></li>
+                        </ul>
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="submenuTabDatos" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Menú padre <span class="text-danger">*</span></label>
+                                        <select class="form-select" name="id_menu" id="modalSubmenuIdMenu" required>
+                                            <option value="">Seleccione</option>
+                                            <?php foreach ($menus as $menu): ?>
+                                                <option value="<?= (int) $menu['id_menu'] ?>"><?= cms_e($menu['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                        <input class="form-control" name="nombre" id="modalSubmenuNombre" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL</label>
+                                        <input class="form-control" name="url" id="modalSubmenuUrl" placeholder="#">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Ícono <small class="text-muted">(clase Bootstrap Icons)</small></label>
+                                        <input class="form-control" name="icono" id="modalSubmenuIcono" placeholder="bi-file-text">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="estado" id="modalSubmenuEstado">
+                                            <label class="form-check-label" for="modalSubmenuEstado">Activo</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="submenuTabContenido" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-7">
+                                        <label class="form-label">Título de página</label>
+                                        <input class="form-control" name="pagina_titulo" id="modalPaginaTitulo" placeholder="Si queda vacío usa el nombre del submenú">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Texto del botón</label>
+                                        <input class="form-control" name="pagina_boton_texto" id="modalPaginaBotonTexto" placeholder="Opcional">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Bajada</label>
+                                        <input class="form-control" name="pagina_bajada" id="modalPaginaBajada" placeholder="Resumen breve para el hero">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Contenido</label>
+                                        <textarea class="form-control" name="pagina_contenido" id="modalPaginaContenido" rows="7" placeholder="Texto principal de la página"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL del botón</label>
+                                        <input class="form-control" name="pagina_boton_url" id="modalPaginaBotonUrl" placeholder="#contacto">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="submenuTabMedia" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Imagen hero</label>
+                                        <input class="form-control" type="file" name="pagina_imagen_hero" accept="image/*">
+                                        <small class="text-muted" id="modalPaginaHeroActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Video hero local</label>
+                                        <input class="form-control" type="file" name="pagina_hero_video_archivo" accept="video/mp4,video/webm,video/quicktime">
+                                        <small class="text-muted" id="modalPaginaHeroVideoActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL video hero</label>
+                                        <input class="form-control" name="pagina_hero_video_url" id="modalPaginaHeroVideoUrl" placeholder="YouTube, Vimeo o URL directa">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Imagen secundaria</label>
+                                        <input class="form-control" type="file" name="pagina_imagen_secundaria" accept="image/*">
+                                        <small class="text-muted" id="modalPaginaSecundariaActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Video local</label>
+                                        <input class="form-control" type="file" name="pagina_video_archivo" accept="video/mp4,video/webm,video/quicktime">
+                                        <small class="text-muted" id="modalPaginaVideoActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL YouTube / Vimeo</label>
+                                        <input class="form-control" name="pagina_video_url" id="modalPaginaVideoUrl" placeholder="https://youtube.com/...">
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label class="form-label">Agregar imagen a galería</label>
+                                        <input class="form-control" type="file" name="pagina_galeria_imagen" accept="image/*">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Título de imagen</label>
+                                        <input class="form-control" name="pagina_galeria_titulo" placeholder="Opcional">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="small fw-semibold mb-2">Galería actual</div>
+                                        <div id="modalPaginaMediaActual" class="d-flex flex-wrap gap-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="submenuTabSeo" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Meta título</label>
+                                        <input class="form-control" name="pagina_meta_title" id="modalPaginaMetaTitle">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Meta descripción</label>
+                                        <textarea class="form-control" name="pagina_meta_description" id="modalPaginaMetaDescription" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cancelar</button>
+                    <div class="submenu-editor-footer">
+                        <button type="button" class="btn btn-soft" data-bs-dismiss="offcanvas">Cancelar</button>
                         <button type="submit" class="btn btn-premium">Guardar</button>
                     </div>
                 </form>
-            </div>
-        </div>
     </div>
 <?php elseif ($panel === 'submenus'): ?>
     <section class="section-card">
@@ -794,6 +1183,20 @@ HTML,
                                             data-url="<?= cms_e($submenu['url']) ?>"
                                             data-icono="<?= cms_e($submenu['icono']) ?>"
                                             data-estado="<?= (int) $submenu['estado'] ?>"
+                                            data-pagina-titulo="<?= cms_e($submenu['pagina_titulo'] ?? '') ?>"
+                                            data-pagina-bajada="<?= cms_e($submenu['pagina_bajada'] ?? '') ?>"
+                                            data-pagina-contenido="<?= cms_e($submenu['pagina_contenido'] ?? '') ?>"
+                                            data-pagina-imagen-hero="<?= cms_e($submenu['pagina_imagen_hero'] ?? '') ?>"
+                                            data-pagina-hero-video-url="<?= cms_e($submenu['pagina_hero_video_url'] ?? '') ?>"
+                                            data-pagina-hero-video-archivo="<?= cms_e($submenu['pagina_hero_video_archivo'] ?? '') ?>"
+                                            data-pagina-imagen-secundaria="<?= cms_e($submenu['pagina_imagen_secundaria'] ?? '') ?>"
+                                            data-pagina-video-url="<?= cms_e($submenu['pagina_video_url'] ?? '') ?>"
+                                            data-pagina-video-archivo="<?= cms_e($submenu['pagina_video_archivo'] ?? '') ?>"
+                                            data-pagina-boton-texto="<?= cms_e($submenu['pagina_boton_texto'] ?? '') ?>"
+                                            data-pagina-boton-url="<?= cms_e($submenu['pagina_boton_url'] ?? '') ?>"
+                                            data-pagina-meta-title="<?= cms_e($submenu['pagina_meta_title'] ?? '') ?>"
+                                            data-pagina-meta-description="<?= cms_e($submenu['pagina_meta_description'] ?? '') ?>"
+                                            data-pagina-media="<?= cms_e(json_encode($submenu['pagina_media'] ?? [], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?>"
                                             onclick="abrirModalSubmenu(this)">
                                             <i class="bi bi-pencil-square"></i>
                                         </button>
@@ -807,51 +1210,141 @@ HTML,
         <?php endforeach; ?>
     </section>
 
-    <!-- Modal Submenú -->
-    <div class="modal fade" id="modalSubmenu" tabindex="-1" aria-labelledby="modalSubmenuLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <form method="post" id="formModalSubmenu">
+    <!-- Offcanvas Submenú -->
+    <div class="offcanvas offcanvas-bottom submenu-editor-canvas" id="modalSubmenu" tabindex="-1" aria-labelledby="modalSubmenuLabel">
+                <form method="post" id="formModalSubmenu" enctype="multipart/form-data" class="submenu-editor-form">
                     <input type="hidden" name="accion" value="guardar_submenu">
                     <input type="hidden" name="id_sub_menu" id="modalSubmenuId" value="0">
-                    <div class="modal-header">
+                    <div class="offcanvas-header submenu-editor-header">
                         <h5 class="modal-title" id="modalSubmenuLabel">Submenú</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
                     </div>
-                    <div class="modal-body">
-                        <div class="mb-3">
-                            <label class="form-label">Menú padre <span class="text-danger">*</span></label>
-                            <select class="form-select" name="id_menu" id="modalSubmenuIdMenu" required>
-                                <option value="">Seleccione</option>
-                                <?php foreach ($menus as $menu): ?>
-                                    <option value="<?= (int) $menu['id_menu'] ?>"><?= cms_e($menu['nombre']) ?></option>
-                                <?php endforeach; ?>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Nombre <span class="text-danger">*</span></label>
-                            <input class="form-control" name="nombre" id="modalSubmenuNombre" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">URL</label>
-                            <input class="form-control" name="url" id="modalSubmenuUrl" placeholder="#">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Ícono <small class="text-muted">(clase Bootstrap Icons)</small></label>
-                            <input class="form-control" name="icono" id="modalSubmenuIcono" placeholder="bi-file-text">
-                        </div>
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" name="estado" id="modalSubmenuEstado">
-                            <label class="form-check-label" for="modalSubmenuEstado">Activo</label>
+                    <div class="offcanvas-body submenu-editor-body">
+                        <ul class="submenu-editor-tabs" role="tablist">
+                            <li role="presentation"><button class="active" type="button" data-bs-toggle="tab" data-bs-target="#submenuTabDatos" role="tab">Datos</button></li>
+                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabContenido" role="tab">Página</button></li>
+                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabMedia" role="tab">Multimedia</button></li>
+                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabSeo" role="tab">SEO</button></li>
+                        </ul>
+                        <div class="tab-content">
+                            <div class="tab-pane fade show active" id="submenuTabDatos" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Menú padre <span class="text-danger">*</span></label>
+                                        <select class="form-select" name="id_menu" id="modalSubmenuIdMenu" required>
+                                            <option value="">Seleccione</option>
+                                            <?php foreach ($menus as $menu): ?>
+                                                <option value="<?= (int) $menu['id_menu'] ?>"><?= cms_e($menu['nombre']) ?></option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombre <span class="text-danger">*</span></label>
+                                        <input class="form-control" name="nombre" id="modalSubmenuNombre" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL</label>
+                                        <input class="form-control" name="url" id="modalSubmenuUrl" placeholder="#">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Ícono <small class="text-muted">(clase Bootstrap Icons)</small></label>
+                                        <input class="form-control" name="icono" id="modalSubmenuIcono" placeholder="bi-file-text">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="estado" id="modalSubmenuEstado">
+                                            <label class="form-check-label" for="modalSubmenuEstado">Activo</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="submenuTabContenido" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-7">
+                                        <label class="form-label">Título de página</label>
+                                        <input class="form-control" name="pagina_titulo" id="modalPaginaTitulo" placeholder="Si queda vacío usa el nombre del submenú">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Texto del botón</label>
+                                        <input class="form-control" name="pagina_boton_texto" id="modalPaginaBotonTexto" placeholder="Opcional">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Bajada</label>
+                                        <input class="form-control" name="pagina_bajada" id="modalPaginaBajada" placeholder="Resumen breve para el hero">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Contenido</label>
+                                        <textarea class="form-control" name="pagina_contenido" id="modalPaginaContenido" rows="7" placeholder="Texto principal de la página"></textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL del botón</label>
+                                        <input class="form-control" name="pagina_boton_url" id="modalPaginaBotonUrl" placeholder="#contacto">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="submenuTabMedia" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Imagen hero</label>
+                                        <input class="form-control" type="file" name="pagina_imagen_hero" accept="image/*">
+                                        <small class="text-muted" id="modalPaginaHeroActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Video hero local</label>
+                                        <input class="form-control" type="file" name="pagina_hero_video_archivo" accept="video/mp4,video/webm,video/quicktime">
+                                        <small class="text-muted" id="modalPaginaHeroVideoActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL video hero</label>
+                                        <input class="form-control" name="pagina_hero_video_url" id="modalPaginaHeroVideoUrl" placeholder="YouTube, Vimeo o URL directa">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Imagen secundaria</label>
+                                        <input class="form-control" type="file" name="pagina_imagen_secundaria" accept="image/*">
+                                        <small class="text-muted" id="modalPaginaSecundariaActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Video local</label>
+                                        <input class="form-control" type="file" name="pagina_video_archivo" accept="video/mp4,video/webm,video/quicktime">
+                                        <small class="text-muted" id="modalPaginaVideoActual"></small>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">URL YouTube / Vimeo</label>
+                                        <input class="form-control" name="pagina_video_url" id="modalPaginaVideoUrl" placeholder="https://youtube.com/...">
+                                    </div>
+                                    <div class="col-md-7">
+                                        <label class="form-label">Agregar imagen a galería</label>
+                                        <input class="form-control" type="file" name="pagina_galeria_imagen" accept="image/*">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <label class="form-label">Título de imagen</label>
+                                        <input class="form-control" name="pagina_galeria_titulo" placeholder="Opcional">
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="small fw-semibold mb-2">Galería actual</div>
+                                        <div id="modalPaginaMediaActual" class="d-flex flex-wrap gap-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="tab-pane fade" id="submenuTabSeo" role="tabpanel">
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <label class="form-label">Meta título</label>
+                                        <input class="form-control" name="pagina_meta_title" id="modalPaginaMetaTitle">
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Meta descripción</label>
+                                        <textarea class="form-control" name="pagina_meta_description" id="modalPaginaMetaDescription" rows="3"></textarea>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cancelar</button>
+                    <div class="submenu-editor-footer">
+                        <button type="button" class="btn btn-soft" data-bs-dismiss="offcanvas">Cancelar</button>
                         <button type="submit" class="btn btn-premium">Guardar</button>
                     </div>
                 </form>
-            </div>
-        </div>
     </div>
 <?php elseif ($panel === 'configuracion'): ?>
 <style>
@@ -1426,7 +1919,8 @@ admin_render_layout_end([
         }
 
         function abrirModalSubmenu(btn, defaultIdMenu) {
-            var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalSubmenu'));
+            var submenuEditor = document.getElementById('modalSubmenu');
+            var modal = bootstrap.Offcanvas.getOrCreateInstance(submenuEditor);
             var titulo = document.getElementById('modalSubmenuLabel');
             var idInput = document.getElementById('modalSubmenuId');
             var idMenuSelect = document.getElementById('modalSubmenuIdMenu');
@@ -1434,6 +1928,51 @@ admin_render_layout_end([
             var urlInput = document.getElementById('modalSubmenuUrl');
             var iconoInput = document.getElementById('modalSubmenuIcono');
             var estadoCheck = document.getElementById('modalSubmenuEstado');
+            var pageFields = {
+                titulo: document.getElementById('modalPaginaTitulo'),
+                bajada: document.getElementById('modalPaginaBajada'),
+                contenido: document.getElementById('modalPaginaContenido'),
+                videoUrl: document.getElementById('modalPaginaVideoUrl'),
+                botonTexto: document.getElementById('modalPaginaBotonTexto'),
+                botonUrl: document.getElementById('modalPaginaBotonUrl'),
+                metaTitle: document.getElementById('modalPaginaMetaTitle'),
+                metaDescription: document.getElementById('modalPaginaMetaDescription'),
+                heroActual: document.getElementById('modalPaginaHeroActual'),
+                heroVideoUrl: document.getElementById('modalPaginaHeroVideoUrl'),
+                heroVideoActual: document.getElementById('modalPaginaHeroVideoActual'),
+                secundariaActual: document.getElementById('modalPaginaSecundariaActual'),
+                videoActual: document.getElementById('modalPaginaVideoActual'),
+                mediaActual: document.getElementById('modalPaginaMediaActual')
+            };
+
+            function setField(field, value) {
+                if (field) { field.value = value || ''; }
+            }
+
+            function setCurrentText(field, label, value) {
+                if (field) { field.textContent = value ? label + ': ' + value : ''; }
+            }
+
+            function renderMedia(raw) {
+                if (!pageFields.mediaActual) { return; }
+                pageFields.mediaActual.innerHTML = '';
+                var media = [];
+                try { media = raw ? JSON.parse(raw) : []; } catch (e) { media = []; }
+                if (!media.length) {
+                    pageFields.mediaActual.innerHTML = '<span class="text-muted small">Sin imágenes de galería.</span>';
+                    return;
+                }
+                media.forEach(function (item) {
+                    var wrap = document.createElement('label');
+                    wrap.className = 'border rounded-3 p-2 d-flex align-items-center gap-2';
+                    wrap.style.maxWidth = '240px';
+                    wrap.innerHTML =
+                        '<input class="form-check-input m-0" type="checkbox" name="delete_media[]" value="' + String(item.id_media || '') + '">' +
+                        '<span class="small">Eliminar</span>' +
+                        '<span class="small text-muted text-truncate">' + String(item.titulo || item.archivo || 'Imagen') + '</span>';
+                    pageFields.mediaActual.appendChild(wrap);
+                });
+            }
 
             if (btn) {
                 titulo.textContent = 'Editar submenú';
@@ -1443,6 +1982,20 @@ admin_render_layout_end([
                 urlInput.value = btn.dataset.url || '';
                 iconoInput.value = btn.dataset.icono || '';
                 estadoCheck.checked = btn.dataset.estado === '1';
+                setField(pageFields.titulo, btn.dataset.paginaTitulo || '');
+                setField(pageFields.bajada, btn.dataset.paginaBajada || '');
+                setField(pageFields.contenido, btn.dataset.paginaContenido || '');
+                setField(pageFields.heroVideoUrl, btn.dataset.paginaHeroVideoUrl || '');
+                setField(pageFields.videoUrl, btn.dataset.paginaVideoUrl || '');
+                setField(pageFields.botonTexto, btn.dataset.paginaBotonTexto || '');
+                setField(pageFields.botonUrl, btn.dataset.paginaBotonUrl || '');
+                setField(pageFields.metaTitle, btn.dataset.paginaMetaTitle || '');
+                setField(pageFields.metaDescription, btn.dataset.paginaMetaDescription || '');
+                setCurrentText(pageFields.heroActual, 'Actual', btn.dataset.paginaImagenHero || '');
+                setCurrentText(pageFields.heroVideoActual, 'Actual', btn.dataset.paginaHeroVideoArchivo || '');
+                setCurrentText(pageFields.secundariaActual, 'Actual', btn.dataset.paginaImagenSecundaria || '');
+                setCurrentText(pageFields.videoActual, 'Actual', btn.dataset.paginaVideoArchivo || '');
+                renderMedia(btn.dataset.paginaMedia || '[]');
             } else {
                 titulo.textContent = 'Nuevo submenú';
                 idInput.value = '0';
@@ -1451,6 +2004,24 @@ admin_render_layout_end([
                 urlInput.value = '';
                 iconoInput.value = '';
                 estadoCheck.checked = true;
+                setField(pageFields.titulo, '');
+                setField(pageFields.bajada, '');
+                setField(pageFields.contenido, '');
+                setField(pageFields.heroVideoUrl, '');
+                setField(pageFields.videoUrl, '');
+                setField(pageFields.botonTexto, '');
+                setField(pageFields.botonUrl, '');
+                setField(pageFields.metaTitle, '');
+                setField(pageFields.metaDescription, '');
+                setCurrentText(pageFields.heroActual, '', '');
+                setCurrentText(pageFields.heroVideoActual, '', '');
+                setCurrentText(pageFields.secundariaActual, '', '');
+                setCurrentText(pageFields.videoActual, '', '');
+                renderMedia('[]');
+            }
+            var firstTab = submenuEditor ? submenuEditor.querySelector('[data-bs-target="#submenuTabDatos"]') : null;
+            if (firstTab && bootstrap.Tab) {
+                bootstrap.Tab.getOrCreateInstance(firstTab).show();
             }
             modal.show();
         }

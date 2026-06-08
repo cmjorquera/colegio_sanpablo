@@ -356,6 +356,11 @@ if ($mostrarEmail && $email !== '') {
                 submitButton.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Validando...';
             }
 
+            var adminWindow = window.open('', '_blank');
+            if (adminWindow) {
+                adminWindow.opener = null;
+            }
+
             fetch('login_check.php', {
                 method: 'POST',
                 headers: {
@@ -367,11 +372,19 @@ if ($mostrarEmail && $email !== '') {
                 .then(function (response) { return response.json(); })
                 .then(function (data) {
                     if (data.ok) {
-                        showAlert('Acceso correcto. Redirigiendo...', 'success');
-                        window.location.href = data.redirect || 'admin.php';
+                        var redirectUrl = data.redirect || 'admin.php';
+                        showAlert('Acceso correcto. Abriendo administrador...', 'success');
+                        if (adminWindow) {
+                            adminWindow.location.href = redirectUrl;
+                        } else {
+                            window.open(redirectUrl, '_blank', 'noopener');
+                        }
                         return;
                     }
 
+                    if (adminWindow) {
+                        adminWindow.close();
+                    }
                     showAlert(data.msg || 'Usuario o clave incorrectos', 'error');
                     if (claveInput) {
                         claveInput.classList.add('is-invalid');
@@ -379,6 +392,9 @@ if ($mostrarEmail && $email !== '') {
                     }
                 })
                 .catch(function () {
+                    if (adminWindow) {
+                        adminWindow.close();
+                    }
                     showAlert('No fue posible validar el acceso. Intenta nuevamente.', 'error');
                 })
                 .finally(function () {

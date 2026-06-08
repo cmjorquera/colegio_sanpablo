@@ -258,24 +258,26 @@ function admin_json_response(array $payload, int $status = 200): void
     exit;
 }
 
-function admin_modal_help_image_path(string $context, string $fieldKey): string
+function admin_youtube_video_id(?string $url): string
 {
-    $context = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower($context));
-    $fieldKey = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower($fieldKey));
+    $url = trim((string) $url);
+    if ($url === '') {
+        return '';
+    }
 
-    return 'assets/images/admin-help/' . trim($context, '-') . '/' . trim($fieldKey, '-') . '.png';
-}
+    $patterns = [
+        '/youtu\.be\/([A-Za-z0-9_-]{6,})/i',
+        '/youtube\.com\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{6,})/i',
+        '/[?&]v=([A-Za-z0-9_-]{6,})/i',
+    ];
 
-function admin_modal_help_content(string $context, string $fieldKey, string $label): string
-{
-    $path = admin_modal_help_image_path($context, $fieldKey);
-    $html = '<div class="field-help-popover">'
-        . '<div class="field-help-title">' . cms_e($label) . '</div>'
-        . '<img src="' . cms_e($path) . '" alt="' . cms_e($label) . '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'
-        . '<div class="field-help-empty" style="display:none;">Sube una imagen de referencia en <code>' . cms_e($path) . '</code></div>'
-        . '</div>';
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $url, $match)) {
+            return $match[1];
+        }
+    }
 
-    return htmlspecialchars($html, ENT_QUOTES, 'UTF-8');
+    return '';
 }
 
 function admin_modal_field_head(string $label, string $inputId, string $context, string $fieldKey, bool $blockable = true, string $clearName = ''): void
@@ -295,18 +297,6 @@ function admin_modal_field_head(string $label, string $inputId, string $context,
                     <span>Bloquear</span>
                 </label>
             <?php endif; ?>
-            <button
-                type="button"
-                class="field-help-btn"
-                data-bs-toggle="popover"
-                data-bs-trigger="focus"
-                data-bs-placement="left"
-                data-bs-html="true"
-                data-bs-content="<?= admin_modal_help_content($context, $fieldKey, $label) ?>"
-                title="Referencia"
-            >
-                <i class="bi bi-info-circle"></i>
-            </button>
         </div>
     </div>
     <?php
@@ -466,7 +456,7 @@ $tab = $_GET['tab'] ?? 'general';
 $isTopbar = ($section['nombre_interno'] ?? '') === 'topbar';
 $isEventsCalendar = ($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events';
 $isVideoFeatured = ($section['nombre_interno'] ?? '') === 'video_destacado_home' || ($section['tipo_seccion'] ?? '') === 'video';
-$isModal = in_array(($section['nombre_interno'] ?? ''), ['modal_informativo', 'modal_bienvenida'], true) || ($section['tipo_seccion'] ?? '') === 'modal';
+$isModal = ($section['nombre_interno'] ?? '') === 'modal_informativo' || ($section['tipo_seccion'] ?? '') === 'modal';
 $isCarouselAdmin = in_array(($section['tipo_seccion'] ?? ''), ['carousel', 'hero'], true);
 $isGalleryAdmin  = ($section['tipo_seccion'] ?? '') === 'gallery';
 $eventosCalendario = $isEventsCalendar ? cms_list_events($db, 300) : [];
@@ -542,6 +532,48 @@ admin_render_layout_start([
             background: var(--adm-brand-gradient-soft);
             color: var(--adm-tertiary);
             font-size: 1.8rem;
+        }
+        .carousel-admin-video {
+            width: 100%;
+            height: 190px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #111827, #1e3a8a);
+            color: #fff;
+            text-align: center;
+        }
+        .carousel-admin-video i {
+            color: #ff0033;
+            font-size: 2.4rem;
+        }
+        .carousel-admin-video span {
+            display: block;
+            font-size: .8rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+        .carousel-admin-youtube-thumb {
+            filter: saturate(1.04) contrast(1.02);
+        }
+        .carousel-admin-video-badge {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(180deg, rgba(15,23,42,.08), rgba(15,23,42,.24));
+            pointer-events: none;
+        }
+        .carousel-admin-video-badge i {
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            display: inline-grid;
+            place-items: center;
+            color: #fff;
+            background: #ff0033;
+            box-shadow: 0 12px 26px rgba(15,23,42,.28);
+            font-size: 1.75rem;
+            line-height: 1;
         }
         .carousel-card-menu {
             position: absolute;
@@ -724,6 +756,39 @@ admin_render_layout_start([
             color: var(--adm-muted);
             background: #eef2f7;
         }
+        .topbar-items-table {
+            table-layout: fixed;
+        }
+        .topbar-items-table th,
+        .topbar-items-table td {
+            vertical-align: middle;
+        }
+        .topbar-items-table .topbar-drag-cell {
+            width: 44px;
+            text-align: center;
+        }
+        .topbar-items-table .topbar-actions-cell {
+            width: 132px;
+        }
+        .topbar-drag-handle {
+            width: 34px;
+            height: 34px;
+            border: 1px solid var(--adm-border);
+            border-radius: 8px;
+            display: inline-grid;
+            place-items: center;
+            color: var(--adm-muted);
+            background: #fff;
+            cursor: grab;
+        }
+        .topbar-drag-handle:hover {
+            color: var(--adm-primary);
+            border-color: var(--adm-primary);
+            background: var(--adm-primary-soft);
+        }
+        .topbar-items-table .table-actions {
+            justify-content: flex-start;
+        }
         .social-icon-preset img {
             width: 30px;
             height: 30px;
@@ -735,6 +800,12 @@ admin_render_layout_start([
             border-radius: var(--adm-radius-lg);
             overflow: hidden;
             box-shadow: var(--adm-shadow-lg);
+            max-height: calc(100vh - 48px);
+        }
+        .admin-modal .modal-content > form {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
         }
         .admin-modal .modal-header {
             padding: 16px 20px;
@@ -749,6 +820,8 @@ admin_render_layout_start([
         .admin-modal .modal-body {
             padding: 18px 20px;
             background: var(--adm-card);
+            min-height: 0;
+            overflow-y: auto;
         }
         #eventModal .modal-content { max-height: calc(100vh - 48px); }
         #eventModal .modal-body {
@@ -764,6 +837,19 @@ admin_render_layout_start([
             padding: 12px 20px;
             border-top: 1px solid var(--adm-border);
             background: #f8fafc;
+            flex: 0 0 auto;
+        }
+        .news-item-modal .modal-content {
+            max-height: calc(100vh - 28px);
+            display: flex;
+            flex-direction: column;
+        }
+        .news-item-modal .modal-body {
+            overflow-y: auto;
+            flex: 1 1 auto;
+        }
+        .news-item-modal .modal-footer {
+            flex: 0 0 auto;
         }
         .field-card {
             background: rgba(255,255,255,0.92);
@@ -804,44 +890,6 @@ admin_render_layout_start([
             margin: 0;
             cursor: pointer;
         }
-        .field-help-btn {
-            width: 28px;
-            height: 28px;
-            border: 1px solid #d9e2f0;
-            border-radius: 999px;
-            background: #f8fbff;
-            color: var(--adm-tertiary);
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: .2s ease;
-        }
-        .field-help-btn:hover {
-            background: rgba(var(--adm-tertiary-rgb),.08);
-            color: var(--adm-tertiary);
-        }
-        .field-help-popover { width: 220px; }
-        .field-help-title {
-            font-size: 0.78rem;
-            font-weight: 700;
-            color: #162338;
-            margin-bottom: 6px;
-        }
-        .field-help-popover img {
-            width: 100%;
-            border-radius: 10px;
-            border: 1px solid #dfe5f2;
-            background: #fff;
-        }
-        .field-help-empty {
-            font-size: 0.74rem;
-            color: #72809a;
-            line-height: 1.45;
-            background: #f8fbff;
-            border: 1px dashed #d7deed;
-            border-radius: 10px;
-            padding: 9px;
-        }
         .field-card.is-blocked {
             opacity: 0.72;
             border-style: dashed;
@@ -868,6 +916,29 @@ admin_render_layout_start([
         }
         .admin-modal .modal-dialog.modal-xl {
             max-width: 1040px;
+        }
+        .carousel-item-modal .modal-dialog.modal-xl {
+            max-width: 1240px;
+        }
+        .carousel-item-modal .modal-body {
+            padding: 14px 20px;
+        }
+        .carousel-item-modal .row.g-3 {
+            --bs-gutter-x: 0.75rem;
+            --bs-gutter-y: 0.75rem;
+        }
+        .carousel-item-modal .field-card {
+            padding: 10px;
+        }
+        .carousel-item-modal .field-head {
+            margin-bottom: 6px;
+        }
+        .carousel-item-modal textarea.form-control {
+            min-height: 72px;
+        }
+        .carousel-item-modal hr.my-4 {
+            margin-top: 1rem !important;
+            margin-bottom: 1rem !important;
         }
         .admin-modal .modal-dialog.modal-lg {
             max-width: 760px;
@@ -1147,19 +1218,6 @@ HTML,
                 </div>
             </form>
         <?php else: ?>
-            <?php if ($isModal): ?>
-                <div class="alert border-0 mb-4" style="background:#f0f7ff;color:#1a4080;border-radius:12px;font-size:.875rem;">
-                    <strong><i class="bi bi-info-circle me-1"></i>Configuración del Modal informativo</strong><br>
-                    <strong>Opción A — desde esta pestaña (General):</strong> agrega estas claves de configuración:<br>
-                    &nbsp;&nbsp;<code>titulo</code> → título del modal<br>
-                    &nbsp;&nbsp;<code>descripcion</code> → texto del cuerpo<br>
-                    &nbsp;&nbsp;<code>imagen</code> → ruta a la imagen (ej: <code>uploads/modal/imagen.jpg</code>)<br>
-                    &nbsp;&nbsp;<code>boton_texto</code> → texto del botón (dejar vacío para no mostrar)<br>
-                    &nbsp;&nbsp;<code>boton_url</code> → URL del botón<br>
-                    <strong>Opción B — desde la pestaña Items:</strong> agrega un item con imagen, título, descripción y botón.<br>
-                    <strong>Comportamiento:</strong> <code>mostrar</code> → <code>siempre</code> o <code>una_vez</code> (default) · <code>delay_ms</code> → ej: <code>1200</code>
-                </div>
-            <?php endif; ?>
             <form method="post">
                 <input type="hidden" name="accion" value="guardar_seccion">
                 <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
@@ -1342,24 +1400,36 @@ HTML,
             </div>
         <?php elseif ($isTopbar): ?>
             <div class="alert alert-info border-0" style="background:#eef8ff; color:#234;">
-                Las redes sociales del topbar se guardan en <code>seccion_item</code> con <code>etiqueta = 'red_social'</code>. En el sitio solo se muestran las primeras 4 visibles según <code>orden</code>.
+                Las redes sociales del topbar se guardan en <code>seccion_item</code> con <code>etiqueta = 'red_social'</code>. Arrastra las filas para cambiar el orden. En el sitio solo se muestran las primeras 4 visibles.
             </div>
             <div class="table-responsive">
-                <table class="table table-modern align-middle" id="itemsTable">
+                <table class="table table-modern topbar-items-table align-middle" id="itemsTable">
+                    <colgroup>
+                        <col style="width:44px;">
+                        <col style="width:22%;">
+                        <col>
+                        <col style="width:110px;">
+                        <col style="width:110px;">
+                        <col style="width:132px;">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th>Orden</th>
+                            <th></th>
                             <th>Red</th>
                             <th>URL</th>
                             <th>Icono</th>
                             <th>Visible</th>
-                            <th>Acciones</th>
+                            <th class="topbar-actions-cell">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="topbarItemsTbody" data-section-id="<?= (int) $idSeccion ?>">
                         <?php foreach ($topbarItems as $item): ?>
-                            <tr>
-                                <td><?= (int) $item['orden'] ?></td>
+                            <tr data-id="<?= (int) $item['id_item'] ?>">
+                                <td class="topbar-drag-cell">
+                                    <span class="topbar-drag-handle" title="Arrastrar para ordenar" aria-label="Arrastrar para ordenar">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </span>
+                                </td>
                                 <td><?= cms_e($item['titulo'] ?? '') ?></td>
                                 <td><a href="<?= cms_e($item['descripcion'] ?? '#') ?>" target="_blank" rel="noopener"><?= cms_e($item['descripcion'] ?? '') ?></a></td>
                                 <td>
@@ -1380,7 +1450,7 @@ HTML,
                                         </label>
                                     </form>
                                 </td>
-                                <td>
+                                <td class="topbar-actions-cell">
                                     <div class="table-actions">
                                         <a href="<?= cms_e($item['descripcion'] ?? '#') ?>" target="_blank" rel="noopener" class="btn-icon preview" title="Ver red social" aria-label="Ver red social">
                                             <i class="bi bi-eye"></i>
@@ -1409,10 +1479,24 @@ HTML,
             </div>
             <div class="carousel-card-grid mb-4" id="carouselSortable">
                 <?php foreach ($items as $item): ?>
-                    <?php $slideTitle = trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? '')); ?>
+                    <?php
+                    $slideTitle = trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? ''));
+                    $slideYoutubeId = admin_youtube_video_id((string) ($item['url'] ?? ''));
+                    $slideHasYoutube = $slideYoutubeId !== '';
+                    ?>
                     <article class="carousel-admin-card" data-id="<?= (int) $item['id_item'] ?>">
                         <div class="carousel-admin-media">
-                            <?php if (!empty($item['imagen'])): ?>
+                            <?php if ($slideHasYoutube): ?>
+                                <img
+                                    class="carousel-admin-youtube-thumb"
+                                    src="https://img.youtube.com/vi/<?= cms_e($slideYoutubeId) ?>/maxresdefault.jpg"
+                                    alt="<?= cms_e($slideTitle ?: 'Video YouTube del carrusel') ?>"
+                                    onerror="this.onerror=null;this.src='https://img.youtube.com/vi/<?= cms_e($slideYoutubeId) ?>/hqdefault.jpg';"
+                                >
+                                <div class="carousel-admin-video-badge" aria-hidden="true">
+                                    <i class="bi bi-play-fill"></i>
+                                </div>
+                            <?php elseif (!empty($item['imagen'])): ?>
                                 <img src="<?= cms_e($item['imagen']) ?>" alt="<?= cms_e($slideTitle ?: 'Slide del carrusel') ?>">
                             <?php else: ?>
                                 <div class="carousel-admin-placeholder"><i class="bi bi-image"></i></div>
@@ -1434,6 +1518,7 @@ HTML,
                                                 'boton_1_url'    => $item['boton_1_url'] ?? '',
                                                 'boton_2_texto'  => $item['boton_2_texto'] ?? '',
                                                 'boton_2_url'    => $item['boton_2_url'] ?? '',
+                                                'url'            => $item['url'] ?? '',
                                                 'visible'        => $item['visible'] ?? 'si',
                                                 'orden'          => (int) ($item['orden'] ?? 1),
                                             ], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>">
@@ -1817,6 +1902,7 @@ HTML,
                     <input type="hidden" name="accion" value="guardar_topbar_item">
                     <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                     <input type="hidden" name="id_item" value="<?= (int) ($editingItem['id_item'] ?? 0) ?>">
+                    <input type="hidden" name="orden" value="<?= (int) ($editingItem['orden'] ?? count($topbarItems) + 1) ?>">
                     <div class="modal-header">
                         <h5 class="modal-title"><?= $editingItem ? 'Editar red social' : 'Agregar red social' ?></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -1850,7 +1936,7 @@ HTML,
                                     <input class="form-control" id="topbar_descripcion" name="descripcion" value="<?= cms_e($editingItem['descripcion'] ?? '') ?>" placeholder="https://instagram.com/...">
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <div class="field-card">
                                     <?php admin_modal_field_head('Visible', 'topbar_visible', 'topbar', 'visible', false); ?>
                                     <label class="setting-toggle mb-0">
@@ -1861,14 +1947,8 @@ HTML,
                                     </label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="field-card">
-                                    <?php admin_modal_field_head('Orden', 'topbar_orden', 'topbar', 'orden', false); ?>
-                                    <input class="form-control" id="topbar_orden" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($topbarItems) + 1) ?>">
-                                </div>
-                            </div>
                         </div>
-                        <div class="form-text mt-3">El sitio mostrará como máximo 4 redes visibles ordenadas por este campo.</div>
+                        <div class="form-text mt-3">El sitio mostrará como máximo 4 redes visibles según el orden de la tabla.</div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>
@@ -1879,7 +1959,7 @@ HTML,
         </div>
     </div>
 <?php else: ?>
-    <div class="modal fade admin-modal" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade admin-modal <?= ($section['tipo_seccion'] ?? '') === 'news' ? 'news-item-modal' : '' ?> <?= $isCarouselAdmin ? 'carousel-item-modal' : '' ?>" id="itemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <form method="post" enctype="multipart/form-data">
@@ -1986,58 +2066,65 @@ HTML,
                             </div>
                         <?php elseif (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
                             <div class="row g-3">
-                                <div class="col-md-4">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Etiqueta', 'item_etiqueta', $section['nombre_interno'], 'etiqueta'); ?>
                                         <input class="form-control" id="item_etiqueta" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Título línea 1', 'item_titulo_linea_1', $section['nombre_interno'], 'titulo-linea-1'); ?>
                                         <input class="form-control" id="item_titulo_linea_1" name="titulo_linea_1" value="<?= cms_e($editingItem['titulo_linea_1'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Título línea 2', 'item_titulo_linea_2', $section['nombre_interno'], 'titulo-linea-2'); ?>
                                         <input class="form-control" id="item_titulo_linea_2" name="titulo_linea_2" value="<?= cms_e($editingItem['titulo_linea_2'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Título línea 3', 'item_titulo_linea_3', $section['nombre_interno'], 'titulo-linea-3'); ?>
                                         <input class="form-control" id="item_titulo_linea_3" name="titulo_linea_3" value="<?= cms_e($editingItem['titulo_linea_3'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-8">
+                                <div class="col-12">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Descripción', 'item_descripcion', $section['nombre_interno'], 'descripcion'); ?>
                                         <textarea class="form-control" id="item_descripcion" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 1 texto', 'item_boton_1_texto', $section['nombre_interno'], 'boton-1-texto'); ?>
                                         <input class="form-control" id="item_boton_1_texto" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 1 URL', 'item_boton_1_url', $section['nombre_interno'], 'boton-1-url'); ?>
                                         <input class="form-control" id="item_boton_1_url" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 2 texto', 'item_boton_2_texto', $section['nombre_interno'], 'boton-2-texto'); ?>
                                         <input class="form-control" id="item_boton_2_texto" name="boton_2_texto" value="<?= cms_e($editingItem['boton_2_texto'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 2 URL', 'item_boton_2_url', $section['nombre_interno'], 'boton-2-url'); ?>
                                         <input class="form-control" id="item_boton_2_url" name="boton_2_url" value="<?= cms_e($editingItem['boton_2_url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Video YouTube', 'item_url_carousel', $section['nombre_interno'], 'url'); ?>
+                                        <input class="form-control" id="item_url_carousel" name="url" value="<?= cms_e($editingItem['url'] ?? '') ?>" placeholder="https://www.youtube.com/watch?v=...">
+                                        <div class="field-note">Si completas este campo, el carrusel usará el video como fondo automático. YouTube exige reproducirlo silenciado.</div>
                                     </div>
                                 </div>
                             </div>
@@ -2159,13 +2246,13 @@ HTML,
                                 <div class="col-md-4">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón texto', 'item_boton_1_texto_news', $section['nombre_interno'], 'boton-1-texto'); ?>
-                                        <input class="form-control" id="item_boton_1_texto_news" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Leer más') ?>">
+                                        <input class="form-control" id="item_boton_1_texto_news" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Leer más') ?>" placeholder="Leer más">
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón URL', 'item_boton_1_url_news', $section['nombre_interno'], 'boton-1-url'); ?>
-                                        <input class="form-control" id="item_boton_1_url_news" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '#') ?>">
+                                        <input class="form-control" id="item_boton_1_url_news" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>" placeholder="https://...">
                                     </div>
                                 </div>
                             </div>
@@ -2263,10 +2350,14 @@ admin_render_layout_end([
                 }
             }
 
+            var topbarTbody = document.getElementById('topbarItemsTbody');
             if ($('#itemsTable').length) {
                 $('#itemsTable').DataTable({
                     pageLength: 10,
-                    order: [[0, 'asc']],
+                    ordering: !topbarTbody,
+                    paging: !topbarTbody,
+                    info: !topbarTbody,
+                    order: topbarTbody ? [] : [[0, 'asc']],
                     language: { url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json' }
                 });
             }
@@ -2671,6 +2762,7 @@ admin_render_layout_end([
                     set('#item_boton_1_url', item.boton_1_url);
                     set('#item_boton_2_texto', item.boton_2_texto);
                     set('#item_boton_2_url', item.boton_2_url);
+                    set('#item_url_carousel', item.url);
                     set('#item_visible', item.visible);
                     set('#item_orden', item.orden !== undefined ? String(item.orden) : '1');
 
@@ -2706,6 +2798,41 @@ admin_render_layout_end([
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
     <script>
     (function () {
+        var topbarTbody = document.getElementById('topbarItemsTbody');
+        if (topbarTbody && typeof Sortable !== 'undefined') {
+            var saveTopbarTimeout = null;
+            Sortable.create(topbarTbody, {
+                animation: 180,
+                handle: '.topbar-drag-handle',
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                onEnd: function () {
+                    clearTimeout(saveTopbarTimeout);
+                    saveTopbarTimeout = setTimeout(function () {
+                        var ids = Array.from(topbarTbody.querySelectorAll('tr'))
+                            .map(function (tr) { return tr.dataset.id; })
+                            .filter(Boolean);
+                        var fd = new FormData();
+                        fd.append('accion', 'reorder_items');
+                        fd.append('id_seccion', topbarTbody.dataset.sectionId || '');
+                        ids.forEach(function (id) { fd.append('items[]', id); });
+                        fetch(window.location.href, {
+                            method: 'POST',
+                            body: fd,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.ok) {
+                                adminNotify({ title: 'Orden guardado', msg: 'El orden de las redes sociales fue actualizado.', type: 'info', autoClose: 1800 });
+                            }
+                        })
+                        .catch(function () {});
+                    }, 350);
+                }
+            });
+        }
+
         var galleryGrid = document.getElementById('gallerySortable');
         if (galleryGrid && typeof Sortable !== 'undefined') {
             var saveGalleryTimeout = null;

@@ -1049,10 +1049,65 @@ body {
 .slide-bg {
     position: absolute;
     inset: 0;
+    z-index: 0;
     background-size: cover;
     background-position: center center;
     background-repeat: no-repeat;
     transition: transform 8s ease;
+}
+.slide-video-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    background: #111827;
+}
+.slide-video-bg iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100vw, 177.78vh);
+    height: max(56.25vw, 100vh);
+    border: 0;
+    pointer-events: none;
+    transform: translate(-50%, -50%);
+}
+.carousel-item--video .slide-bg { display: none; }
+.sp-video-sound {
+    position: absolute;
+    left: 50%;
+    right: auto;
+    bottom: 74px;
+    z-index: 20;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(255,255,255,.28);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,.46);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 10px 24px rgba(0,0,0,.22);
+    transform: translateX(-50%);
+    transition: background .2s, transform .2s, border-color .2s;
+}
+.sp-video-sound:hover {
+    background: rgba(0,0,0,.66);
+    border-color: rgba(255,255,255,.5);
+    transform: translateX(-50%) translateY(-1px);
+}
+.sp-video-sound i {
+    font-size: 15px;
+    line-height: 1;
+}
+@media (max-width: 575.98px) {
+    .sp-video-sound {
+        bottom: 66px;
+        width: 42px;
+        height: 42px;
+    }
 }
 /* Efecto Ken Burns sutil en el slide activo */
 .carousel-item.active .slide-bg {
@@ -1063,6 +1118,7 @@ body {
 .slide-overlay {
     position: absolute;
     inset: 0;
+    z-index: 2;
     background: linear-gradient(
         to right,
         rgba(20, 20, 30, 0.78) 0%,
@@ -1075,6 +1131,7 @@ body {
 .slide-content {
     position: absolute;
     inset: 0;
+    z-index: 3;
     display: flex;
     align-items: center;
     padding: 0 60px;
@@ -1154,6 +1211,7 @@ body {
 
 /* Indicadores personalizados */
 #heroCarousel .carousel-indicators {
+    z-index: 5;
     bottom: 22px;
     gap: 8px;
 }
@@ -1196,6 +1254,7 @@ body {
 }
 .carousel-control-prev,
 .carousel-control-next {
+    z-index: 5;
     width: auto;
     padding: 0 20px;
     opacity: 1;

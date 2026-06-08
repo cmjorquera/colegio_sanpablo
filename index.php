@@ -1,14 +1,18 @@
 <?php
 require_once __DIR__ . '/includes/cms_helpers.php';
 
-function e(?string $value): string
-{
-    return cms_e($value);
+if (!function_exists('e')) {
+    function e(?string $value): string
+    {
+        return cms_e($value);
+    }
 }
 
-function cfg(array $configMap, string $sectionName, string $key, string $default = ''): string
-{
-    return cms_cfg($configMap, $sectionName, $key, $default);
+if (!function_exists('cfg')) {
+    function cfg(array $configMap, string $sectionName, string $key, string $default = ''): string
+    {
+        return cms_cfg($configMap, $sectionName, $key, $default);
+    }
 }
 
 $institution = null;
@@ -64,10 +68,6 @@ try {
     <?php foreach ($sections as $section): ?>
         <?php
         $sectionName = $section['nombre_interno'] ?? '';
-
-        if ($sectionName === 'menu_principal') {
-            continue;
-        }
 
         $component = cms_get_component_path($sectionName);
 

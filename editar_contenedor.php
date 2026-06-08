@@ -2,12 +2,13 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: colegiosanpablo.php');
+    header('Location: index.php');
     exit;
 }
 
 require_once __DIR__ . '/includes/cms_helpers.php';
 require_once __DIR__ . '/includes/admin_layout.php';
+require_once __DIR__ . '/includes/funciones_auditoria.php';
 
 $db = cms_get_connection();
 $institutionId = cms_get_institution_id($db);
@@ -32,16 +33,88 @@ function topbar_get_config_value(array $configs, string $key, string $default = 
     return $default;
 }
 
+function topbar_social_icon_options(): array
+{
+    return [
+        [
+            'name' => 'Instagram',
+            'icon' => 'assets/redes_sociales/instagram.jpg',
+            'url' => 'https://instagram.com/',
+            'keys' => ['instagram', 'insta'],
+        ],
+        [
+            'name' => 'Facebook',
+            'icon' => 'assets/redes_sociales/facebook.jpg',
+            'url' => 'https://facebook.com/',
+            'keys' => ['facebook', 'fb'],
+        ],
+        [
+            'name' => 'YouTube',
+            'icon' => 'assets/redes_sociales/youtube.png',
+            'url' => 'https://youtube.com/',
+            'keys' => ['youtube', 'youtu.be'],
+        ],
+        [
+            'name' => 'Twitter',
+            'icon' => 'assets/redes_sociales/twitter.png',
+            'url' => 'https://x.com/',
+            'keys' => ['twitter', 'x.com'],
+        ],
+        [
+            'name' => 'LinkedIn',
+            'icon' => 'assets/redes_sociales/linkeding.png',
+            'url' => 'https://linkedin.com/',
+            'keys' => ['linkedin', 'linkeding'],
+        ],
+    ];
+}
+
+function topbar_icon_is_image(string $icon): bool
+{
+    return (bool) preg_match('/\.(png|jpe?g|webp|gif|svg)(\?.*)?$/i', $icon);
+}
+
+function topbar_resolve_social_icon(string $icon, string $source = ''): string
+{
+    $icon = trim($icon);
+    if ($icon !== '' && topbar_icon_is_image($icon)) {
+        return $icon;
+    }
+
+    $haystack = strtolower(trim($icon . ' ' . $source));
+    foreach (topbar_social_icon_options() as $option) {
+        foreach ($option['keys'] as $key) {
+            if ($haystack !== '' && strpos($haystack, strtolower($key)) !== false) {
+                return (string) $option['icon'];
+            }
+        }
+    }
+
+    return $icon;
+}
+
+function topbar_render_social_icon(string $icon, string $title = 'Red social'): string
+{
+    $icon = topbar_resolve_social_icon($icon, $title);
+    if ($icon !== '' && topbar_icon_is_image($icon)) {
+        return '<img src="' . cms_e($icon) . '" alt="' . cms_e($title) . '">';
+    }
+
+    return '<i class="' . cms_e($icon !== '' ? $icon : 'bi bi-link-45deg') . '"></i>';
+}
+
 function topbar_save_general(mysqli $db, array $section, array $post): void
 {
+    cms_ensure_section_tracking_columns($db);
     $idSeccion = (int) $section['id_seccion'];
     $idInstitucion = (int) $section['id_institucion'];
     $visible = (($post['visible'] ?? 'no') === 'si') ? 'si' : 'no';
-    $orden = max(1, (int) ($post['orden'] ?? 1));
+    $orden = max(1, (int) ($post['orden'] ?? ($section['orden'] ?? 1)));
     $observacion = trim((string) ($post['observacion'] ?? ''));
+    $idUsuario = isset($_SESSION['id_usuario']) ? (int) $_SESSION['id_usuario'] : null;
 
-    $stmtSeccion = $db->prepare('UPDATE seccion SET visible = ?, orden = ?, observacion = ? WHERE id_seccion = ?');
-    $stmtSeccion->bind_param('sisi', $visible, $orden, $observacion, $idSeccion);
+    $stmtSeccion = $db->prepare('UPDATE seccion SET visible = ?, orden = ?, observacion = ?, actualizado_en = NOW(), actualizado_por = ? WHERE id_seccion = ?');
+    $stmtSeccion->bind_param('sisii', $visible, $orden, $observacion, $idUsuario, $idSeccion);
     $stmtSeccion->execute();
     $stmtSeccion->close();
 
@@ -56,11 +129,11 @@ function topbar_save_general(mysqli $db, array $section, array $post): void
 
     $configValues = [
         'texto_boton_ingresar' => trim((string) ($post['texto_boton_ingresar'] ?? 'Ingresar')),
-        'mostrar_direccion' => (($post['mostrar_direccion'] ?? 'si') === 'si') ? 'si' : 'no',
-        'mostrar_telefono' => (($post['mostrar_telefono'] ?? 'si') === 'si') ? 'si' : 'no',
-        'mostrar_email' => (($post['mostrar_email'] ?? 'si') === 'si') ? 'si' : 'no',
-        'mostrar_redes' => (($post['mostrar_redes'] ?? 'si') === 'si') ? 'si' : 'no',
-        'mostrar_boton_ingresar' => (($post['mostrar_boton_ingresar'] ?? 'si') === 'si') ? 'si' : 'no',
+        'mostrar_direccion' => (($post['mostrar_direccion'] ?? 'no') === 'si') ? 'si' : 'no',
+        'mostrar_telefono' => (($post['mostrar_telefono'] ?? 'no') === 'si') ? 'si' : 'no',
+        'mostrar_email' => (($post['mostrar_email'] ?? 'no') === 'si') ? 'si' : 'no',
+        'mostrar_redes' => (($post['mostrar_redes'] ?? 'no') === 'si') ? 'si' : 'no',
+        'mostrar_boton_ingresar' => (($post['mostrar_boton_ingresar'] ?? 'no') === 'si') ? 'si' : 'no',
     ];
 
     $deleteSql = "DELETE FROM seccion_config
@@ -85,8 +158,8 @@ function topbar_save_item(mysqli $db, array $section, array $post): int
     $idItem = (int) ($post['id_item'] ?? 0);
     $titulo = trim((string) ($post['titulo'] ?? ''));
     $url = trim((string) ($post['descripcion'] ?? ''));
-    $icono = trim((string) ($post['icono'] ?? ''));
-    $visible = (($post['visible'] ?? 'si') === 'si') ? 'si' : 'no';
+    $icono = topbar_resolve_social_icon((string) ($post['icono'] ?? ''), $titulo . ' ' . $url);
+    $visible = (($post['visible'] ?? 'no') === 'si') ? 'si' : 'no';
     $orden = max(1, (int) ($post['orden'] ?? 1));
 
     if ($titulo === '' || $url === '' || $icono === '') {
@@ -144,24 +217,67 @@ function topbar_save_item(mysqli $db, array $section, array $post): int
     return $newId;
 }
 
-function admin_modal_help_image_path(string $context, string $fieldKey): string
+function topbar_toggle_item_visible(mysqli $db, array $section, int $idItem, string $visible): void
 {
-    $context = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower($context));
-    $fieldKey = preg_replace('/[^a-z0-9_-]+/i', '-', strtolower($fieldKey));
+    $idSeccion = (int) $section['id_seccion'];
+    $visible = $visible === 'si' ? 'si' : 'no';
 
-    return 'assets/images/admin-help/' . trim($context, '-') . '/' . trim($fieldKey, '-') . '.png';
+    if ($visible === 'si') {
+        $stmtCount = $db->prepare("SELECT COUNT(*) AS total
+            FROM seccion_item
+            WHERE id_seccion = ? AND etiqueta = 'red_social' AND visible = 'si' AND id_item <> ?");
+        $stmtCount->bind_param('ii', $idSeccion, $idItem);
+        $stmtCount->execute();
+        $countResult = $stmtCount->get_result();
+        $visibleCount = (int) (($countResult ? $countResult->fetch_assoc()['total'] : 0));
+        $stmtCount->close();
+
+        if ($visibleCount >= 4) {
+            throw new RuntimeException('El topbar solo puede tener 4 redes sociales visibles como máximo.');
+        }
+    }
+
+    $stmt = $db->prepare("UPDATE seccion_item
+        SET visible = ?
+        WHERE id_item = ? AND id_seccion = ? AND etiqueta = 'red_social'");
+    $stmt->bind_param('sii', $visible, $idItem, $idSeccion);
+    $stmt->execute();
+    $stmt->close();
 }
 
-function admin_modal_help_content(string $context, string $fieldKey, string $label): string
+function admin_is_ajax_request(): bool
 {
-    $path = admin_modal_help_image_path($context, $fieldKey);
-    $html = '<div class="field-help-popover">'
-        . '<div class="field-help-title">' . cms_e($label) . '</div>'
-        . '<img src="' . cms_e($path) . '" alt="' . cms_e($label) . '" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'block\';">'
-        . '<div class="field-help-empty" style="display:none;">Sube una imagen de referencia en <code>' . cms_e($path) . '</code></div>'
-        . '</div>';
+    return strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
+}
 
-    return htmlspecialchars($html, ENT_QUOTES, 'UTF-8');
+function admin_json_response(array $payload, int $status = 200): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+function admin_youtube_video_id(?string $url): string
+{
+    $url = trim((string) $url);
+    if ($url === '') {
+        return '';
+    }
+
+    $patterns = [
+        '/youtu\.be\/([A-Za-z0-9_-]{6,})/i',
+        '/youtube\.com\/(?:embed|shorts|live)\/([A-Za-z0-9_-]{6,})/i',
+        '/[?&]v=([A-Za-z0-9_-]{6,})/i',
+    ];
+
+    foreach ($patterns as $pattern) {
+        if (preg_match($pattern, $url, $match)) {
+            return $match[1];
+        }
+    }
+
+    return '';
 }
 
 function admin_modal_field_head(string $label, string $inputId, string $context, string $fieldKey, bool $blockable = true, string $clearName = ''): void
@@ -181,18 +297,6 @@ function admin_modal_field_head(string $label, string $inputId, string $context,
                     <span>Bloquear</span>
                 </label>
             <?php endif; ?>
-            <button
-                type="button"
-                class="field-help-btn"
-                data-bs-toggle="popover"
-                data-bs-trigger="focus"
-                data-bs-placement="left"
-                data-bs-html="true"
-                data-bs-content="<?= admin_modal_help_content($context, $fieldKey, $label) ?>"
-                title="Referencia"
-            >
-                <i class="bi bi-info-circle"></i>
-            </button>
         </div>
     </div>
     <?php
@@ -211,28 +315,132 @@ try {
         if (($section['nombre_interno'] ?? '') === 'topbar' && $action === 'guardar_topbar_item') {
             topbar_save_item($db, $section, $_POST);
             cms_set_flash('success', 'La red social fue guardada correctamente.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items&saved=red_social');
+        }
+
+        if (($section['nombre_interno'] ?? '') === 'topbar' && $action === 'toggle_topbar_item_visible') {
+            $nextVisible = (string) ($_POST['visible'] ?? 'no');
+            topbar_toggle_item_visible($db, $section, (int) ($_POST['id_item'] ?? 0), $nextVisible);
+            if (admin_is_ajax_request()) {
+                admin_json_response([
+                    'ok' => true,
+                    'visible' => $nextVisible === 'si' ? 'si' : 'no',
+                ]);
+            }
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'guardar_evento') {
+            $idEventoAudit = (int) ($_POST['id_evento'] ?? 0);
+            $datosAntes = $idEventoAudit > 0 ? obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit) : null;
+            $savedEventId = cms_save_event($db, $_POST);
+            cms_save_event_media_uploads($db, $savedEventId);
+            $datosDespues = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $savedEventId);
+            registrarAuditoria($db, 'Eventos del calendario', 'eventos', $savedEventId, $idEventoAudit > 0 ? 'editar' : 'crear', $idEventoAudit > 0 ? 'Se modificó un evento' : 'Se creó un evento', $datosAntes, $datosDespues);
+            cms_set_flash('success', 'El evento fue guardado correctamente.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'toggle_evento') {
+            $idEventoAudit = (int) ($_POST['id_evento'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            cms_toggle_event_visible($db, $idEventoAudit);
+            $datosDespues = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            $accionAudit = (int) ($datosDespues['visible'] ?? 0) === 1 ? 'publicar' : 'ocultar';
+            registrarAuditoria($db, 'Eventos del calendario', 'eventos', $idEventoAudit, $accionAudit, 'Se cambió la visibilidad de un evento', $datosAntes, $datosDespues);
+            if (admin_is_ajax_request()) {
+                admin_json_response(['ok' => true, 'visible' => (int) ($datosDespues['visible'] ?? 0)]);
+            }
+            cms_set_flash('success', 'La visibilidad del evento fue actualizada.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && $action === 'cancelar_evento') {
+            $idEventoAudit = (int) ($_POST['id_evento'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            cms_cancel_event($db, $idEventoAudit);
+            $datosDespues = obtenerRegistroAuditoria($db, 'eventos', 'id_evento', $idEventoAudit);
+            registrarAuditoria($db, 'Eventos del calendario', 'eventos', $idEventoAudit, 'cancelar', 'Se canceló un evento', $datosAntes, $datosDespues);
+            cms_set_flash('success', 'El evento fue cancelado correctamente.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && strpos($action, 'toggle_evento_media:') === 0) {
+            cms_toggle_event_media_visible($db, (int) substr($action, strlen('toggle_evento_media:')));
+            cms_set_flash('success', 'La visibilidad del archivo multimedia fue actualizada.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items&modal=evento&evento=' . (int) ($_POST['id_evento'] ?? 0));
+        }
+
+        if ((($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events') && strpos($action, 'eliminar_evento_media:') === 0) {
+            cms_delete_event_media($db, (int) substr($action, strlen('eliminar_evento_media:')));
+            cms_set_flash('success', 'El archivo multimedia fue eliminado.');
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items&modal=evento&evento=' . (int) ($_POST['id_evento'] ?? 0));
+        }
+
+        if ($action === 'toggle_item_visible') {
+            $idItemToggle = (int) ($_POST['id_item'] ?? 0);
+            $newVisible = (string) ($_POST['visible'] ?? 'no');
+            $newVisible = $newVisible === 'si' ? 'si' : 'no';
+            $stmtToggle = $db->prepare('UPDATE seccion_item SET visible = ? WHERE id_item = ? AND id_seccion = ?');
+            $stmtToggle->bind_param('sii', $newVisible, $idItemToggle, $idSeccion);
+            $stmtToggle->execute();
+            $stmtToggle->close();
+            if (admin_is_ajax_request()) {
+                admin_json_response(['ok' => true, 'visible' => $newVisible]);
+            }
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+        }
+
+        if ($action === 'reorder_items') {
+            $ids = array_map('intval', (array) ($_POST['items'] ?? []));
+            foreach ($ids as $index => $idReorder) {
+                if ($idReorder <= 0) { continue; }
+                $orden = $index + 1;
+                $stmtReorder = $db->prepare('UPDATE seccion_item SET orden = ? WHERE id_item = ? AND id_seccion = ?');
+                $stmtReorder->bind_param('iii', $orden, $idReorder, $idSeccion);
+                $stmtReorder->execute();
+                $stmtReorder->close();
+            }
+            if (admin_is_ajax_request()) {
+                admin_json_response(['ok' => true]);
+            }
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
 
         if ($action === 'guardar_seccion') {
+            $datosAntes = cms_get_section_configs($db, $idSeccion);
             cms_save_section($db, $idSeccion, $_POST);
+            $datosDespues = cms_get_section_configs($db, $idSeccion);
+            registrarAuditoria($db, 'Configuración de contenedores', 'seccion_config', $idSeccion, 'editar', 'Se modificó la configuración de un contenedor', $datosAntes, $datosDespues);
             cms_set_flash('success', 'El contenedor fue actualizado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion);
         }
 
         if ($action === 'guardar_item') {
-            cms_save_item($db, $section, $_POST);
-            cms_set_flash('success', 'El item fue guardado correctamente.');
-            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
+            $idItemAudit = (int) ($_POST['id_item'] ?? 0);
+            $datosAntes = $idItemAudit > 0 ? obtenerRegistroAuditoria($db, 'seccion_item', 'id_item', $idItemAudit) : null;
+            $savedItemId = cms_save_item($db, $section, $_POST);
+            $datosDespues = obtenerRegistroAuditoria($db, 'seccion_item', 'id_item', $savedItemId);
+            registrarAuditoria($db, 'Items de contenedor', 'seccion_item', $savedItemId, $idItemAudit > 0 ? 'editar' : 'crear', $idItemAudit > 0 ? 'Se modificó un item de contenedor' : 'Se creó un item de contenedor', $datosAntes, $datosDespues);
+            cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items&saved=item');
         }
 
         if ($action === 'eliminar_item') {
-            cms_delete_item($db, (int) ($_POST['id_item'] ?? 0));
+            $idItemAudit = (int) ($_POST['id_item'] ?? 0);
+            $datosAntes = obtenerRegistroAuditoria($db, 'seccion_item', 'id_item', $idItemAudit);
+            cms_delete_item($db, $idItemAudit);
+            registrarAuditoria($db, 'Items de contenedor', 'seccion_item', $idItemAudit, 'eliminar', 'Se eliminó un item de contenedor', $datosAntes, null);
             cms_set_flash('success', 'El item fue eliminado correctamente.');
             cms_redirect('editar_contenedor.php?id=' . $idSeccion . '&tab=items');
         }
     }
 } catch (Throwable $e) {
+    if (admin_is_ajax_request()) {
+        admin_json_response([
+            'ok' => false,
+            'message' => $e->getMessage(),
+        ], 400);
+    }
     cms_set_flash('danger', $e->getMessage());
     cms_redirect('editar_contenedor.php?id=' . $idSeccion);
 }
@@ -246,6 +454,14 @@ $editingItem = isset($_GET['item']) ? cms_get_item($db, (int) $_GET['item']) : n
 $openModal = $_GET['modal'] ?? '';
 $tab = $_GET['tab'] ?? 'general';
 $isTopbar = ($section['nombre_interno'] ?? '') === 'topbar';
+$isEventsCalendar = ($section['nombre_interno'] ?? '') === 'calendario_eventos_home' || ($section['tipo_seccion'] ?? '') === 'events';
+$isVideoFeatured = ($section['nombre_interno'] ?? '') === 'video_destacado_home' || ($section['tipo_seccion'] ?? '') === 'video';
+$isModal = ($section['nombre_interno'] ?? '') === 'modal_informativo' || ($section['tipo_seccion'] ?? '') === 'modal';
+$isCarouselAdmin = in_array(($section['tipo_seccion'] ?? ''), ['carousel', 'hero'], true);
+$isGalleryAdmin  = ($section['tipo_seccion'] ?? '') === 'gallery';
+$eventosCalendario = $isEventsCalendar ? cms_list_events($db, 300) : [];
+$editingEvent = ($isEventsCalendar && isset($_GET['evento'])) ? cms_get_event($db, (int) $_GET['evento']) : null;
+$editingEventMedia = ($isEventsCalendar && $editingEvent) ? cms_list_event_media($db, (int) ($editingEvent['id_evento'] ?? 0), false) : [];
 $topbarConfigs = [
     'texto_boton_ingresar' => topbar_get_config_value($configs, 'texto_boton_ingresar', 'Ingresar'),
     'mostrar_direccion' => topbar_get_config_value($configs, 'mostrar_direccion', 'si'),
@@ -257,6 +473,7 @@ $topbarConfigs = [
 $topbarItems = $isTopbar
     ? array_values(array_filter($items, static fn(array $item): bool => ($item['etiqueta'] ?? '') === 'red_social'))
     : [];
+$topbarSocialIcons = topbar_social_icon_options();
 
 admin_render_layout_start([
     'title' => 'Editar contenedor | ' . ($section['titulo_admin'] ?? 'Contenedor'),
@@ -266,111 +483,412 @@ admin_render_layout_start([
     'institution_name' => $site['institution']['nombre'] ?? 'Institución activa',
     'institution_short_name' => $site['institution']['nombre_corto'] ?? ($site['institution']['nombre'] ?? 'Institución'),
     'institution_logo' => $site['institution']['logo_header'] ?? '',
+    'color_primario' => $site['institution']['color_primario'] ?? '',
+    'color_secundario' => $site['institution']['color_secundario'] ?? '',
+    'color_terciario' => $site['institution']['color_terciario'] ?? '',
+    'color_cuaternario' => $site['institution']['color_cuaternario'] ?? '',
     'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
     'header_actions' => '<a href="admin.php?panel=contenedores" class="btn btn-soft"><i class="bi bi-arrow-left me-2"></i>Volver</a><a href="preview_contenedor.php?id=' . (int) $idSeccion . '" class="btn btn-premium"><i class="bi bi-eye me-2"></i>Visualizar</a>',
     'extra_head' => <<<'HTML'
     <style>
-        .hero-card { border: 1px solid #dbe4ef; border-radius: 22px; overflow: hidden; background: #fff; height: 100%; }
+        .hero-card { border: 1px solid var(--adm-border); border-radius: 10px; overflow: hidden; background: #fff; height: 100%; }
         .hero-thumb { height: 180px; background-size: cover; background-position: center; }
-        .nav-pills .nav-link.active { background: linear-gradient(135deg, #1f8f6b, #27b785); }
+        .carousel-card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 18px;
+        }
+        .carousel-admin-card {
+            min-height: 360px;
+            border: 1px solid var(--adm-border);
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: var(--adm-shadow-sm);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .carousel-admin-media {
+            position: relative;
+            min-height: 190px;
+            background: linear-gradient(135deg, #f8fafc, #eef4fb);
+            display: grid;
+            place-items: center;
+            border-bottom: 1px solid var(--adm-border);
+        }
+        .carousel-admin-media img {
+            width: 100%;
+            height: 190px;
+            display: block;
+            object-fit: cover;
+            object-position: center;
+        }
+        .carousel-admin-placeholder {
+            width: 74px;
+            height: 74px;
+            border-radius: 18px;
+            display: grid;
+            place-items: center;
+            background: var(--adm-brand-gradient-soft);
+            color: var(--adm-tertiary);
+            font-size: 1.8rem;
+        }
+        .carousel-admin-video {
+            width: 100%;
+            height: 190px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #111827, #1e3a8a);
+            color: #fff;
+            text-align: center;
+        }
+        .carousel-admin-video i {
+            color: #ff0033;
+            font-size: 2.4rem;
+        }
+        .carousel-admin-video span {
+            display: block;
+            font-size: .8rem;
+            font-weight: 700;
+            letter-spacing: .02em;
+        }
+        .carousel-admin-youtube-thumb {
+            filter: saturate(1.04) contrast(1.02);
+        }
+        .carousel-admin-video-badge {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(180deg, rgba(15,23,42,.08), rgba(15,23,42,.24));
+            pointer-events: none;
+        }
+        .carousel-admin-video-badge i {
+            width: 48px;
+            height: 48px;
+            border-radius: 999px;
+            display: inline-grid;
+            place-items: center;
+            color: #fff;
+            background: #ff0033;
+            box-shadow: 0 12px 26px rgba(15,23,42,.28);
+            font-size: 1.75rem;
+            line-height: 1;
+        }
+        .carousel-card-menu {
+            position: absolute;
+            top: 14px;
+            right: 14px;
+        }
+        .carousel-card-menu .dropdown-toggle {
+            width: 34px;
+            height: 34px;
+            border: 1px solid rgba(255,255,255,.68);
+            border-radius: 999px;
+            background: rgba(255,255,255,.92);
+            color: var(--adm-muted);
+            display: inline-grid;
+            place-items: center;
+            box-shadow: 0 8px 18px rgba(15, 23, 42, .14);
+        }
+        .carousel-card-menu .dropdown-toggle::after {
+            display: none;
+        }
+        .carousel-admin-body {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            flex: 1;
+        }
+        .carousel-admin-title {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--adm-text);
+        }
+        .carousel-admin-meta {
+            color: var(--adm-muted);
+            font-size: .82rem;
+        }
+        .carousel-admin-desc {
+            color: var(--adm-text-2);
+            font-size: .88rem;
+            margin: 0;
+        }
+        .carousel-admin-card { cursor: grab; }
+        .carousel-admin-card:active { cursor: grabbing; }
+        .carousel-admin-card.sortable-ghost { opacity: .35; border: 2px dashed var(--adm-primary); }
+        .carousel-admin-card.sortable-chosen { box-shadow: 0 20px 40px rgba(15,23,42,.18) !important; transform: scale(1.025); z-index: 10; }
+        .carousel-admin-card.sortable-drag { box-shadow: 0 24px 48px rgba(15,23,42,.22) !important; }
+        .carousel-drag-hint {
+            display: flex; align-items: center; gap: 6px;
+            font-size: .78rem; color: var(--adm-muted); margin-bottom: 14px;
+        }
+        .carousel-drag-hint i { font-size: 1rem; }
+        .admin-tabs-card { padding: 12px; }
+        .admin-tabs {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px;
+            border: 1px solid var(--adm-border);
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .admin-tabs .nav-item {
+            display: block;
+            width: auto;
+            margin: 0;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            overflow: visible;
+        }
+        .admin-tabs .nav-link {
+            min-width: 104px;
+            text-align: center;
+            color: var(--adm-text-2);
+            border-radius: 8px;
+            font-size: .875rem;
+            font-weight: 700;
+            padding: 9px 14px;
+            line-height: 1;
+            border: 1px solid transparent;
+        }
+        .admin-tabs .nav-link:hover {
+            color: var(--adm-tertiary);
+            background: rgba(var(--adm-tertiary-rgb),.06);
+        }
+        .admin-tabs .nav-link.active {
+            background: var(--adm-brand-gradient);
+            color: #fff;
+            box-shadow: 0 8px 18px rgba(var(--adm-primary-rgb),.22);
+        }
+        .topbar-toggle-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+        }
+        .setting-toggle {
+            min-height: 66px;
+            border: 1px solid var(--adm-border);
+            border-radius: 10px;
+            background: #fff;
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+        }
+        .setting-toggle-copy {
+            font-weight: 700;
+            color: var(--adm-text);
+            font-size: .88rem;
+        }
+        .setting-toggle-copy small {
+            display: block;
+            color: var(--adm-muted);
+            font-weight: 500;
+            margin-top: 2px;
+        }
+        .state-switch { flex-shrink: 0; }
+        .setting-toggle .form-check.form-switch,
+        .table-check .form-check.form-switch { padding-left: 0; }
+        .setting-toggle .form-check.form-switch .form-check-input,
+        .table-check .form-check.form-switch .form-check-input { margin-left: 0; float: none; cursor: pointer; }
+        .table-check {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            color: var(--adm-text-2);
+            font-weight: 700;
+        }
+        .social-icon-presets {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 10px;
+        }
+        .social-icon-preset {
+            border: 1px solid var(--adm-border);
+            border-radius: 10px;
+            background: #fff;
+            color: var(--adm-text-2);
+            min-height: 54px;
+            padding: 8px;
+            font-size: 1.25rem;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: border-color .18s ease, background .18s ease, color .18s ease;
+        }
+        .social-icon-preset:hover {
+            border-color: rgba(var(--adm-tertiary-rgb), .35);
+            background: rgba(var(--adm-tertiary-rgb), .07);
+            color: var(--adm-tertiary);
+        }
+        .social-icon-preset.is-selected {
+            border-color: rgba(var(--adm-primary-rgb), .45);
+            background: rgba(var(--adm-primary-rgb), .12);
+            color: #8a5b00;
+        }
+        .social-icon-display {
+            width: 38px;
+            height: 38px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(var(--adm-primary-rgb), .10);
+            color: var(--adm-primary);
+            font-size: 1.05rem;
+        }
+        .social-icon-display img {
+            width: 24px;
+            height: 24px;
+            display: block;
+            object-fit: contain;
+        }
+        .social-icon-display.empty {
+            color: var(--adm-muted);
+            background: #eef2f7;
+        }
+        .topbar-items-table {
+            table-layout: fixed;
+        }
+        .topbar-items-table th,
+        .topbar-items-table td {
+            vertical-align: middle;
+        }
+        .topbar-items-table .topbar-drag-cell {
+            width: 44px;
+            text-align: center;
+        }
+        .topbar-items-table .topbar-actions-cell {
+            width: 132px;
+        }
+        .topbar-drag-handle {
+            width: 34px;
+            height: 34px;
+            border: 1px solid var(--adm-border);
+            border-radius: 8px;
+            display: inline-grid;
+            place-items: center;
+            color: var(--adm-muted);
+            background: #fff;
+            cursor: grab;
+        }
+        .topbar-drag-handle:hover {
+            color: var(--adm-primary);
+            border-color: var(--adm-primary);
+            background: var(--adm-primary-soft);
+        }
+        .topbar-items-table .table-actions {
+            justify-content: flex-start;
+        }
+        .social-icon-preset img {
+            width: 30px;
+            height: 30px;
+            display: block;
+            object-fit: contain;
+        }
         .admin-modal .modal-content {
             border: 0;
-            border-radius: 28px;
+            border-radius: var(--adm-radius-lg);
             overflow: hidden;
-            background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-            box-shadow: 0 28px 60px rgba(15, 23, 42, 0.18);
+            box-shadow: var(--adm-shadow-lg);
+            max-height: calc(100vh - 48px);
+        }
+        .admin-modal .modal-content > form {
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
         }
         .admin-modal .modal-header {
-            padding: 22px 26px 18px;
-            border-bottom: 1px solid #e8edf6;
-            background: linear-gradient(135deg, rgba(53, 88, 213, 0.08), rgba(46, 197, 161, 0.08));
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--adm-border);
+            background: var(--adm-card);
         }
         .admin-modal .modal-title {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: #162338;
+            font-size: .95rem;
+            font-weight: 700;
+            color: var(--adm-text);
         }
-        .admin-modal .modal-body { padding: 24px 26px; }
+        .admin-modal .modal-body {
+            padding: 18px 20px;
+            background: var(--adm-card);
+            min-height: 0;
+            overflow-y: auto;
+        }
+        #eventModal .modal-content { max-height: calc(100vh - 48px); }
+        #eventModal .modal-body {
+            max-height: calc(100vh - 170px);
+            overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--adm-border-dark) var(--adm-bg);
+        }
+        #eventModal .modal-body::-webkit-scrollbar { width: 6px; }
+        #eventModal .modal-body::-webkit-scrollbar-track { background: var(--adm-bg); }
+        #eventModal .modal-body::-webkit-scrollbar-thumb { background: var(--adm-border-dark); border-radius: 4px; }
         .admin-modal .modal-footer {
-            padding: 18px 26px 24px;
-            border-top: 1px solid #e8edf6;
-            background: rgba(255,255,255,0.78);
+            padding: 12px 20px;
+            border-top: 1px solid var(--adm-border);
+            background: #f8fafc;
+            flex: 0 0 auto;
+        }
+        .news-item-modal .modal-content {
+            max-height: calc(100vh - 28px);
+            display: flex;
+            flex-direction: column;
+        }
+        .news-item-modal .modal-body {
+            overflow-y: auto;
+            flex: 1 1 auto;
+        }
+        .news-item-modal .modal-footer {
+            flex: 0 0 auto;
         }
         .field-card {
             background: rgba(255,255,255,0.92);
             border: 1px solid #e4ebf5;
-            border-radius: 20px;
-            padding: 14px 14px 12px;
-            box-shadow: 0 10px 24px rgba(18, 35, 68, 0.05);
+            border-radius: 10px;
+            padding: 12px 12px 10px;
+            box-shadow: 0 8px 18px rgba(18, 35, 68, 0.04);
             height: 100%;
         }
         .field-head {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 10px;
-            margin-bottom: 10px;
+            gap: 8px;
+            margin-bottom: 8px;
         }
         .field-head .form-label {
             margin: 0;
             font-weight: 700;
             color: #162338;
+            font-size: 0.88rem;
         }
         .field-tools {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             flex-shrink: 0;
         }
         .field-lock {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.82rem;
+            gap: 6px;
+            font-size: 0.76rem;
             color: #72809a;
             cursor: pointer;
         }
         .field-lock .form-check-input {
             margin: 0;
             cursor: pointer;
-        }
-        .field-help-btn {
-            width: 30px;
-            height: 30px;
-            border: 1px solid #d9e2f0;
-            border-radius: 999px;
-            background: #f8fbff;
-            color: #3558d5;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: .2s ease;
-        }
-        .field-help-btn:hover {
-            background: #edf2ff;
-            color: #2847b5;
-        }
-        .field-help-popover { width: 220px; }
-        .field-help-title {
-            font-size: 0.82rem;
-            font-weight: 700;
-            color: #162338;
-            margin-bottom: 8px;
-        }
-        .field-help-popover img {
-            width: 100%;
-            border-radius: 12px;
-            border: 1px solid #dfe5f2;
-            background: #fff;
-        }
-        .field-help-empty {
-            font-size: 0.78rem;
-            color: #72809a;
-            line-height: 1.45;
-            background: #f8fbff;
-            border: 1px dashed #d7deed;
-            border-radius: 12px;
-            padding: 10px;
         }
         .field-card.is-blocked {
             opacity: 0.72;
@@ -382,9 +900,196 @@ admin_render_layout_start([
             background: #eef2f7;
         }
         .field-note {
-            margin-top: 8px;
-            font-size: 0.76rem;
+            margin-top: 6px;
+            font-size: 0.72rem;
             color: #72809a;
+        }
+        .admin-modal .form-control,
+        .admin-modal .form-select {
+            border-radius: 10px;
+            min-height: 38px;
+            padding: 6px 10px;
+            font-size: 14px;
+        }
+        .admin-modal textarea.form-control {
+            min-height: 88px;
+        }
+        .admin-modal .modal-dialog.modal-xl {
+            max-width: 1040px;
+        }
+        .carousel-item-modal .modal-dialog.modal-xl {
+            max-width: 1240px;
+        }
+        .carousel-item-modal .modal-body {
+            padding: 14px 20px;
+        }
+        .carousel-item-modal .row.g-3 {
+            --bs-gutter-x: 0.75rem;
+            --bs-gutter-y: 0.75rem;
+        }
+        .carousel-item-modal .field-card {
+            padding: 10px;
+        }
+        .carousel-item-modal .field-head {
+            margin-bottom: 6px;
+        }
+        .carousel-item-modal textarea.form-control {
+            min-height: 72px;
+        }
+        .carousel-item-modal hr.my-4 {
+            margin-top: 1rem !important;
+            margin-bottom: 1rem !important;
+        }
+        .admin-modal .modal-dialog.modal-lg {
+            max-width: 760px;
+        }
+        .admin-modal .btn {
+            min-height: 38px;
+        }
+        .admin-event-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            flex-wrap: wrap;
+            padding: 16px;
+            border: 1px solid #e4ebf5;
+            border-radius: 10px;
+            background: #fff;
+            box-shadow: 0 8px 18px rgba(18, 35, 68, 0.04);
+            margin-bottom: 18px;
+        }
+        .event-import-form {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .event-import-form .form-control {
+            max-width: 260px;
+        }
+        .event-upload-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 1090;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.42);
+            backdrop-filter: blur(3px);
+        }
+        .event-upload-overlay.is-visible {
+            display: flex;
+        }
+        .event-upload-card {
+            width: min(360px, calc(100vw - 32px));
+            border-radius: 18px;
+            background: #fff;
+            padding: 24px;
+            text-align: center;
+            box-shadow: 0 24px 54px rgba(15, 23, 42, 0.2);
+        }
+        .event-upload-card .spinner-border {
+            color: var(--adm-primary);
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+        .event-upload-card strong {
+            display: block;
+            margin-top: 14px;
+            color: #162338;
+            font-weight: 800;
+        }
+        .event-upload-card small {
+            display: block;
+            margin-top: 4px;
+            color: #72809a;
+        }
+        .event-media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+            gap: 12px;
+        }
+        .event-media-card {
+            border: 1px solid #e4ebf5;
+            border-radius: 14px;
+            overflow: hidden;
+            background: #f8fbff;
+        }
+        .event-media-thumb {
+            aspect-ratio: 16 / 10;
+            display: grid;
+            place-items: center;
+            background: #eaf1f8;
+            color: #12324a;
+            font-size: 1.6rem;
+        }
+        .event-media-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+        .event-media-body {
+            padding: 10px;
+        }
+        .event-media-body strong,
+        .event-media-body small {
+            display: block;
+        }
+        .event-media-body small {
+            color: #72809a;
+        }
+        .event-help-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #bfd2ee;
+            color: var(--adm-tertiary);
+            background: rgba(var(--adm-tertiary-rgb),.08);
+        }
+        .event-help-btn:hover {
+            color: #fff;
+            background: var(--adm-tertiary);
+            border-color: var(--adm-tertiary);
+        }
+        .event-help-offcanvas .offcanvas-header {
+            background: var(--adm-tertiary);
+            color: #fff;
+        }
+        .event-help-offcanvas .help-step {
+            border: 1px solid #e4ebf5;
+            border-radius: 12px;
+            padding: 12px;
+            background: #fff;
+            margin-bottom: 10px;
+        }
+        .event-help-offcanvas .help-step strong {
+            display: block;
+            color: #162338;
+            margin-bottom: 4px;
+        }
+        .admin-modal .row.g-3 {
+            --bs-gutter-x: 0.9rem;
+            --bs-gutter-y: 0.9rem;
+        }
+        .admin-modal .form-text {
+            font-size: 0.76rem;
+            color: #6f7e97;
+        }
+        @media (max-width: 767px) {
+            .admin-modal .modal-header,
+            .admin-modal .modal-body,
+            .admin-modal .modal-footer {
+                padding-left: 14px;
+                padding-right: 14px;
+            }
+            .field-card {
+                border-radius: 14px;
+            }
         }
     </style>
 HTML,
@@ -412,10 +1117,11 @@ HTML,
     </div>
 </div>
 
-<div class="section-card">
-    <ul class="nav nav-pills gap-2">
-        <li class="nav-item"><a class="nav-link <?= $tab === 'general' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=general">General</a></li>
-        <li class="nav-item"><a class="nav-link <?= $tab === 'items' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items">Items</a></li>
+<div class="section-card admin-tabs-card">
+    <ul class="nav admin-tabs">
+        <li class="nav-item"><a class="nav-link <?= $tab === 'general' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=general"><i class="bi bi-sliders me-1"></i>General</a></li>
+        <li class="nav-item"><a class="nav-link <?= $tab === 'items' ? 'active' : '' ?>" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items"><i class="bi bi-layers me-1"></i>Items</a></li>
+        <li class="nav-item"><a class="nav-link js-preview-btn" href="preview_contenedor.php?id=<?= (int) $idSeccion ?>" data-preview-title="<?= cms_e($section['titulo_admin'] ?? 'Contenedor') ?>" data-preview-url="preview_contenedor.php?id=<?= (int) $idSeccion ?>&embed=1"><i class="bi bi-eye me-1"></i>Vista previa</a></li>
     </ul>
 </div>
 
@@ -424,26 +1130,24 @@ HTML,
         <div class="section-head">
             <div>
                 <h3>Configuración del contenedor</h3>
-                <p>Visible, orden, observación y claves guardadas en <code>seccion_config</code>.</p>
+                <p><?= $isTopbar ? 'Datos de contacto, visibilidad y comportamiento del topbar.' : ($isCarouselAdmin ? 'Visible, observación y opciones del carrusel guardadas en <code>seccion_config</code>.' : 'Visible, orden, observación y claves guardadas en <code>seccion_config</code>.') ?></p>
             </div>
         </div>
         <?php if ($isTopbar): ?>
-            <form method="post">
+            <form method="post" class="js-confirm-submit" data-confirm-title="Guardar topbar" data-confirm-msg="Se actualizarán los datos visibles del topbar superior.">
                 <input type="hidden" name="accion" value="guardar_topbar_general">
                 <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                 <div class="row g-3 mb-4">
                     <div class="col-md-3">
-                        <label class="form-label">Visible</label>
-                        <select class="form-select" name="visible">
-                            <option value="si" <?= ($section['visible'] ?? '') === 'si' ? 'selected' : '' ?>>Si</option>
-                            <option value="no" <?= ($section['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option>
-                        </select>
+                        <label class="setting-toggle h-100">
+                            <span class="setting-toggle-copy">Visible<small>Mostrar topbar</small></span>
+                            <span class="form-check form-switch mb-0 state-switch">
+                                <input class="form-check-input" type="checkbox" name="visible" value="si" <?= ($section['visible'] ?? '') === 'si' ? 'checked' : '' ?>>
+                                <span class="state-switch-track" data-on="Si" data-off="No"></span>
+                            </span>
+                        </label>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Orden</label>
-                        <input class="form-control" type="number" name="orden" min="1" value="<?= (int) $section['orden'] ?>">
-                    </div>
-                    <div class="col-md-6">
+                    <div class="col-md-9">
                         <label class="form-label">Observación</label>
                         <input class="form-control" type="text" name="observacion" value="<?= cms_e($section['observacion'] ?? '') ?>">
                     </div>
@@ -474,40 +1178,39 @@ HTML,
                         </div>
                         <div class="form-text">Los colores vienen de <code>institucion</code> y no se editan aquí.</div>
                     </div> -->
-                    <div class="col-md-2">
-                        <label class="form-label">Mostrar dirección</label>
-                        <select class="form-select" name="mostrar_direccion">
-                            <option value="si" <?= $topbarConfigs['mostrar_direccion'] === 'si' ? 'selected' : '' ?>>Si</option>
-                            <option value="no" <?= $topbarConfigs['mostrar_direccion'] === 'no' ? 'selected' : '' ?>>No</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Mostrar teléfono</label>
-                        <select class="form-select" name="mostrar_telefono">
-                            <option value="si" <?= $topbarConfigs['mostrar_telefono'] === 'si' ? 'selected' : '' ?>>Si</option>
-                            <option value="no" <?= $topbarConfigs['mostrar_telefono'] === 'no' ? 'selected' : '' ?>>No</option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <label class="form-label">Mostrar correo</label>
-                        <select class="form-select" name="mostrar_email">
-                            <option value="si" <?= $topbarConfigs['mostrar_email'] === 'si' ? 'selected' : '' ?>>Si</option>
-                            <option value="no" <?= $topbarConfigs['mostrar_email'] === 'no' ? 'selected' : '' ?>>No</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Mostrar redes</label>
-                        <select class="form-select" name="mostrar_redes">
-                            <option value="si" <?= $topbarConfigs['mostrar_redes'] === 'si' ? 'selected' : '' ?>>Si</option>
-                            <option value="no" <?= $topbarConfigs['mostrar_redes'] === 'no' ? 'selected' : '' ?>>No</option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Mostrar botón ingresar</label>
-                        <select class="form-select" name="mostrar_boton_ingresar">
-                            <option value="si" <?= $topbarConfigs['mostrar_boton_ingresar'] === 'si' ? 'selected' : '' ?>>Si</option>
-                            <option value="no" <?= $topbarConfigs['mostrar_boton_ingresar'] === 'no' ? 'selected' : '' ?>>No</option>
-                        </select>
+                    <div class="col-12">
+                        <div class="topbar-toggle-grid">
+                            <label class="setting-toggle">
+                                <span class="setting-toggle-copy">Dirección<small>Mostrar en el topbar</small></span>
+                                <span class="form-check form-switch mb-0 state-switch">
+                                    <input class="form-check-input" type="checkbox" name="mostrar_direccion" value="si" <?= $topbarConfigs['mostrar_direccion'] === 'si' ? 'checked' : '' ?>>
+                                </span>
+                            </label>
+                            <label class="setting-toggle">
+                                <span class="setting-toggle-copy">Teléfono<small>Mostrar en el topbar</small></span>
+                                <span class="form-check form-switch mb-0 state-switch">
+                                    <input class="form-check-input" type="checkbox" name="mostrar_telefono" value="si" <?= $topbarConfigs['mostrar_telefono'] === 'si' ? 'checked' : '' ?>>
+                                </span>
+                            </label>
+                            <label class="setting-toggle">
+                                <span class="setting-toggle-copy">Correo<small>Mostrar en el topbar</small></span>
+                                <span class="form-check form-switch mb-0 state-switch">
+                                    <input class="form-check-input" type="checkbox" name="mostrar_email" value="si" <?= $topbarConfigs['mostrar_email'] === 'si' ? 'checked' : '' ?>>
+                                </span>
+                            </label>
+                            <label class="setting-toggle">
+                                <span class="setting-toggle-copy">Redes<small>Mostrar redes sociales</small></span>
+                                <span class="form-check form-switch mb-0 state-switch">
+                                    <input class="form-check-input" type="checkbox" name="mostrar_redes" value="si" <?= $topbarConfigs['mostrar_redes'] === 'si' ? 'checked' : '' ?>>
+                                </span>
+                            </label>
+                            <label class="setting-toggle">
+                                <span class="setting-toggle-copy">Botón ingresar<small>Mostrar acceso al sistema</small></span>
+                                <span class="form-check form-switch mb-0 state-switch">
+                                    <input class="form-check-input" type="checkbox" name="mostrar_boton_ingresar" value="si" <?= $topbarConfigs['mostrar_boton_ingresar'] === 'si' ? 'checked' : '' ?>>
+                                </span>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 <div class="d-flex gap-2 mt-3">
@@ -518,19 +1221,25 @@ HTML,
             <form method="post">
                 <input type="hidden" name="accion" value="guardar_seccion">
                 <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                <?php if ($isCarouselAdmin || $isVideoFeatured): ?>
+                    <input type="hidden" name="orden" value="<?= (int) $section['orden'] ?>">
+                <?php endif; ?>
                 <div class="row g-3 mb-4">
                     <div class="col-md-3">
-                        <label class="form-label">Visible</label>
-                        <select class="form-select" name="visible">
-                            <option value="si" <?= ($section['visible'] ?? '') === 'si' ? 'selected' : '' ?>>Si</option>
-                            <option value="no" <?= ($section['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option>
-                        </select>
+                        <label class="setting-toggle h-100">
+                            <span class="setting-toggle-copy">Visible<small>Mostrar contenedor</small></span>
+                            <span class="form-check form-switch mb-0 state-switch">
+                                <input class="form-check-input" type="checkbox" name="visible" value="si" <?= ($section['visible'] ?? '') === 'si' ? 'checked' : '' ?>>
+                            </span>
+                        </label>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label">Orden</label>
-                        <input class="form-control" type="number" name="orden" min="1" value="<?= (int) $section['orden'] ?>">
-                    </div>
-                    <div class="col-md-6">
+                    <?php if (!$isCarouselAdmin && !$isVideoFeatured): ?>
+                        <div class="col-md-3">
+                            <label class="form-label">Orden</label>
+                            <input class="form-control" type="number" name="orden" min="1" value="<?= (int) $section['orden'] ?>">
+                        </div>
+                    <?php endif; ?>
+                    <div class="<?= ($isCarouselAdmin || $isVideoFeatured) ? 'col-md-9' : 'col-md-6' ?>">
                         <label class="form-label">Observación</label>
                         <input class="form-control" type="text" name="observacion" value="<?= cms_e($section['observacion'] ?? '') ?>">
                     </div>
@@ -544,10 +1253,21 @@ HTML,
                             </div>
                             <div class="col-md-7">
                                 <label class="form-label">Valor</label>
-                                <input class="form-control" name="config_value[]" value="<?= cms_e($config['valor']) ?>">
+                                <?php $configValue = strtolower(trim((string) ($config['valor'] ?? ''))); ?>
+                                <?php if (in_array($configValue, ['si', 'no'], true)): ?>
+                                    <label class="setting-toggle mb-0">
+                                        <span class="setting-toggle-copy">Valor<small><?= $configValue === 'si' ? 'Activo' : 'Inactivo' ?></small></span>
+                                        <span class="form-check form-switch mb-0 state-switch">
+                                            <input type="hidden" name="config_value[]" value="<?= $configValue === 'si' ? 'si' : 'no' ?>">
+                                            <input class="form-check-input js-config-boolean-toggle" type="checkbox" <?= $configValue === 'si' ? 'checked' : '' ?>>
+                                                </span>
+                                    </label>
+                                <?php else: ?>
+                                    <input class="form-control" name="config_value[]" value="<?= cms_e($config['valor']) ?>">
+                                <?php endif; ?>
                             </div>
-                            <div class="col-md-1">
-                                <button type="button" class="btn btn-outline-danger w-100 remove-config-row"><i class="bi bi-trash"></i></button>
+                            <div class="col-auto d-flex align-items-end pb-1">
+                                <button type="button" class="btn-icon delete remove-config-row" title="Eliminar"><i class="bi bi-trash"></i></button>
                             </div>
                         </div>
                     <?php endforeach; ?>
@@ -555,7 +1275,7 @@ HTML,
                         <div class="row g-3 align-items-end mb-3 config-row">
                             <div class="col-md-4"><label class="form-label">Clave</label><input class="form-control" name="config_key[]" placeholder="titulo_bloque"></div>
                             <div class="col-md-7"><label class="form-label">Valor</label><input class="form-control" name="config_value[]" placeholder="Últimas Noticias"></div>
-                            <div class="col-md-1"><button type="button" class="btn btn-outline-danger w-100 remove-config-row"><i class="bi bi-trash"></i></button></div>
+                            <div class="col-auto d-flex align-items-end pb-1"><button type="button" class="btn-icon delete remove-config-row" title="Eliminar"><i class="bi bi-trash"></i></button></div>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -570,44 +1290,181 @@ HTML,
     <div class="section-card">
         <div class="section-head">
             <div>
-                <h3>Items del contenedor</h3>
-                <p>Administración específica del bloque.</p>
+                <h3><?= $isEventsCalendar ? 'Eventos del calendario' : 'Items del contenedor' ?></h3>
+                <p><?= $isEventsCalendar ? 'Carga individual y masiva de eventos reales desde la tabla eventos.' : 'Administración específica del bloque.' ?></p>
             </div>
-            <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar item</a>
+            <?php if (!$isEventsCalendar && !$isVideoFeatured): ?>
+                <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar item</a>
+            <?php endif; ?>
         </div>
 
-        <?php if ($isTopbar): ?>
-            <div class="alert alert-info border-0" style="background:#eef8ff; color:#234;">
-                Las redes sociales del topbar se guardan en <code>seccion_item</code> con <code>etiqueta = 'red_social'</code>. En el sitio solo se muestran las primeras 4 visibles según <code>orden</code>.
+        <?php if ($isEventsCalendar): ?>
+            <div class="admin-event-toolbar">
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento" class="btn btn-premium"><i class="bi bi-plus-circle me-1"></i>Agregar evento</a>
+                    <a href="eventos_descargar_plantilla.php?id=<?= (int) $idSeccion ?>" class="btn btn-outline-success"><i class="bi bi-file-earmark-spreadsheet me-1"></i>Descargar plantilla Excel</a>
+                    <button type="button" class="event-help-btn" data-eventos-help title="Ayuda de carga masiva"><i class="bi bi-question-circle-fill"></i></button>
+                    <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item" class="btn btn-outline-secondary"><i class="bi bi-layers me-1"></i>Agregar item legacy</a>
+                </div>
+                <form class="event-import-form" id="eventExcelUploadForm" method="post" action="eventos_preview_importacion.php" enctype="multipart/form-data">
+                    <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                    <input class="form-control" type="file" name="archivo_excel" accept=".xlsx,.xls,.csv" required>
+                    <button type="submit" class="btn btn-success"><i class="bi bi-upload me-1"></i>Subir eventos desde Excel</button>
+                </form>
             </div>
+            <div class="event-upload-overlay" id="eventExcelUploadOverlay" aria-hidden="true">
+                <div class="event-upload-card">
+                    <div class="spinner-border" role="status" aria-label="Validando archivo"></div>
+                    <strong>Validando archivo Excel</strong>
+                    <small>Preparando preview de eventos...</small>
+                </div>
+            </div>
+
+            <div class="offcanvas offcanvas-end event-help-offcanvas" tabindex="-1" id="eventosExcelHelp" aria-labelledby="eventosExcelHelpLabel">
+                <div class="offcanvas-header">
+                    <div>
+                        <h5 class="offcanvas-title" id="eventosExcelHelpLabel">Carga masiva de eventos</h5>
+                        <small>Flujo institucional con validación previa</small>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas"></button>
+                </div>
+                <div class="offcanvas-body bg-light">
+                    <div class="help-step"><strong>1. Descargar plantilla</strong>Usa la plantilla Excel oficial. La hoja EVENTOS contiene solo los campos cargables y la hoja AYUDA documenta formatos y ejemplos.</div>
+                    <div class="help-step"><strong>2. Completar columnas</strong>El titulo y fecha_inicio son obligatorios. Las fechas usan yyyy-mm-dd y las horas HH:mm.</div>
+                    <div class="help-step"><strong>3. Subir archivo</strong>La subida no publica nada. El sistema solo interpreta el Excel y muestra una tabla de preview.</div>
+                    <div class="help-step"><strong>4. Validar filas</strong>Cada fila muestra su estado: valido, fecha invalida, falta titulo, categoria vacia o duplicado.</div>
+                    <div class="help-step"><strong>5. Seleccionar y confirmar</strong>Marca los eventos que deseas importar o usa Seleccionar todos. La inserción real ocurre con Cargar eventos seleccionados.</div>
+                    <div class="help-step"><strong>Regla calendario/eventos</strong>Este flujo trabaja solo con la tabla eventos. No crea ni modifica registros de calendario, feriados ni días institucionales.</div>
+                </div>
+            </div>
+
             <div class="table-responsive">
                 <table class="table table-modern align-middle" id="itemsTable">
                     <thead>
                         <tr>
-                            <th>Orden</th>
-                            <th>Red</th>
-                            <th>URL</th>
-                            <th>Ícono</th>
+                            <th>Fecha</th>
+                            <th>Hora</th>
+                            <th>Título</th>
+                            <th>Categoría</th>
+                            <th>Ubicación</th>
+                            <th>Estado</th>
                             <th>Visible</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($topbarItems as $item): ?>
+                        <?php foreach ($eventosCalendario as $evento): ?>
+                            <?php
+                            $eventId = (int) ($evento['id_evento'] ?? ($evento['id'] ?? 0));
+                            $eventTitle = $evento['titulo'] ?? '';
+                            ?>
                             <tr>
-                                <td><?= (int) $item['orden'] ?></td>
+                                <td><?= cms_e($evento['fecha_inicio'] ?? '') ?></td>
+                                <td><?= cms_e($evento['hora_inicio'] ?? '') ?></td>
+                                <td><?= cms_e($eventTitle) ?></td>
+                                <td><?= cms_e($evento['categoria'] ?? '') ?></td>
+                                <td><?= cms_e($evento['ubicacion'] ?? '') ?></td>
+                                <td><span class="badge-soft <?= ($evento['estado'] ?? '') === 'publicado' ? 'success' : 'warning' ?>"><?= cms_e($evento['estado'] ?? '') ?></span></td>
+                                <td>
+                                    <form method="post" class="m-0 js-visible-toggle-form">
+                                        <input type="hidden" name="accion" value="toggle_evento">
+                                        <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                        <input type="hidden" name="id_evento" value="<?= $eventId ?>">
+                                        <span class="form-check form-switch mb-0 state-switch" style="padding-left:0;">
+                                            <input class="form-check-input js-evento-visible-toggle" type="checkbox" role="switch" style="margin-left:0;cursor:pointer;" <?= (int) ($evento['visible'] ?? 1) === 1 ? 'checked' : '' ?>>
+                                        </span>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=evento&evento=<?= $eventId ?>" class="btn-icon edit" title="Editar" aria-label="Editar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                        <form method="post" class="m-0" onsubmit="return confirm('¿Cancelar este evento?');">
+                                            <input type="hidden" name="accion" value="cancelar_evento">
+                                            <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                            <input type="hidden" name="id_evento" value="<?= $eventId ?>">
+                                            <button type="submit" class="btn-icon" title="Cancelar" aria-label="Cancelar" style="color:var(--adm-danger-brand);border-color:var(--adm-danger-brand);">
+                                                <i class="bi bi-x-circle"></i>
+                                            </button>
+                                        </form>
+                                        <a href="evento_detalle.php?id_evento=<?= $eventId ?>" target="_blank" class="btn-icon preview" title="Ver detalle" aria-label="Ver">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php elseif ($isTopbar): ?>
+            <div class="alert alert-info border-0" style="background:#eef8ff; color:#234;">
+                Las redes sociales del topbar se guardan en <code>seccion_item</code> con <code>etiqueta = 'red_social'</code>. Arrastra las filas para cambiar el orden. En el sitio solo se muestran las primeras 4 visibles.
+            </div>
+            <div class="table-responsive">
+                <table class="table table-modern topbar-items-table align-middle" id="itemsTable">
+                    <colgroup>
+                        <col style="width:44px;">
+                        <col style="width:22%;">
+                        <col>
+                        <col style="width:110px;">
+                        <col style="width:110px;">
+                        <col style="width:132px;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th></th>
+                            <th>Red</th>
+                            <th>URL</th>
+                            <th>Icono</th>
+                            <th>Visible</th>
+                            <th class="topbar-actions-cell">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topbarItemsTbody" data-section-id="<?= (int) $idSeccion ?>">
+                        <?php foreach ($topbarItems as $item): ?>
+                            <tr data-id="<?= (int) $item['id_item'] ?>">
+                                <td class="topbar-drag-cell">
+                                    <span class="topbar-drag-handle" title="Arrastrar para ordenar" aria-label="Arrastrar para ordenar">
+                                        <i class="bi bi-grip-vertical"></i>
+                                    </span>
+                                </td>
                                 <td><?= cms_e($item['titulo'] ?? '') ?></td>
                                 <td><a href="<?= cms_e($item['descripcion'] ?? '#') ?>" target="_blank" rel="noopener"><?= cms_e($item['descripcion'] ?? '') ?></a></td>
-                                <td><code><?= cms_e($item['icono'] ?? '') ?></code></td>
-                                <td><span class="badge-soft <?= ($item['visible'] ?? '') === 'si' ? 'success' : 'warning' ?>"><?= ($item['visible'] ?? '') === 'si' ? 'Si' : 'No' ?></span></td>
                                 <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
-                                        <form method="post" onsubmit="return confirm('¿Eliminar esta red social?');">
+                                    <span class="social-icon-display <?= trim((string) ($item['icono'] ?? '')) === '' ? 'empty' : '' ?>" title="<?= cms_e($item['titulo'] ?? 'Red social') ?>">
+                                        <?= topbar_render_social_icon((string) ($item['icono'] ?? ''), (string) ($item['titulo'] ?? 'Red social')) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <form method="post" class="m-0 js-visible-toggle-form">
+                                        <input type="hidden" name="accion" value="toggle_topbar_item_visible">
+                                        <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                        <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
+                                        <input type="hidden" name="visible" value="<?= ($item['visible'] ?? '') === 'si' ? 'no' : 'si' ?>">
+                                        <label class="table-check mb-0" title="<?= ($item['visible'] ?? '') === 'si' ? 'Dejar oculta' : 'Dejar visible' ?>">
+                                            <span class="form-check form-switch mb-0 state-switch">
+                                                <input class="form-check-input js-visible-toggle" type="checkbox" <?= ($item['visible'] ?? '') === 'si' ? 'checked' : '' ?>>
+                                                    </span>
+                                        </label>
+                                    </form>
+                                </td>
+                                <td class="topbar-actions-cell">
+                                    <div class="table-actions">
+                                        <a href="<?= cms_e($item['descripcion'] ?? '#') ?>" target="_blank" rel="noopener" class="btn-icon preview" title="Ver red social" aria-label="Ver red social">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>" class="btn-icon edit" title="Editar" aria-label="Editar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                        <form method="post" class="m-0" onsubmit="return confirm('¿Eliminar esta red social?');">
                                             <input type="hidden" name="accion" value="eliminar_item">
                                             <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                                             <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                            <button type="submit" class="btn-icon delete" title="Eliminar" aria-label="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </form>
                                     </div>
                                 </td>
@@ -616,20 +1473,103 @@ HTML,
                     </tbody>
                 </table>
             </div>
-        <?php elseif (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
+        <?php elseif ($isCarouselAdmin): ?>
+            <div class="carousel-drag-hint">
+                <i class="bi bi-grip-vertical"></i> Arrastra las cards para cambiar el orden. El cambio se guarda automáticamente.
+            </div>
+            <div class="carousel-card-grid mb-4" id="carouselSortable">
+                <?php foreach ($items as $item): ?>
+                    <?php
+                    $slideTitle = trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? ''));
+                    $slideYoutubeId = admin_youtube_video_id((string) ($item['url'] ?? ''));
+                    $slideHasYoutube = $slideYoutubeId !== '';
+                    ?>
+                    <article class="carousel-admin-card" data-id="<?= (int) $item['id_item'] ?>">
+                        <div class="carousel-admin-media">
+                            <?php if ($slideHasYoutube): ?>
+                                <img
+                                    class="carousel-admin-youtube-thumb"
+                                    src="https://img.youtube.com/vi/<?= cms_e($slideYoutubeId) ?>/maxresdefault.jpg"
+                                    alt="<?= cms_e($slideTitle ?: 'Video YouTube del carrusel') ?>"
+                                    onerror="this.onerror=null;this.src='https://img.youtube.com/vi/<?= cms_e($slideYoutubeId) ?>/hqdefault.jpg';"
+                                >
+                                <div class="carousel-admin-video-badge" aria-hidden="true">
+                                    <i class="bi bi-play-fill"></i>
+                                </div>
+                            <?php elseif (!empty($item['imagen'])): ?>
+                                <img src="<?= cms_e($item['imagen']) ?>" alt="<?= cms_e($slideTitle ?: 'Slide del carrusel') ?>">
+                            <?php else: ?>
+                                <div class="carousel-admin-placeholder"><i class="bi bi-image"></i></div>
+                            <?php endif; ?>
+                            <div class="dropdown carousel-card-menu">
+                                <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <button type="button" class="dropdown-item js-carousel-edit"
+                                            data-item="<?= htmlspecialchars(json_encode([
+                                                'id_item'        => (int) $item['id_item'],
+                                                'etiqueta'       => $item['etiqueta'] ?? '',
+                                                'titulo_linea_1' => $item['titulo_linea_1'] ?? '',
+                                                'titulo_linea_2' => $item['titulo_linea_2'] ?? '',
+                                                'titulo_linea_3' => $item['titulo_linea_3'] ?? '',
+                                                'descripcion'    => $item['descripcion'] ?? '',
+                                                'boton_1_texto'  => $item['boton_1_texto'] ?? '',
+                                                'boton_1_url'    => $item['boton_1_url'] ?? '',
+                                                'boton_2_texto'  => $item['boton_2_texto'] ?? '',
+                                                'boton_2_url'    => $item['boton_2_url'] ?? '',
+                                                'url'            => $item['url'] ?? '',
+                                                'visible'        => $item['visible'] ?? 'si',
+                                                'orden'          => (int) ($item['orden'] ?? 1),
+                                            ], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8') ?>">
+                                        <i class="bi bi-pencil-square me-2"></i>Editar
+                                    </button>
+                                    <form method="post" onsubmit="return confirm('¿Eliminar este item?');">
+                                        <input type="hidden" name="accion" value="eliminar_item">
+                                        <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                        <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-trash me-2"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="carousel-admin-body">
+                                <button type="button"
+                                        class="badge-soft <?= ($item['visible'] ?? '') === 'si' ? 'success' : 'warning' ?> js-toggle-badge"
+                                        style="border:none;cursor:pointer;"
+                                        data-item-id="<?= (int) $item['id_item'] ?>"
+                                        data-item-visible="<?= cms_e($item['visible'] ?? 'no') ?>"
+                                        data-id-seccion="<?= (int) $idSeccion ?>"
+                                        title="Cambiar visibilidad">
+                                    <?= ($item['visible'] ?? '') === 'si' ? 'Activo' : 'Oculto' ?>
+                                </button>
+                            <h4 class="carousel-admin-title"><?= cms_e($slideTitle ?: 'Slide sin título') ?></h4>
+                            <?php if (!empty($item['etiqueta'])): ?>
+                                <div class="carousel-admin-meta"><?= cms_e($item['etiqueta']) ?></div>
+                            <?php endif; ?>
+                            <?php if (!empty($item['descripcion'])): ?>
+                                <p class="carousel-admin-desc"><?= cms_e($item['descripcion']) ?></p>
+                            <?php endif; ?>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+        <?php elseif ($section['tipo_seccion'] === 'events'): ?>
             <div class="row g-4 mb-4">
                 <?php foreach ($items as $item): ?>
                     <div class="col-md-6 col-xl-4">
                         <div class="hero-card">
-                            <div class="hero-thumb" style="background-image:url('<?= cms_e($item['imagen'] ?: 'assets/images/portada_1.jpg') ?>')"></div>
+                            <div class="hero-thumb" style="background-image:url('<?= cms_e($item['imagen'] ?: 'assets/images/frontis_01.jpg') ?>')"></div>
                             <div class="p-3">
                                 <span class="badge-soft <?= ($item['visible'] ?? '') === 'si' ? 'success' : 'warning' ?>"><?= ($item['visible'] ?? '') === 'si' ? 'Activo' : 'Oculto' ?></span>
-                                <h5 class="mt-3 mb-1"><?= cms_e(trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? ''))) ?></h5>
-                                <small class="text-muted">Orden <?= (int) $item['orden'] ?></small>
+                                <h5 class="mt-3 mb-1"><?= cms_e($item['titulo'] ?? '') ?></h5>
+                                <small class="text-muted"><?= cms_e($item['fecha_publicacion'] ?? '') ?> · <?= cms_e($item['subtitulo'] ?? '') ?></small>
                                 <p class="text-muted mt-2 mb-3"><?= cms_e($item['etiqueta'] ?? '') ?></p>
                                 <div class="d-flex gap-2">
                                     <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
-                                    <form method="post" onsubmit="return confirm('¿Eliminar este item?');">
+                                    <form method="post" onsubmit="return confirm('¿Eliminar este evento?');">
                                         <input type="hidden" name="accion" value="eliminar_item">
                                         <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                                         <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
@@ -641,36 +1581,124 @@ HTML,
                     </div>
                 <?php endforeach; ?>
             </div>
+        <?php elseif ($isGalleryAdmin): ?>
+            <div class="carousel-drag-hint">
+                <i class="bi bi-grip-vertical"></i> Arrastra las cards para cambiar el orden. El cambio se guarda automáticamente.
+            </div>
+            <div class="carousel-card-grid mb-4" id="gallerySortable">
+                <?php foreach ($items as $item): ?>
+                    <article class="carousel-admin-card" data-id="<?= (int) $item['id_item'] ?>">
+                        <div class="carousel-admin-media">
+                            <?php if (!empty($item['imagen'])): ?>
+                                <img src="<?= cms_e($item['imagen']) ?>" alt="<?= cms_e($item['titulo'] ?: 'Imagen de galería') ?>">
+                            <?php else: ?>
+                                <div class="carousel-admin-placeholder"><i class="bi bi-image"></i></div>
+                            <?php endif; ?>
+                            <div class="dropdown carousel-card-menu">
+                                <button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones">
+                                    <i class="bi bi-three-dots-vertical"></i>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end shadow-sm">
+                                    <a class="dropdown-item" href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>">
+                                        <i class="bi bi-pencil-square me-2"></i>Editar
+                                    </a>
+                                    <form method="post" onsubmit="return confirm('¿Eliminar esta imagen?');">
+                                        <input type="hidden" name="accion" value="eliminar_item">
+                                        <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                        <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
+                                        <button type="submit" class="dropdown-item text-danger">
+                                            <i class="bi bi-trash me-2"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="carousel-admin-body">
+                            <button type="button"
+                                    class="badge-soft <?= ($item['visible'] ?? '') === 'si' ? 'success' : 'warning' ?> js-toggle-badge"
+                                    style="border:none;cursor:pointer;"
+                                    data-item-id="<?= (int) $item['id_item'] ?>"
+                                    data-item-visible="<?= cms_e($item['visible'] ?? 'no') ?>"
+                                    data-id-seccion="<?= (int) $idSeccion ?>"
+                                    title="Cambiar visibilidad">
+                                <?= ($item['visible'] ?? '') === 'si' ? 'Activo' : 'Oculto' ?>
+                            </button>
+                            <h4 class="carousel-admin-title"><?= cms_e($item['titulo'] ?: 'Sin título') ?></h4>
+                            <?php if (!empty($item['descripcion'])): ?>
+                                <p class="carousel-admin-desc"><?= cms_e($item['descripcion']) ?></p>
+                            <?php endif; ?>
+                            <?php if (!empty($item['url'])): ?>
+                                <div class="carousel-admin-meta"><i class="bi bi-link-45deg me-1"></i><?= cms_e($item['url']) ?></div>
+                            <?php endif; ?>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+                <?php if (empty($items)): ?>
+                    <div class="col-12 text-center text-muted py-5" style="grid-column:1/-1;">
+                        <i class="bi bi-images" style="font-size:2.5rem;display:block;margin-bottom:10px;"></i>
+                        No hay imágenes en la galería. Usa "Agregar item" para subir la primera.
+                    </div>
+                <?php endif; ?>
+            </div>
         <?php endif; ?>
 
-        <?php if (!$isTopbar): ?>
+        <?php if (!$isTopbar && !$isEventsCalendar && !$isCarouselAdmin && !$isGalleryAdmin): ?>
+            <div class="carousel-drag-hint">
+                <i class="bi bi-grip-vertical"></i> Arrastra las filas para cambiar el orden. El cambio se guarda automáticamente.
+            </div>
             <div class="table-responsive">
-                <table class="table table-modern align-middle" id="itemsTable">
+                <table class="table table-modern align-middle" id="generalItemsTable">
                     <thead>
                         <tr>
-                            <th>Orden</th>
-                            <th>Título</th>
-                            <th>Visible</th>
-                            <th>Acciones</th>
+                            <th style="width:36px;"></th>
+                            <th style="width:52px;">Orden</th>
+                            <th><?= $isVideoFeatured ? 'Video' : 'Título' ?></th>
+                            <th style="width:90px;">Visible</th>
+                            <th style="width:110px;">Acciones</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="generalItemsTbody">
                         <?php foreach ($items as $item): ?>
-                            <tr>
-                                <td><?= (int) $item['orden'] ?></td>
+                            <tr data-id="<?= (int) $item['id_item'] ?>">
+                                <td style="text-align:center;vertical-align:middle;">
+                                    <i class="bi bi-grip-vertical drag-handle" style="color:var(--adm-muted);font-size:1.1rem;cursor:grab;"></i>
+                                </td>
+                                <td class="item-orden-cell"><?= (int) $item['orden'] ?></td>
                                 <td>
                                     <?php $displayTitle = $item['titulo'] ?: trim(($item['titulo_linea_1'] ?? '') . ' ' . ($item['titulo_linea_2'] ?? '') . ' ' . ($item['titulo_linea_3'] ?? '')); ?>
-                                    <?= cms_e($displayTitle) ?>
+                                    <?php if ($isVideoFeatured): ?>
+                                        <div class="fw-semibold"><?= cms_e($displayTitle ?: 'Video destacado') ?></div>
+                                        <small class="text-muted"><?= cms_e($item['url'] ?? '') ?></small>
+                                    <?php else: ?>
+                                        <?= cms_e($displayTitle) ?>
+                                    <?php endif; ?>
                                 </td>
-                                <td><span class="badge-soft <?= ($item['visible'] ?? '') === 'si' ? 'success' : 'warning' ?>"><?= ($item['visible'] ?? '') === 'si' ? 'Si' : 'No' ?></span></td>
                                 <td>
-                                    <div class="d-flex gap-2">
-                                        <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>" class="btn btn-sm btn-outline-secondary">Editar</a>
-                                        <form method="post" onsubmit="return confirm('¿Eliminar este item?');">
+                                    <form class="m-0 js-visible-toggle-form">
+                                        <input type="hidden" name="accion" value="toggle_item_visible">
+                                        <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                                        <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
+                                        <input type="hidden" name="visible" value="<?= ($item['visible'] ?? '') === 'si' ? 'no' : 'si' ?>">
+                                        <span class="form-check form-switch mb-0 state-switch" style="padding-left:0;">
+                                            <input class="form-check-input js-visible-toggle" type="checkbox" role="switch" style="margin-left:0;cursor:pointer;" <?= ($item['visible'] ?? '') === 'si' ? 'checked' : '' ?>>
+                                        </span>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="table-actions">
+                                        <a href="<?= cms_e(!empty($item['boton_1_url']) ? $item['boton_1_url'] : (!empty($item['url']) ? $item['url'] : '#')) ?>" target="_blank" class="btn-icon preview" title="Ver" aria-label="Ver">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
+                                        <a href="editar_contenedor.php?id=<?= (int) $idSeccion ?>&tab=items&modal=item&item=<?= (int) $item['id_item'] ?>" class="btn-icon edit" title="Editar" aria-label="Editar">
+                                            <i class="bi bi-pencil-square"></i>
+                                        </a>
+                                        <form method="post" class="m-0" onsubmit="return confirm('¿Eliminar este item?');">
                                             <input type="hidden" name="accion" value="eliminar_item">
                                             <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                                             <input type="hidden" name="id_item" value="<?= (int) $item['id_item'] ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
+                                            <button type="submit" class="btn-icon delete" title="Eliminar" aria-label="Eliminar">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
                                         </form>
                                     </div>
                                 </td>
@@ -683,6 +1711,189 @@ HTML,
     </div>
 <?php endif; ?>
 
+<?php if ($isEventsCalendar): ?>
+    <?php
+    $eventForm = $editingEvent ?: [];
+    $eventIdValue = (int) ($eventForm['id_evento'] ?? ($eventForm['id'] ?? 0));
+    ?>
+    <div class="modal fade admin-modal" id="eventModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content">
+                <form method="post" enctype="multipart/form-data">
+                    <input type="hidden" name="accion" value="guardar_evento">
+                    <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
+                    <input type="hidden" name="id_evento" value="<?= $eventIdValue ?>">
+                    <div class="modal-header">
+                        <h5 class="modal-title"><?= $eventIdValue > 0 ? 'Editar evento' : 'Agregar evento' ?></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-8">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Título del evento', 'evento_titulo', 'calendario_eventos_home', 'titulo'); ?>
+                                    <input class="form-control" id="evento_titulo" name="titulo" value="<?= cms_e($eventForm['titulo'] ?? '') ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Categoría', 'evento_categoria', 'calendario_eventos_home', 'categoria'); ?>
+                                    <select class="form-select" id="evento_categoria" name="categoria">
+                                        <?php foreach (['Pastoral', 'Académico', 'Deportivo', 'Institucional'] as $categoryOption): ?>
+                                            <option value="<?= cms_e($categoryOption) ?>" <?= (($eventForm['categoria'] ?? '') === $categoryOption) ? 'selected' : '' ?>><?= cms_e($categoryOption) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Descripción corta', 'evento_descripcion_corta', 'calendario_eventos_home', 'descripcion-corta'); ?>
+                                    <textarea class="form-control" id="evento_descripcion_corta" name="descripcion_corta"><?= cms_e($eventForm['descripcion_corta'] ?? '') ?></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Descripción completa', 'evento_descripcion', 'calendario_eventos_home', 'descripcion'); ?>
+                                    <textarea class="form-control" id="evento_descripcion" name="descripcion"><?= cms_e($eventForm['descripcion'] ?? '') ?></textarea>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Fecha inicio', 'evento_fecha_inicio', 'calendario_eventos_home', 'fecha-inicio'); ?>
+                                    <input class="form-control" id="evento_fecha_inicio" type="date" name="fecha_inicio" value="<?= cms_e($eventForm['fecha_inicio'] ?? '') ?>" required>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Fecha término', 'evento_fecha_termino', 'calendario_eventos_home', 'fecha-termino'); ?>
+                                    <input class="form-control" id="evento_fecha_termino" type="date" name="fecha_termino" value="<?= cms_e($eventForm['fecha_termino'] ?? '') ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Hora inicio', 'evento_hora_inicio', 'calendario_eventos_home', 'hora-inicio'); ?>
+                                    <input class="form-control" id="evento_hora_inicio" type="time" name="hora_inicio" value="<?= cms_e(substr((string) ($eventForm['hora_inicio'] ?? ''), 0, 5)) ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Hora término', 'evento_hora_termino', 'calendario_eventos_home', 'hora-termino'); ?>
+                                    <input class="form-control" id="evento_hora_termino" type="time" name="hora_termino" value="<?= cms_e(substr((string) ($eventForm['hora_termino'] ?? ''), 0, 5)) ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Ubicación', 'evento_ubicacion', 'calendario_eventos_home', 'ubicacion'); ?>
+                                    <input class="form-control" id="evento_ubicacion" name="ubicacion" value="<?= cms_e($eventForm['ubicacion'] ?? '') ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Color', 'evento_color', 'calendario_eventos_home', 'color'); ?>
+                                    <input class="form-control" id="evento_color" type="color" name="color" value="<?= cms_e($eventForm['color'] ?? '#fd7e14') ?>">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="field-card">
+                                    <?php admin_modal_field_head('Estado', 'evento_estado', 'calendario_eventos_home', 'estado', false); ?>
+                                    <select class="form-select" id="evento_estado" name="estado">
+                                        <?php foreach (['borrador', 'publicado', 'oculto', 'cancelado'] as $stateOption): ?>
+                                            <option value="<?= cms_e($stateOption) ?>" <?= (($eventForm['estado'] ?? 'publicado') === $stateOption) ? 'selected' : '' ?>><?= cms_e($stateOption) ?></option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="field-card" data-field-shell>
+                                    <?php admin_modal_field_head('Imagen principal', 'evento_imagen', 'calendario_eventos_home', 'imagen'); ?>
+                                    <input class="form-control" id="evento_imagen" type="file" name="imagen" accept="image/*">
+                                    <div class="field-note">Esta imagen se usa como portada/hero del detalle del evento.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="field-card">
+                                    <label class="form-label d-block">Visible</label>
+                                    <select class="form-select" name="visible">
+                                        <option value="1" <?= (int) ($eventForm['visible'] ?? 1) === 1 ? 'selected' : '' ?>>Si</option>
+                                        <option value="0" <?= (int) ($eventForm['visible'] ?? 1) === 0 ? 'selected' : '' ?>>No</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="field-card">
+                                    <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-3">
+                                        <div>
+                                            <label class="form-label d-block mb-1">Multimedia del evento</label>
+                                            <div class="field-note">Galería y videos del detalle del evento. Estos archivos se guardan en <code>evento_media</code>.</div>
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Imágenes para galería</label>
+                                            <input class="form-control" type="file" name="event_media_images[]" accept="image/*" multiple>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Videos locales</label>
+                                            <input class="form-control" type="file" name="event_media_videos[]" accept="video/*" multiple>
+                                        </div>
+                                        <div class="col-12">
+                                            <div class="event-media-grid d-none" id="eventMediaUploadPreview"></div>
+                                        </div>
+                                        <div class="col-md-7">
+                                            <label class="form-label">URL YouTube</label>
+                                            <input class="form-control" name="event_media_youtube_url[]" placeholder="https://www.youtube.com/watch?v=...">
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label">Título del video</label>
+                                            <input class="form-control" name="event_media_youtube_title[]" placeholder="Resumen del evento">
+                                        </div>
+                                    </div>
+
+                                    <?php if ($editingEventMedia): ?>
+                                        <div class="event-media-grid mt-3">
+                                            <?php foreach ($editingEventMedia as $media): ?>
+                                                <div class="event-media-card">
+                                                    <div class="event-media-thumb">
+                                                        <?php if (($media['tipo'] ?? '') === 'imagen' && !empty($media['archivo'])): ?>
+                                                            <img src="<?= cms_e($media['archivo']) ?>" alt="<?= cms_e($media['titulo'] ?? '') ?>">
+                                                        <?php elseif (($media['tipo'] ?? '') === 'video'): ?>
+                                                            <i class="bi bi-play-btn"></i>
+                                                        <?php else: ?>
+                                                            <i class="bi bi-youtube"></i>
+                                                        <?php endif; ?>
+                                                    </div>
+                                                    <div class="event-media-body">
+                                                        <strong><?= cms_e($media['titulo'] ?? ucfirst((string) ($media['tipo'] ?? 'media'))) ?></strong>
+                                                        <small><?= cms_e($media['tipo'] ?? '') ?> · <?= (int) ($media['visible'] ?? 1) === 1 ? 'Visible' : 'Oculto' ?></small>
+                                                        <div class="d-flex gap-2 mt-2">
+                                                            <button type="submit" name="accion" value="toggle_evento_media:<?= (int) $media['id_media'] ?>" class="btn btn-sm btn-outline-warning" formnovalidate>
+                                                                <?= (int) ($media['visible'] ?? 1) === 1 ? 'Ocultar' : 'Mostrar' ?>
+                                                            </button>
+                                                            <button type="submit" name="accion" value="eliminar_evento_media:<?= (int) $media['id_media'] ?>" class="btn btn-sm btn-outline-danger" formnovalidate onclick="return confirm('¿Eliminar este archivo multimedia?');">Eliminar</button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php elseif ($eventIdValue > 0): ?>
+                                        <div class="field-note mt-3">Este evento todavía no tiene multimedia asociado.</div>
+                                    <?php else: ?>
+                                        <div class="field-note mt-3">Guarda el evento para asociar y administrar multimedia.</div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>
+                        <button type="submit" class="btn btn-admin-action">Guardar evento</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<?php endif; ?>
+
 <?php if ($isTopbar): ?>
     <div class="modal fade admin-modal" id="itemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg modal-dialog-scrollable">
@@ -691,6 +1902,7 @@ HTML,
                     <input type="hidden" name="accion" value="guardar_topbar_item">
                     <input type="hidden" name="id_seccion" value="<?= (int) $idSeccion ?>">
                     <input type="hidden" name="id_item" value="<?= (int) ($editingItem['id_item'] ?? 0) ?>">
+                    <input type="hidden" name="orden" value="<?= (int) ($editingItem['orden'] ?? count($topbarItems) + 1) ?>">
                     <div class="modal-header">
                         <h5 class="modal-title"><?= $editingItem ? 'Editar red social' : 'Agregar red social' ?></h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -706,8 +1918,16 @@ HTML,
                             </div>
                             <div class="col-md-6">
                                 <div class="field-card" data-field-shell>
-                                    <?php admin_modal_field_head('Clase del ícono', 'topbar_icono', 'topbar', 'icono'); ?>
-                                    <input class="form-control" id="topbar_icono" name="icono" value="<?= cms_e($editingItem['icono'] ?? '') ?>" placeholder="fab fa-instagram">
+                                    <label class="form-label d-block mb-2">Icono</label>
+                                    <input type="hidden" id="topbar_icono" name="icono" value="<?= cms_e($editingItem['icono'] ?? '') ?>">
+                                    <div class="social-icon-presets" aria-label="Iconos rápidos">
+                                        <?php foreach ($topbarSocialIcons as $socialIcon): ?>
+                                            <button type="button" class="social-icon-preset" data-social-name="<?= cms_e($socialIcon['name']) ?>" data-social-icon="<?= cms_e($socialIcon['icon']) ?>" data-social-url="<?= cms_e($socialIcon['url']) ?>" title="<?= cms_e($socialIcon['name']) ?>" aria-label="<?= cms_e($socialIcon['name']) ?>">
+                                                <?= topbar_render_social_icon((string) $socialIcon['icon'], (string) $socialIcon['name']) ?>
+                                            </button>
+                                        <?php endforeach; ?>
+                                    </div>
+                                    <div class="field-note">Elige el logo de la red social.</div>
                                 </div>
                             </div>
                             <div class="col-12">
@@ -716,20 +1936,19 @@ HTML,
                                     <input class="form-control" id="topbar_descripcion" name="descripcion" value="<?= cms_e($editingItem['descripcion'] ?? '') ?>" placeholder="https://instagram.com/...">
                                 </div>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <div class="field-card">
                                     <?php admin_modal_field_head('Visible', 'topbar_visible', 'topbar', 'visible', false); ?>
-                                    <select class="form-select" id="topbar_visible" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="field-card">
-                                    <?php admin_modal_field_head('Orden', 'topbar_orden', 'topbar', 'orden', false); ?>
-                                    <input class="form-control" id="topbar_orden" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($topbarItems) + 1) ?>">
+                                    <label class="setting-toggle mb-0">
+                                        <span class="setting-toggle-copy">Visible<small>Mostrar esta red</small></span>
+                                        <span class="form-check form-switch mb-0 state-switch">
+                                            <input class="form-check-input" id="topbar_visible" type="checkbox" name="visible" value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'checked' : '' ?>>
+                                                </span>
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                        <div class="form-text mt-3">El sitio mostrará como máximo 4 redes visibles ordenadas por este campo.</div>
+                        <div class="form-text mt-3">El sitio mostrará como máximo 4 redes visibles según el orden de la tabla.</div>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>
@@ -740,7 +1959,7 @@ HTML,
         </div>
     </div>
 <?php else: ?>
-    <div class="modal fade admin-modal" id="itemModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade admin-modal <?= ($section['tipo_seccion'] ?? '') === 'news' ? 'news-item-modal' : '' ?> <?= $isCarouselAdmin ? 'carousel-item-modal' : '' ?>" id="itemModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <form method="post" enctype="multipart/form-data">
@@ -752,60 +1971,238 @@ HTML,
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <?php if (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
+                        <?php if ($isModal): ?>
                             <div class="row g-3">
-                                <div class="col-md-4">
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Imagen del modal', 'item_imagen_modal', $section['nombre_interno'], 'imagen', true, 'clear_imagen'); ?>
+                                        <input class="form-control" id="item_imagen_modal" type="file" name="imagen" accept="image/*">
+                                        <?php if (!empty($editingItem['imagen'])): ?>
+                                            <div class="field-note mt-2">
+                                                <img src="<?= cms_e($editingItem['imagen']) ?>" alt="Vista previa" style="max-height:80px;border-radius:8px;border:1px solid #e4ebf5;">
+                                            </div>
+                                        <?php endif; ?>
+                                        <div class="field-note">Recomendado: 880 × 340 px. Aparece en la parte superior del modal.</div>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título', 'item_titulo_modal', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_modal" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>" placeholder="Bienvenidos al nuevo año escolar">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Mensaje', 'item_descripcion_modal', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_modal" name="descripcion" rows="4" placeholder="Texto que aparecerá en el cuerpo del modal..."><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-5">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Texto del botón', 'item_boton1_texto_modal', $section['nombre_interno'], 'boton-1-texto'); ?>
+                                        <input class="form-control" id="item_boton1_texto_modal" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? '') ?>" placeholder="Ver más">
+                                        <div class="field-note">Dejar vacío para no mostrar botón.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL del botón', 'item_boton1_url_modal', $section['nombre_interno'], 'boton-1-url'); ?>
+                                        <input class="form-control" id="item_boton1_url_modal" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>" placeholder="https://...">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Visible', 'item_visible_modal', $section['nombre_interno'], 'visible', false); ?>
+                                        <select class="form-select" id="item_visible_modal" name="visible">
+                                            <option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option>
+                                            <option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Orden', 'item_orden_modal', $section['nombre_interno'], 'orden', false); ?>
+                                        <input class="form-control" id="item_orden_modal" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? 1) ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif ($isVideoFeatured): ?>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título interno', 'item_titulo_video', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_video" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? 'Video destacado') ?>" placeholder="Video destacado">
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL de YouTube', 'item_url_video', $section['nombre_interno'], 'url'); ?>
+                                        <?php $editingVideoUrl = (string) ($editingItem['url'] ?? ''); ?>
+                                        <input class="form-control" id="item_url_video" name="url" value="<?= preg_match('/(youtube\.com|youtu\.be)/i', $editingVideoUrl) ? cms_e($editingVideoUrl) : '' ?>" placeholder="https://www.youtube.com/watch?v=...">
+                                        <div class="field-note">Si cargas un video local y dejas esta URL vacía, se usará el archivo subido.</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Video local', 'item_video_file', $section['nombre_interno'], 'video'); ?>
+                                        <input class="form-control" id="item_video_file" type="file" name="video_file" accept="video/mp4,video/webm,video/quicktime,video/x-m4v">
+                                        <?php if (!empty($editingItem['url']) && !preg_match('/(youtube\.com|youtu\.be)/i', (string) $editingItem['url'])): ?>
+                                            <div class="field-note">Actual: <code><?= cms_e($editingItem['url']) ?></code></div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Visible', 'item_visible_video', $section['nombre_interno'], 'visible', false); ?>
+                                        <select class="form-select" id="item_visible_video" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Orden', 'item_orden_video', $section['nombre_interno'], 'orden', false); ?>
+                                        <input class="form-control" id="item_orden_video" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
+                            <div class="row g-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Etiqueta', 'item_etiqueta', $section['nombre_interno'], 'etiqueta'); ?>
                                         <input class="form-control" id="item_etiqueta" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Título línea 1', 'item_titulo_linea_1', $section['nombre_interno'], 'titulo-linea-1'); ?>
                                         <input class="form-control" id="item_titulo_linea_1" name="titulo_linea_1" value="<?= cms_e($editingItem['titulo_linea_1'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Título línea 2', 'item_titulo_linea_2', $section['nombre_interno'], 'titulo-linea-2'); ?>
                                         <input class="form-control" id="item_titulo_linea_2" name="titulo_linea_2" value="<?= cms_e($editingItem['titulo_linea_2'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-4">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Título línea 3', 'item_titulo_linea_3', $section['nombre_interno'], 'titulo-linea-3'); ?>
                                         <input class="form-control" id="item_titulo_linea_3" name="titulo_linea_3" value="<?= cms_e($editingItem['titulo_linea_3'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-8">
+                                <div class="col-12">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Descripción', 'item_descripcion', $section['nombre_interno'], 'descripcion'); ?>
                                         <textarea class="form-control" id="item_descripcion" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 1 texto', 'item_boton_1_texto', $section['nombre_interno'], 'boton-1-texto'); ?>
                                         <input class="form-control" id="item_boton_1_texto" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 1 URL', 'item_boton_1_url', $section['nombre_interno'], 'boton-1-url'); ?>
                                         <input class="form-control" id="item_boton_1_url" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 2 texto', 'item_boton_2_texto', $section['nombre_interno'], 'boton-2-texto'); ?>
                                         <input class="form-control" id="item_boton_2_texto" name="boton_2_texto" value="<?= cms_e($editingItem['boton_2_texto'] ?? '') ?>">
                                     </div>
                                 </div>
-                                <div class="col-md-3">
+                                <div class="col-lg-3 col-md-6">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón 2 URL', 'item_boton_2_url', $section['nombre_interno'], 'boton-2-url'); ?>
                                         <input class="form-control" id="item_boton_2_url" name="boton_2_url" value="<?= cms_e($editingItem['boton_2_url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Video YouTube', 'item_url_carousel', $section['nombre_interno'], 'url'); ?>
+                                        <input class="form-control" id="item_url_carousel" name="url" value="<?= cms_e($editingItem['url'] ?? '') ?>" placeholder="https://www.youtube.com/watch?v=...">
+                                        <div class="field-note">Si completas este campo, el carrusel usará el video como fondo automático. YouTube exige reproducirlo silenciado.</div>
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif ($section['tipo_seccion'] === 'events'): ?>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Categoría', 'item_etiqueta_event', $section['nombre_interno'], 'etiqueta'); ?>
+                                        <input class="form-control" id="item_etiqueta_event" name="etiqueta" value="<?= cms_e($editingItem['etiqueta'] ?? '') ?>" placeholder="Pastoral, Deportivo, Institucional...">
+                                    </div>
+                                </div>
+                                <div class="col-md-8">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título', 'item_titulo_event', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_event" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Fecha del evento', 'item_fecha_event', $section['nombre_interno'], 'fecha-publicacion'); ?>
+                                        <input class="form-control" id="item_fecha_event" type="date" name="fecha_publicacion" value="<?= cms_e($editingItem['fecha_publicacion'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Hora', 'item_subtitulo_event', $section['nombre_interno'], 'subtitulo'); ?>
+                                        <input class="form-control" id="item_subtitulo_event" name="subtitulo" value="<?= cms_e($editingItem['subtitulo'] ?? '') ?>" placeholder="09:00 hrs.">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Ubicación', 'item_boton_2_texto_event', $section['nombre_interno'], 'boton-2-texto'); ?>
+                                        <input class="form-control" id="item_boton_2_texto_event" name="boton_2_texto" value="<?= cms_e($editingItem['boton_2_texto'] ?? '') ?>" placeholder="Capilla del Colegio">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Descripción', 'item_descripcion_event', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_event" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón texto', 'item_boton_1_texto_event', $section['nombre_interno'], 'boton-1-texto'); ?>
+                                        <input class="form-control" id="item_boton_1_texto_event" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Ver detalle') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Botón URL', 'item_boton_1_url_event', $section['nombre_interno'], 'boton-1-url'); ?>
+                                        <input class="form-control" id="item_boton_1_url_event" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL alternativa', 'item_url_event', $section['nombre_interno'], 'url'); ?>
+                                        <input class="form-control" id="item_url_event" name="url" value="<?= cms_e($editingItem['url'] ?? '') ?>">
+                                    </div>
+                                </div>
+                            </div>
+                        <?php elseif ($section['tipo_seccion'] === 'gallery'): ?>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Título / alt', 'item_titulo_gallery', $section['nombre_interno'], 'titulo'); ?>
+                                        <input class="form-control" id="item_titulo_gallery" name="titulo" value="<?= cms_e($editingItem['titulo'] ?? '') ?>">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('URL', 'item_url_gallery', $section['nombre_interno'], 'url'); ?>
+                                        <input class="form-control" id="item_url_gallery" name="url" value="<?= cms_e($editingItem['url'] ?? '') ?>" placeholder="#0 o enlace de Instagram">
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="field-card" data-field-shell>
+                                        <?php admin_modal_field_head('Descripción interna', 'item_descripcion_gallery', $section['nombre_interno'], 'descripcion'); ?>
+                                        <textarea class="form-control" id="item_descripcion_gallery" name="descripcion"><?= cms_e($editingItem['descripcion'] ?? '') ?></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -849,13 +2246,13 @@ HTML,
                                 <div class="col-md-4">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón texto', 'item_boton_1_texto_news', $section['nombre_interno'], 'boton-1-texto'); ?>
-                                        <input class="form-control" id="item_boton_1_texto_news" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Leer más') ?>">
+                                        <input class="form-control" id="item_boton_1_texto_news" name="boton_1_texto" value="<?= cms_e($editingItem['boton_1_texto'] ?? 'Leer más') ?>" placeholder="Leer más">
                                     </div>
                                 </div>
                                 <div class="col-md-4">
                                     <div class="field-card" data-field-shell>
                                         <?php admin_modal_field_head('Botón URL', 'item_boton_1_url_news', $section['nombre_interno'], 'boton-1-url'); ?>
-                                        <input class="form-control" id="item_boton_1_url_news" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '#') ?>">
+                                        <input class="form-control" id="item_boton_1_url_news" name="boton_1_url" value="<?= cms_e($editingItem['boton_1_url'] ?? '') ?>" placeholder="https://...">
                                     </div>
                                 </div>
                             </div>
@@ -882,38 +2279,31 @@ HTML,
                             </div>
                         <?php endif; ?>
 
-                        <hr class="my-4">
+                        <?php if (!$isVideoFeatured && !$isModal): ?>
+                            <hr class="my-4">
 
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="field-card" data-field-shell>
-                                    <?php admin_modal_field_head('Imagen', 'item_imagen', $section['nombre_interno'], 'imagen', true, 'clear_imagen'); ?>
-                                    <input class="form-control" id="item_imagen" type="file" name="imagen" accept="image/*">
-                                    <div class="field-note">Si bloqueas este campo, la imagen se guardará vacía.</div>
-                                </div>
-                            </div>
-                            <?php if (in_array($section['tipo_seccion'], ['carousel', 'hero'], true)): ?>
-                                <div class="col-md-6">
+                            <div class="row g-3">
+                                <div class="col-md-8">
                                     <div class="field-card" data-field-shell>
-                                        <?php admin_modal_field_head('Imagen mobile', 'item_imagen_mobile', $section['nombre_interno'], 'imagen-mobile', true, 'clear_imagen_mobile'); ?>
-                                        <input class="form-control" id="item_imagen_mobile" type="file" name="imagen_mobile" accept="image/*">
-                                        <div class="field-note">Úsala si el diseño necesita una imagen distinta en móviles.</div>
+                                        <?php admin_modal_field_head('Imagen', 'item_imagen', $section['nombre_interno'], 'imagen', true, 'clear_imagen'); ?>
+                                        <input class="form-control" id="item_imagen" type="file" name="imagen" accept="image/*">
+                                        <div class="field-note">Si bloqueas este campo, la imagen se guardará vacía.</div>
                                     </div>
                                 </div>
-                            <?php endif; ?>
-                            <div class="col-md-3">
-                                <div class="field-card">
-                                    <?php admin_modal_field_head('Visible', 'item_visible', $section['nombre_interno'], 'visible', false); ?>
-                                    <select class="form-select" id="item_visible" name="visible"><option value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'selected' : '' ?>>Si</option><option value="no" <?= ($editingItem['visible'] ?? '') === 'no' ? 'selected' : '' ?>>No</option></select>
+                                <div class="<?= $isCarouselAdmin ? 'col-md-4' : 'col-md-3' ?>">
+                                    <div class="field-card">
+                                        <?php admin_modal_field_head('Visible', 'item_visible', $section['nombre_interno'], 'visible', false); ?>
+                                        <label class="setting-toggle mb-0">
+                                            <span class="setting-toggle-copy">Visible<small>Mostrar item</small></span>
+                                            <span class="form-check form-switch mb-0 state-switch">
+                                                <input class="form-check-input" id="item_visible" type="checkbox" name="visible" value="si" <?= ($editingItem['visible'] ?? 'si') === 'si' ? 'checked' : '' ?>>
+                                            </span>
+                                        </label>
+                                    </div>
                                 </div>
+                                <input type="hidden" name="orden" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>">
                             </div>
-                            <div class="col-md-3">
-                                <div class="field-card">
-                                    <?php admin_modal_field_head('Orden', 'item_orden', $section['nombre_interno'], 'orden', false); ?>
-                                    <input class="form-control" id="item_orden" type="number" name="orden" min="1" value="<?= (int) ($editingItem['orden'] ?? count($items) + 1) ?>">
-                                </div>
-                            </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cerrar</button>
@@ -925,11 +2315,12 @@ HTML,
     </div>
 <?php endif; ?>
 
+
 <template id="configRowTemplate">
     <div class="row g-3 align-items-end mb-3 config-row">
         <div class="col-md-4"><label class="form-label">Clave</label><input class="form-control" name="config_key[]" placeholder="clave"></div>
         <div class="col-md-7"><label class="form-label">Valor</label><input class="form-control" name="config_value[]" placeholder="valor"></div>
-        <div class="col-md-1"><button type="button" class="btn btn-outline-danger w-100 remove-config-row"><i class="bi bi-trash"></i></button></div>
+        <div class="col-auto d-flex align-items-end pb-1"><button type="button" class="btn-icon delete remove-config-row" title="Eliminar"><i class="bi bi-trash"></i></button></div>
     </div>
 </template>
 
@@ -959,11 +2350,261 @@ admin_render_layout_end([
                 }
             }
 
+            var topbarTbody = document.getElementById('topbarItemsTbody');
             if ($('#itemsTable').length) {
                 $('#itemsTable').DataTable({
                     pageLength: 10,
-                    order: [[0, 'asc']],
+                    ordering: !topbarTbody,
+                    paging: !topbarTbody,
+                    info: !topbarTbody,
+                    order: topbarTbody ? [] : [[0, 'asc']],
                     language: { url: 'https://cdn.datatables.net/plug-ins/1.13.8/i18n/es-ES.json' }
+                });
+            }
+
+            var generalTbody = document.getElementById('generalItemsTbody');
+            if (generalTbody && typeof Sortable !== 'undefined') {
+                var saveGenTimeout = null;
+                Sortable.create(generalTbody, {
+                    animation: 180,
+                    handle: '.drag-handle',
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function () {
+                        clearTimeout(saveGenTimeout);
+                        saveGenTimeout = setTimeout(function () {
+                            var ids = Array.from(generalTbody.querySelectorAll('tr'))
+                                           .map(function (tr) { return tr.dataset.id; })
+                                           .filter(Boolean);
+                            ids.forEach(function (id, idx) {
+                                var row = generalTbody.querySelector('tr[data-id="' + id + '"]');
+                                if (row) {
+                                    var cell = row.querySelector('.item-orden-cell');
+                                    if (cell) { cell.textContent = idx + 1; }
+                                }
+                            });
+                            var fd = new FormData();
+                            fd.append('accion', 'reorder_items');
+                            fd.append('id_seccion', '<?= (int) $idSeccion ?>');
+                            ids.forEach(function (id) { fd.append('items[]', id); });
+                            fetch(window.location.href, {
+                                method: 'POST', body: fd,
+                                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                            })
+                            .then(function (r) { return r.json(); })
+                            .then(function (data) {
+                                if (data.ok) {
+                                    adminNotify({ title: 'Orden guardado', msg: 'El nuevo orden fue guardado.', type: 'info', autoClose: 1800 });
+                                }
+                            })
+                            .catch(function () {});
+                        }, 400);
+                    }
+                });
+            }
+
+            document.querySelectorAll('.js-confirm-submit').forEach(function (form) {
+                form.addEventListener('submit', function (event) {
+                    if (form.dataset.confirmed === '1') {
+                        return;
+                    }
+                    event.preventDefault();
+                    adminConfirm({
+                        title: form.dataset.confirmTitle || 'Confirmar guardado',
+                        msg: form.dataset.confirmMsg || 'Se guardarán los cambios realizados.',
+                        type: 'info',
+                        btnText: 'Guardar',
+                        onConfirm: function () {
+                            form.dataset.confirmed = '1';
+                            form.submit();
+                        }
+                    });
+                });
+            });
+
+            var socialPresets = [
+                { keys: ['instagram', 'insta'], name: 'Instagram', icon: 'assets/redes_sociales/instagram.jpg', url: 'https://instagram.com/' },
+                { keys: ['facebook', 'fb'], name: 'Facebook', icon: 'assets/redes_sociales/facebook.jpg', url: 'https://facebook.com/' },
+                { keys: ['youtube', 'youtu.be'], name: 'YouTube', icon: 'assets/redes_sociales/youtube.png', url: 'https://youtube.com/' },
+                { keys: ['twitter', 'x.com'], name: 'Twitter', icon: 'assets/redes_sociales/twitter.png', url: 'https://x.com/' },
+                { keys: ['linkedin', 'linkeding'], name: 'LinkedIn', icon: 'assets/redes_sociales/linkeding.png', url: 'https://linkedin.com/' }
+            ];
+            var socialNameInput = document.getElementById('topbar_titulo');
+            var socialUrlInput = document.getElementById('topbar_descripcion');
+            var socialIconInput = document.getElementById('topbar_icono');
+
+            function applySocialPreset(preset, fillNameAndUrl) {
+                if (!preset || !socialIconInput) {
+                    return;
+                }
+                socialIconInput.value = preset.icon;
+                if (fillNameAndUrl) {
+                    if (socialNameInput && !socialNameInput.value.trim()) {
+                        socialNameInput.value = preset.name;
+                    }
+                    if (socialUrlInput && !socialUrlInput.value.trim()) {
+                        socialUrlInput.value = preset.url;
+                    }
+                }
+                document.querySelectorAll('.social-icon-preset').forEach(function (button) {
+                    button.classList.toggle('is-selected', button.dataset.socialIcon === preset.icon);
+                });
+            }
+
+            function detectSocialPreset() {
+                if (!socialIconInput || socialIconInput.value.trim()) {
+                    return;
+                }
+                var source = ((socialNameInput ? socialNameInput.value : '') + ' ' + (socialUrlInput ? socialUrlInput.value : '')).toLowerCase();
+                var preset = socialPresets.find(function (candidate) {
+                    return candidate.keys.some(function (key) {
+                        return source.indexOf(key) !== -1;
+                    });
+                });
+                if (preset) {
+                    applySocialPreset(preset, false);
+                }
+            }
+
+            document.querySelectorAll('.social-icon-preset').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    applySocialPreset({
+                        name: button.dataset.socialName,
+                        icon: button.dataset.socialIcon,
+                        url: button.dataset.socialUrl
+                    }, true);
+                });
+            });
+            if (socialNameInput) {
+                socialNameInput.addEventListener('input', detectSocialPreset);
+            }
+            if (socialUrlInput) {
+                socialUrlInput.addEventListener('input', detectSocialPreset);
+            }
+            if (socialIconInput && socialIconInput.value.trim()) {
+                document.querySelectorAll('.social-icon-preset').forEach(function (button) {
+                    button.classList.toggle('is-selected', button.dataset.socialIcon === socialIconInput.value.trim());
+                });
+            }
+
+            document.querySelectorAll('.js-config-boolean-toggle').forEach(function (toggle) {
+                toggle.addEventListener('change', function () {
+                    var switchShell = toggle.closest('.state-switch');
+                    var toggleShell = toggle.closest('.setting-toggle');
+                    var hiddenValue = switchShell ? switchShell.querySelector('input[type="hidden"]') : null;
+                    var copy = toggleShell ? toggleShell.querySelector('.setting-toggle-copy small') : null;
+                    if (hiddenValue) {
+                        hiddenValue.value = toggle.checked ? 'si' : 'no';
+                    }
+                    if (copy) {
+                        copy.textContent = toggle.checked ? 'Activo' : 'Inactivo';
+                    }
+                });
+            });
+
+            document.querySelectorAll('.js-visible-toggle').forEach(function (toggle) {
+                toggle.addEventListener('change', function () {
+                    var form = toggle.closest('form');
+                    if (!form) {
+                        return;
+                    }
+                    var hiddenVisible = form.querySelector('input[name="visible"]');
+                    var previousChecked = !toggle.checked;
+                    var nextVisible = toggle.checked ? 'si' : 'no';
+                    if (hiddenVisible) {
+                        hiddenVisible.value = nextVisible;
+                    }
+                    toggle.disabled = true;
+
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                        .then(function (response) {
+                            return response.json().then(function (data) {
+                                if (!response.ok || !data.ok) {
+                                    throw new Error(data.message || 'No se pudo actualizar la visibilidad.');
+                                }
+                                return data;
+                            });
+                        })
+                        .then(function (data) {
+                            toggle.checked = data.visible === 'si';
+                            if (hiddenVisible) {
+                                hiddenVisible.value = data.visible === 'si' ? 'no' : 'si';
+                            }
+                            var toggleLabel = form.querySelector('.table-check');
+                            if (toggleLabel) {
+                                toggleLabel.setAttribute('title', data.visible === 'si' ? 'Dejar oculta' : 'Dejar visible');
+                            }
+                        })
+                        .catch(function (error) {
+                            toggle.checked = previousChecked;
+                            if (hiddenVisible) {
+                                hiddenVisible.value = previousChecked ? 'no' : 'si';
+                            }
+                            adminConfirm({
+                                title: 'No se pudo guardar',
+                                msg: error.message,
+                                type: 'danger',
+                                btnText: 'OK',
+                                onConfirm: function () {}
+                            });
+                        })
+                        .finally(function () {
+                            toggle.disabled = false;
+                        });
+                });
+            });
+
+            var _qs = new URLSearchParams(window.location.search);
+            var _idParam = encodeURIComponent(_qs.get('id') || '');
+
+            if (_qs.get('saved') === 'red_social') {
+                window.history.replaceState({}, document.title, window.location.pathname + '?id=' + _idParam + '&tab=items');
+                adminNotify({
+                    title: 'Red social guardada',
+                    msg: 'La red social fue guardada correctamente.',
+                    type: 'info'
+                });
+            }
+
+            if (_qs.get('saved') === 'item') {
+                window.history.replaceState({}, document.title, window.location.pathname + '?id=' + _idParam + '&tab=items');
+                adminNotify({
+                    title: 'Item guardado',
+                    msg: 'El item fue guardado correctamente.',
+                    type: 'info'
+                });
+            }
+
+            document.querySelectorAll('.js-preview-btn').forEach(function (button) {
+                button.addEventListener('click', function (event) {
+                    var url = button.getAttribute('data-preview-url');
+                    if (!url) {
+                        return;
+                    }
+                    event.preventDefault();
+                    var modalEl = document.getElementById('previewModal');
+                    var titleEl = document.getElementById('previewModalLabel');
+                    var frameEl = document.getElementById('previewFrame');
+                    if (!modalEl || !titleEl || !frameEl) {
+                        window.location.href = button.href;
+                        return;
+                    }
+                    titleEl.textContent = 'Vista previa: ' + (button.getAttribute('data-preview-title') || 'Contenedor');
+                    frameEl.src = url;
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                });
+            });
+
+            var previewModal = document.getElementById('previewModal');
+            if (previewModal) {
+                previewModal.addEventListener('hidden.bs.modal', function () {
+                    document.getElementById('previewFrame').src = 'about:blank';
                 });
             }
 
@@ -997,7 +2638,275 @@ admin_render_layout_end([
                 var modal = new bootstrap.Modal(document.getElementById('itemModal'));
                 modal.show();
             }
+            if (openModal === 'evento') {
+                var eventModalEl = document.getElementById('eventModal');
+                if (eventModalEl) {
+                    var eventModal = new bootstrap.Modal(eventModalEl);
+                    eventModal.show();
+                }
+            }
+
+            var mediaPreview = document.getElementById('eventMediaUploadPreview');
+            function renderMediaUploadPreview() {
+                if (!mediaPreview) {
+                    return;
+                }
+                var fields = document.querySelectorAll('input[name="event_media_images[]"], input[name="event_media_videos[]"]');
+                mediaPreview.innerHTML = '';
+                fields.forEach(function (field) {
+                    Array.prototype.slice.call(field.files || []).forEach(function (file) {
+                        var card = document.createElement('div');
+                        card.className = 'event-media-card';
+                        var thumb = document.createElement('div');
+                        thumb.className = 'event-media-thumb';
+                        if (file.type.indexOf('image/') === 0) {
+                            var img = document.createElement('img');
+                            img.src = URL.createObjectURL(file);
+                            img.onload = function () { URL.revokeObjectURL(img.src); };
+                            thumb.appendChild(img);
+                        } else {
+                            thumb.innerHTML = '<i class="bi bi-play-btn"></i>';
+                        }
+                        var body = document.createElement('div');
+                        body.className = 'event-media-body';
+                        var title = document.createElement('strong');
+                        title.textContent = file.name;
+                        var meta = document.createElement('small');
+                        meta.textContent = 'Archivo seleccionado';
+                        body.appendChild(title);
+                        body.appendChild(meta);
+                        card.appendChild(thumb);
+                        card.appendChild(body);
+                        mediaPreview.appendChild(card);
+                    });
+                });
+                mediaPreview.classList.toggle('d-none', mediaPreview.children.length === 0);
+            }
+            document.querySelectorAll('input[name="event_media_images[]"], input[name="event_media_videos[]"]').forEach(function (field) {
+                field.addEventListener('change', renderMediaUploadPreview);
+            });
+
+            document.querySelectorAll('.js-evento-visible-toggle').forEach(function (toggle) {
+                toggle.addEventListener('change', function () {
+                    var form = toggle.closest('form');
+                    if (!form) { return; }
+                    toggle.disabled = true;
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: new FormData(form),
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function (r) { return r.json ? r.json() : {}; })
+                    .catch(function () {})
+                    .finally(function () { toggle.disabled = false; });
+                });
+            });
+
+            document.querySelectorAll('.js-toggle-badge').forEach(function (badge) {
+                badge.addEventListener('click', function () {
+                    var idItem    = badge.dataset.itemId;
+                    var visible   = badge.dataset.itemVisible;
+                    var idSeccion = badge.dataset.idSeccion;
+                    var next      = visible === 'si' ? 'no' : 'si';
+
+                    badge.style.opacity = '0.5';
+                    badge.style.pointerEvents = 'none';
+
+                    var fd = new FormData();
+                    fd.append('accion',     'toggle_item_visible');
+                    fd.append('id_seccion', idSeccion);
+                    fd.append('id_item',    idItem);
+                    fd.append('visible',    next);
+
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (!data.ok) { throw new Error(data.message || 'Error'); }
+                        badge.dataset.itemVisible = data.visible;
+                        var isActive = data.visible === 'si';
+                        badge.className = 'badge-soft ' + (isActive ? 'success' : 'warning') + ' js-toggle-badge';
+                        badge.textContent = isActive ? 'Activo' : 'Oculto';
+                    })
+                    .catch(function () {
+                        badge.dataset.itemVisible = visible;
+                    })
+                    .finally(function () {
+                        badge.style.opacity = '';
+                        badge.style.pointerEvents = '';
+                    });
+                });
+            });
+
+            document.querySelectorAll('.js-carousel-edit').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var item = {};
+                    try { item = JSON.parse(btn.dataset.item || '{}'); } catch(e) {}
+
+                    var modal = document.getElementById('itemModal');
+                    if (!modal) { return; }
+
+                    var f = modal.querySelector('form');
+                    var set = function(sel, val) { var el = f ? f.querySelector(sel) : modal.querySelector(sel); if (el) { if (el.type === 'checkbox') { el.checked = val === 'si'; } else { el.value = val !== undefined ? val : ''; } } };
+
+                    set('[name="id_item"]', item.id_item !== undefined ? String(item.id_item) : '0');
+                    set('#item_etiqueta', item.etiqueta);
+                    set('#item_titulo_linea_1', item.titulo_linea_1);
+                    set('#item_titulo_linea_2', item.titulo_linea_2);
+                    set('#item_titulo_linea_3', item.titulo_linea_3);
+                    set('#item_descripcion', item.descripcion);
+                    set('#item_boton_1_texto', item.boton_1_texto);
+                    set('#item_boton_1_url', item.boton_1_url);
+                    set('#item_boton_2_texto', item.boton_2_texto);
+                    set('#item_boton_2_url', item.boton_2_url);
+                    set('#item_url_carousel', item.url);
+                    set('#item_visible', item.visible);
+                    set('#item_orden', item.orden !== undefined ? String(item.orden) : '1');
+
+                    var titleEl = modal.querySelector('.modal-title');
+                    if (titleEl) { titleEl.textContent = 'Editar item'; }
+
+                    bootstrap.Modal.getOrCreateInstance(modal).show();
+                });
+            });
+
+            var excelUploadForm = document.getElementById('eventExcelUploadForm');
+            var excelUploadOverlay = document.getElementById('eventExcelUploadOverlay');
+            if (excelUploadForm && excelUploadOverlay) {
+                excelUploadForm.addEventListener('submit', function (event) {
+                    if (excelUploadForm.dataset.readyToSubmit === '1') {
+                        return;
+                    }
+                    event.preventDefault();
+                    excelUploadOverlay.classList.add('is-visible');
+                    excelUploadOverlay.setAttribute('aria-hidden', 'false');
+                    excelUploadForm.querySelectorAll('button').forEach(function (control) {
+                        control.disabled = true;
+                    });
+                    window.setTimeout(function () {
+                        excelUploadForm.dataset.readyToSubmit = '1';
+                        excelUploadForm.submit();
+                    }, 3000);
+                });
+            }
         });
+    </script>
+    <script src="assets/js/eventos_excel_help.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script>
+    (function () {
+        var topbarTbody = document.getElementById('topbarItemsTbody');
+        if (topbarTbody && typeof Sortable !== 'undefined') {
+            var saveTopbarTimeout = null;
+            Sortable.create(topbarTbody, {
+                animation: 180,
+                handle: '.topbar-drag-handle',
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                onEnd: function () {
+                    clearTimeout(saveTopbarTimeout);
+                    saveTopbarTimeout = setTimeout(function () {
+                        var ids = Array.from(topbarTbody.querySelectorAll('tr'))
+                            .map(function (tr) { return tr.dataset.id; })
+                            .filter(Boolean);
+                        var fd = new FormData();
+                        fd.append('accion', 'reorder_items');
+                        fd.append('id_seccion', topbarTbody.dataset.sectionId || '');
+                        ids.forEach(function (id) { fd.append('items[]', id); });
+                        fetch(window.location.href, {
+                            method: 'POST',
+                            body: fd,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.ok) {
+                                adminNotify({ title: 'Orden guardado', msg: 'El orden de las redes sociales fue actualizado.', type: 'info', autoClose: 1800 });
+                            }
+                        })
+                        .catch(function () {});
+                    }, 350);
+                }
+            });
+        }
+
+        var galleryGrid = document.getElementById('gallerySortable');
+        if (galleryGrid && typeof Sortable !== 'undefined') {
+            var saveGalleryTimeout = null;
+            Sortable.create(galleryGrid, {
+                animation: 200,
+                ghostClass: 'sortable-ghost',
+                chosenClass: 'sortable-chosen',
+                dragClass: 'sortable-drag',
+                onEnd: function () {
+                    clearTimeout(saveGalleryTimeout);
+                    saveGalleryTimeout = setTimeout(function () {
+                        var ids = Array.from(galleryGrid.querySelectorAll('.carousel-admin-card'))
+                                       .map(function (c) { return c.dataset.id; })
+                                       .filter(Boolean);
+                        var fd = new FormData();
+                        fd.append('accion', 'reorder_items');
+                        fd.append('id_seccion', '<?= (int) $idSeccion ?>');
+                        ids.forEach(function (id) { fd.append('items[]', id); });
+                        fetch(window.location.href, {
+                            method: 'POST', body: fd,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.ok) {
+                                adminNotify({ title: 'Orden guardado', msg: 'El orden de la galería fue actualizado.', type: 'info', autoClose: 1800 });
+                            }
+                        })
+                        .catch(function () {});
+                    }, 400);
+                }
+            });
+        }
+    })();
+
+    (function () {
+        var grid = document.getElementById('carouselSortable');
+        if (!grid || typeof Sortable === 'undefined') { return; }
+
+        var saveTimeout = null;
+
+        Sortable.create(grid, {
+            animation: 200,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            dragClass: 'sortable-drag',
+            onEnd: function () {
+                clearTimeout(saveTimeout);
+                saveTimeout = setTimeout(function () {
+                    var ids = Array.from(grid.querySelectorAll('.carousel-admin-card'))
+                                   .map(function (c) { return c.dataset.id; })
+                                   .filter(Boolean);
+
+                    var fd = new FormData();
+                    fd.append('accion', 'reorder_items');
+                    fd.append('id_seccion', '<?= (int) $idSeccion ?>');
+                    ids.forEach(function (id) { fd.append('items[]', id); });
+
+                    fetch(window.location.href, {
+                        method: 'POST',
+                        body: fd,
+                        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                    })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        if (data.ok) {
+                            adminNotify({ title: 'Orden guardado', msg: 'El nuevo orden de los slides fue guardado.', type: 'info', autoClose: 1800 });
+                        }
+                    })
+                    .catch(function () {});
+                }, 400);
+            }
+        });
+    })();
     </script>
 HTML
     ),

@@ -1,0 +1,11 @@
+﻿titulo;descripcion_corta;descripcion;fecha_inicio;fecha_termino;hora_inicio;hora_termino;categoria;ubicacion;color;destacado;visible;estado;orden
+"Misa Institucional";"Eucaristía comunitaria.";"Eucaristía en comunidad para dar gracias y pedir por nuestro colegio y sus familias.";2025-05-22;2025-05-22;09:00;10:00;Pastoral;"Capilla del Colegio";#8e44ad;1;1;publicado;1
+
+Instrucciones
+"fecha_inicio debe venir como yyyy-mm-dd"
+"hora_inicio debe venir como HH:mm"
+"estado permitido: borrador, publicado, oculto, cancelado"
+"visible: 1 o 0"
+"destacado: 1 o 0"
+"categoría sugerida: Pastoral, Académico, Deportivo, Institucional"
+"La carga masiva no incluye imágenes ni archivos adjuntos."

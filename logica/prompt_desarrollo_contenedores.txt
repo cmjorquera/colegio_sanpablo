@@ -1,0 +1,2222 @@
+Voy a modificar el contenedor `topbar` de mi sistema.
+
+Antes de escribir o modificar código, debes entender completamente cómo funciona el sistema. Para eso debes revisar obligatoriamente estos archivos del proyecto:
+
+1. qaseduc_colegio_spablo.sql
+   → contiene la estructura real de la base de datos.
+
+2. mermaid-diagram.png
+   → muestra el diagrama de relaciones de las tablas.
+
+3. explicacion.txt
+   → explica la lógica de funcionamiento del sistema.
+
+Estos tres archivos son la fuente de verdad del sistema. No debes inventar tablas, columnas ni relaciones distintas a las definidas ahí.
+
+---
+
+# REGLA DE MEMORIA DEL PROYECTO
+
+Todo cambio realizado en contenedores, componentes, administración del CMS, integración pública, páginas de detalle, carga masiva o uso de base de datos debe quedar documentado en este archivo.
+
+Este archivo funciona como memoria permanente del sistema para no perder contexto entre cambios.
+
+Cuando se agregue o modifique un módulo se debe registrar:
+
+archivo o archivos modificados
+contenedor relacionado
+tablas usadas
+campos importantes
+flujo administrativo
+flujo público
+reglas de fallback o compatibilidad
+página pública donde se renderiza
+
+La página pública principal del sitio es:
+
+index.php
+
+No usar colegiosanpablo.php ni archivos HTML importados como destino principal de nuevas integraciones. Esos archivos pueden existir como referencia o legado, pero el render público oficial del CMS debe apuntar a index.php.
+
+Los previews del CMS deben usar:
+
+index.php#ID_DEL_CONTENEDOR
+
+El contenedor calendario_eventos_home se previsualiza en:
+
+index.php#calendario-eventos-home
+
+Las páginas de detalle o botones de volver deben regresar a index.php o a un ancla de index.php.
+
+---
+
+# RECUPERACION DESDE VERSION ANTIGUA
+
+Existe una referencia histórica en:
+
+version_antigua.zip
+
+Esa versión se puede usar solo como fuente de rescate visual o estructural cuando falten archivos del sistema actual.
+
+Archivos importantes rescatados o comparados desde esa versión:
+
+admin.php
+preview_contenedor.php
+componentes/header_principal.php
+includes/admin_layout.php
+prompt_desarrollo_contenedores.txt
+qaseduc_colegio_spablo.sql
+
+El menú público superior marcado visualmente en el sitio no es hardcodeado. Vive en:
+
+componentes/header_principal.php
+
+Ese componente usa:
+
+$arrMenus
+$arrSubs
+
+Estos arrays se cargan desde:
+
+menus
+sub_menus
+
+La administración de esos nombres se hace desde el panel administrativo en los módulos:
+
+Menú principal
+Submenús
+
+Si el archivo componentes/header_principal.php falta, el menú público desaparece aunque las tablas menus y sub_menus tengan datos.
+
+En esta recuperación se validó que componentes/header.php contiene la misma lógica de menú dinámico. Como el entorno bloquea crear componentes/header_principal.php, cms_get_component_path() carga componentes/header.php cuando el contenedor lógico se llama header_principal.
+
+---
+
+# ARCHIVOS PRINCIPALES ACTUALES
+
+Por bloqueo de escritura en algunos nombres exactos del entorno local, el sistema actual usa estos nombres activos:
+
+index.php
+admin.php
+preview_contenedor.php
+componentes/calendario_eventos_home.php
+
+Para compatibilidad con URLs antiguas se agregó:
+
+.htaccess
+
+Reglas activas:
+
+admin.php redirige internamente a admin.php
+preview_contenedor.php redirige internamente a preview_contenedor.php
+index.php redirige internamente a index.php
+
+El helper cms_get_component_path() mantiene el nombre lógico del contenedor calendario_eventos_home, pero carga componentes/calendario_eventos_home.php cuando el archivo original no existe.
+
+---
+
+# AUTENTICACION DEL ADMINISTRADOR
+
+El acceso al panel administrativo se realiza desde el contenedor topbar, mediante el modal de ingreso del sitio publico.
+
+Archivo del endpoint de login:
+
+login_check.php
+
+Este archivo recibe peticiones AJAX por POST desde el formulario de administrador del topbar.
+
+Campos recibidos:
+
+usuario
+clave
+
+Tabla real usada:
+
+usuario
+
+No usar tabla usuarios en plural, porque la base qaseduc_colegio_spablo.sql define la tabla en singular.
+
+Campos usados de la tabla usuario:
+
+id_usuario
+id_institucion
+nombre
+apellido
+email
+usuario
+clave
+rol
+estado
+
+Reglas del login:
+
+solo acepta metodo POST
+responde JSON
+busca por usuario o email
+solo permite estado = activo
+valida claves guardadas con password_hash
+mantiene compatibilidad con claves MD5
+mantiene compatibilidad con claves en texto plano existentes en la base antigua
+
+Cuando el login es correcto se crean estas variables de sesion:
+
+admin_logged = true
+admin_id
+id_usuario
+id_institucion
+admin_usuario
+admin_email
+admin_nombre
+admin_rol
+
+El destino luego de iniciar sesion es:
+
+admin.php
+
+Si admin.php, editar_contenedor.php o preview_contenedor.php se abren sin sesion admin, deben redirigir a:
+
+index.php
+
+No redirigir accesos no autenticados a colegiosanpablo.php.
+
+---
+
+# ARQUITECTURA DEL SISTEMA
+
+El sistema funciona como un CMS basado en contenedores.
+
+Cada bloque visual del sitio se define en la tabla:
+
+seccion
+
+Cada registro de esta tabla representa un contenedor del sitio.
+
+Ejemplos reales:
+
+topbar  
+hero_principal  
+noticias_home  
+faq_home  
+about_home  
+footer_principal  
+
+Cada contenedor tiene un archivo PHP correspondiente ubicado en:
+
+componentes/{nombre_interno}.php
+
+Ejemplo:
+
+topbar → componentes/topbar.php  
+hero_principal → componentes/hero_principal.php  
+footer_principal → componentes/footer_principal.php  
+
+---
+
+# ESTRUCTURA DE DATOS DEL SISTEMA
+
+El contenido se divide en tres niveles:
+
+## 1. Institución
+
+Tabla:
+
+institucion
+
+Contiene datos globales del sitio como:
+
+direccion  
+telefono  
+email  
+logo  
+color_primario  
+color_secundario  
+color_terciario  
+redes sociales institucionales  
+
+---
+
+## 2. Configuración del contenedor
+
+Tabla:
+
+seccion_config
+
+Guarda configuraciones específicas del contenedor.
+
+Ejemplo para topbar:
+
+texto_boton_ingresar  
+mostrar_direccion  
+mostrar_telefono  
+mostrar_email  
+mostrar_redes  
+mostrar_boton_ingresar  
+usar_gradiente_colores  
+max_redes  
+
+---
+
+## 3. Elementos internos del contenedor
+
+Tabla:
+
+seccion_item
+
+Contiene elementos repetibles dentro de una sección.
+
+Para el topbar se utilizará para redes sociales.
+
+Campos utilizados:
+
+id_seccion  
+etiqueta  
+titulo  
+descripcion  
+icono  
+visible  
+orden  
+
+---
+
+# OBJETIVO DE LA MODIFICACIÓN
+
+Quiero que el contenedor:
+
+topbar (id_seccion = 1)
+
+sea completamente administrable desde el panel.
+
+Los elementos editables del topbar serán:
+
+1 Dirección  
+2 Teléfono  
+3 Correo  
+4 Texto del botón "Ingresar"  
+5 Redes sociales (máximo 4)  
+6 Icono de cada red social  
+7 URL de cada red social  
+8 Orden de redes sociales  
+9 Activar o desactivar cada red  
+10 Mostrar u ocultar dirección, teléfono, correo y redes  
+
+---
+
+# REGLA DE ORIGEN DE DATOS
+
+Dirección → tabla institucion  
+Teléfono → tabla institucion  
+Correo → tabla institucion  
+
+Texto botón ingresar → seccion_config  
+
+Redes sociales → seccion_item  
+
+Colores institucionales → institucion
+
+---
+
+# GRADIENTE DE COLORES
+
+La franja superior del topbar debe usar un gradiente generado con:
+
+color_primario  
+color_secundario  
+color_terciario  
+
+Ejemplo CSS esperado:
+
+background: linear-gradient(
+90deg,
+color_primario,
+color_secundario,
+color_terciario
+);
+
+Estos colores provienen de la tabla institucion.
+
+No deben editarse desde el topbar.
+
+---
+
+# BOTÓN INGRESAR
+
+El botón "Ingresar":
+
+solo debe permitir cambiar el texto del botón.
+
+No debe modificar la acción del botón.
+
+El botón abre un modal existente y esa lógica no debe cambiarse.
+
+---
+
+# REDES SOCIALES
+
+Las redes sociales se almacenan en:
+
+seccion_item
+
+con:
+
+id_seccion = 1  
+etiqueta = 'red_social'
+
+Campos:
+
+titulo → nombre de la red  
+descripcion → URL  
+icono → clase del icono  
+visible → mostrar o no  
+orden → posición  
+
+Reglas:
+
+máximo 4 redes visibles  
+si existen más en BD, mostrar solo las primeras 4 según orden  
+
+---
+
+# ARCHIVOS QUE DEBEN MODIFICARSE
+
+Debes revisar y modificar solo si es necesario:
+
+componentes/topbar.php  
+admin.php  
+index.php  
+editar_contenedor.php  
+
+Si es necesario puedes crear:
+
+contenedores/topbar/editar.php  
+contenedores/topbar/guardar.php  
+assets/js/topbar_admin.js  
+
+Pero solo si el flujo del sistema lo requiere.
+
+---
+
+# REGLAS IMPORTANTES
+
+No crear nuevas tablas.
+
+No inventar columnas.
+
+No usar arrays hardcodeados si la información ya existe en la base de datos.
+
+No cambiar la arquitectura del sistema.
+
+No romper el layout actual del sitio.
+
+No modificar la lógica del modal del botón ingresar.
+
+---
+
+# VALIDACIÓN FINAL
+
+Antes de entregar la solución debes verificar:
+
+Que los nombres de tablas coincidan con qaseduc_colegio_spablo.sql.
+
+Que la arquitectura respete el diagrama mermaid-diagram.png.
+
+Que la lógica siga el comportamiento descrito en explicacion.txt.
+
+Que el código respete la estructura existente del proyecto.
+
+---
+
+# CONTENEDOR calendario_eventos_home
+
+Este contenedor pertenece al home y muestra una sección visual de calendario institucional junto con próximos eventos.
+
+Archivo del componente:
+
+componentes/calendario_eventos_home.php
+
+La sección se define en la tabla seccion con:
+
+nombre_interno = calendario_eventos_home
+tipo_seccion = events
+variante = calendario_lista
+
+Usa seccion_config para administrar textos y comportamiento general del bloque:
+
+titulo_bloque
+subtitulo_bloque
+texto_boton
+url_boton
+cantidad_items
+mes_titulo
+
+Conceptos obligatorios:
+
+calendario = base de dias, feriados, fines de semana y dias institucionales.
+eventos = actividades institucionales cargables manualmente o por Excel.
+
+Los eventos reales se guardan en la tabla eventos. La tabla seccion_item queda como compatibilidad del CMS y como fallback visual cuando aun no existen eventos cargados en la tabla eventos.
+
+Campos legacy usados en seccion_item cuando se use el fallback:
+
+etiqueta representa la categoría del evento.
+titulo representa el título del evento.
+subtitulo representa la hora del evento.
+descripcion representa una descripción corta.
+imagen representa la imagen del evento.
+fecha_publicacion representa la fecha del evento.
+boton_1_texto representa el texto opcional del botón.
+boton_1_url o url pueden apuntar al detalle del evento.
+
+Regla de detalle legacy:
+
+Si boton_1_url tiene valor, se usa boton_1_url.
+Si boton_1_url está vacío y url tiene valor, se usa url.
+Si ambos están vacíos, se usa:
+
+evento_detalle.php?id_item=ID
+
+Para eventos reales de la tabla eventos, el detalle publico usa:
+
+evento_detalle.php?id_evento=ID
+
+---
+
+# ADMINISTRACIÓN DE EVENTOS Y CARGA MASIVA
+
+El contenedor calendario_eventos_home mantiene su definición visual dentro del CMS de contenedores, pero los eventos reales se administran desde la tabla eventos.
+
+La tabla seccion sigue definiendo el contenedor, seccion_config sigue guardando configuraciones del bloque y seccion_item queda solo como compatibilidad visual o fallback. El calendario publico debe mostrar siempre tanto feriados/dias especiales desde calendario como eventos desde eventos.
+
+Los eventos pueden crearse manualmente desde la pestaña Items del contenedor calendario_eventos_home mediante el botón Agregar evento.
+
+Tambien pueden cargarse masivamente desde Excel o CSV desde la misma pestaña Items.
+
+La plantilla se descarga desde el admin con el boton Descargar plantilla Excel. La carga masiva no incluye imagenes ni archivos adjuntos. Si PHP no tiene ZipArchive, el sistema puede entregar un Excel XML .xls compatible con Excel manteniendo las hojas EVENTOS y AYUDA.
+
+La plantilla Excel debe tener:
+
+Hoja EVENTOS:
+fila 1 titulo institucional.
+fila 2 nombre de institucion desde tabla institucion.
+fila 3 Descargado por y Fecha descarga. El usuario se obtiene desde SESSION id_usuario y tabla usuario.
+fila 5 encabezados reales.
+
+Hoja AYUDA:
+documentacion institucional de columnas, formatos, ejemplos, errores comunes, reglas de fechas y reglas de horas.
+
+Campos mínimos obligatorios para carga o creación:
+
+titulo
+fecha_inicio
+
+Campos de la plantilla:
+
+titulo
+descripcion_corta
+descripcion
+fecha_inicio
+fecha_termino
+hora_inicio
+hora_termino
+categoria
+ubicacion
+color
+destacado
+visible
+orden
+
+El campo estado no forma parte de la plantilla Excel ni del preview. Para cargas masivas se usa el valor por defecto publicado mediante la normalizacion del CMS.
+
+Reglas:
+
+fecha_inicio debe venir como yyyy-mm-dd.
+hora_inicio debe venir como HH:mm.
+visible y destacado usan 1 o 0.
+Si fecha_termino viene vacía, se usa fecha_inicio.
+Si color viene vacío, se asigna según categoría.
+
+Flujo obligatorio de carga masiva:
+
+1. Usuario sube Excel o CSV.
+2. Sistema parsea y valida.
+3. Se muestra una tabla preview.
+4. Cada fila tiene checkbox individual.
+5. Existe checkbox superior Seleccionar todos.
+6. Solo filas marcadas se importan.
+7. La insercion real ocurre al confirmar con Cargar eventos seleccionados.
+
+La subida del archivo nunca debe insertar automaticamente eventos.
+
+REGLA IMPORTANTE SOBRE CALENDARIO VS EVENTOS:
+
+La tabla calendario contiene los dias del calendario institucional. Incluye fecha, es_feriado, nombre_feriado, tipo, color, fines de semana y dias habiles. Estos registros no se cargan masivamente desde Excel y no se editan desde el flujo de eventos.
+
+La tabla eventos contiene eventos institucionales reales. Este flujo de plantilla, preview con checkbox e importacion confirmada trabaja solo con eventos.
+
+componentes/calendario_eventos_home.php debe mostrar ambos tipos de informacion:
+
+feriados y dias especiales desde calendario.
+eventos cargados desde eventos.
+
+Los feriados existentes en calendario deben aparecer aunque no existan eventos cargados.
+
+La carga masiva Excel no debe insertar ni modificar registros en calendario.
+
+Los eventos publicados y visibles se muestran en el calendario público del home.
+
+El calendario público debe renderizarse en la página principal:
+
+index.php#calendario-eventos-home
+
+No apuntar el calendario ni sus botones de retorno a colegiosanpablo.php.
+
+El detalle público se abre en:
+
+evento_detalle.php?id_evento=X
+
+Desde evento_detalle.php los enlaces de volver deben regresar a:
+
+index.php#calendario-eventos-home
+
+Detalle publico rediseñado:
+
+Archivo modificado:
+
+evento_detalle.php
+
+Tablas usadas:
+
+eventos
+seccion_item
+institucion
+
+El detalle publico mantiene el header dinamico basado en menus y sub_menus desde cms_get_site_data(), y mantiene footer institucional con datos de institucion.
+
+Compatibilidad de rutas:
+
+evento_detalle.php?id_evento=X usa la tabla eventos.
+evento_detalle.php?id_item=X usa la tabla seccion_item como compatibilidad legacy.
+
+Reglas de publicacion:
+
+Para id_evento solo se muestra el evento si visible = 1 y estado no es cancelado, oculto ni borrador.
+Para id_item solo se muestra el item si visible = si.
+
+Mapeo de eventos:
+
+titulo desde eventos.titulo.
+descripcion_corta desde eventos.descripcion_corta.
+descripcion desde eventos.descripcion.
+fecha_inicio y fecha_termino desde eventos.
+hora_inicio y hora_termino desde eventos.
+ubicacion, categoria, color, imagen, destacado, visible y estado desde eventos.
+
+Mapeo legacy seccion_item:
+
+titulo desde seccion_item.titulo.
+descripcion desde seccion_item.descripcion.
+imagen desde seccion_item.imagen.
+fecha desde seccion_item.fecha_publicacion.
+categoria desde seccion_item.etiqueta.
+hora/descripcion breve puede usar seccion_item.subtitulo cuando exista.
+
+Reglas visuales:
+
+La pagina usa hero superior con imagen, overlay oscuro, badge de categoria, titulo, descripcion corta y datos rapidos.
+El cuerpo usa dos columnas: contenido principal a la izquierda y tarjeta destacada de datos a la derecha.
+La galeria queda preparada para multiples imagenes; actualmente usa imagen principal como primera imagen solo si existe fisicamente.
+Si la imagen del evento esta vacia o el archivo no existe, el hero usa fallback institucional assets/images/frontis_01.jpg y no se muestra icono roto.
+La seccion Videos del evento queda preparada pero oculta mientras no existan videos.
+El boton volver siempre apunta a index.php#calendario-eventos-home.
+
+Multimedia por evento:
+
+Se agrega tabla hija:
+
+evento_media
+
+Campos:
+
+id_media
+id_evento
+tipo
+archivo
+url
+titulo
+descripcion
+portada
+visible
+orden
+creado_en
+
+Relacion:
+
+evento_media.id_evento referencia eventos.id_evento con ON DELETE CASCADE.
+
+Tipos permitidos:
+
+imagen
+video
+youtube
+
+La tabla calendario no se modifica para este flujo. calendario sigue siendo solo base de dias, feriados y dias institucionales.
+
+El modal de crear/editar eventos en editar_contenedor.php mantiene visible y estado, quita los campos orden y destacado, y agrega el bloque Multimedia del evento.
+
+El campo archivo_adjunto de la tabla eventos queda como compatibilidad legacy, pero no se muestra en el modal de eventos para evitar confundirlo con imagenes o videos. Las imagenes y videos del detalle del evento deben gestionarse desde evento_media.
+
+Desde el bloque Multimedia del evento:
+
+se pueden subir varias imagenes.
+se pueden subir videos locales.
+se pueden registrar URLs de YouTube.
+se muestran previews de archivos seleccionados y multimedia ya guardada.
+se puede ocultar/mostrar multimedia.
+se puede eliminar multimedia.
+
+Los archivos multimedia se guardan bajo:
+
+uploads/eventos/media/ID_EVENTO
+
+Helpers asociados en includes/cms_helpers.php:
+
+cms_ensure_event_media_table()
+cms_list_event_media()
+cms_save_event_media_uploads()
+cms_toggle_event_media_visible()
+cms_delete_event_media()
+
+evento_detalle.php usa evento_media para:
+
+hero con imagen principal tomada desde imagen marcada como portada o primera imagen visible.
+carrusel de imagenes destacadas.
+galeria de imagenes.
+videos locales y YouTube.
+fallback institucional si no existen imagenes visibles.
+
+Ajuste visual del modal de eventos:
+
+editar_contenedor.php usa scroll interno en el body del modal #eventModal para que el formulario largo de evento y multimedia sea usable sin perder el encabezado ni el footer.
+
+La imagen principal del evento se conserva como portada/hero del detalle. Las imagenes de galeria, videos locales y URLs de YouTube se cargan en el bloque Multimedia del evento y se guardan en evento_media.
+
+--------------------------------------------------
+NAVEGACION MENSUAL Y UX CARGA MASIVA EVENTOS
+--------------------------------------------------
+
+Archivos modificados:
+
+componentes/calendario_eventos_home.php
+assets/css/pages/colegiosanpablo.css
+editar_contenedor.php
+eventos_preview_importacion.php
+assets/js/eventos_importacion.js
+
+Calendario publico:
+
+El componente calendario_eventos_home.php muestra por defecto el mes actual. Ademas acepta el parametro publico:
+
+cal_mes=YYYY-MM
+
+El calendario incorpora flecha izquierda para mes anterior y flecha derecha para mes siguiente, manteniendo el ancla:
+
+index.php?cal_mes=YYYY-MM#calendario-eventos-home
+
+Regla de datos:
+
+Cada mes renderizado consulta ambas fuentes:
+
+- tabla calendario para feriados, fines de semana y dias institucionales.
+- tabla eventos para eventos institucionales visibles y publicados.
+
+La navegacion mensual no modifica registros ni mezcla responsabilidades de tablas. calendario sigue siendo base de dias/feriados y eventos sigue siendo actividades cargables.
+
+UX carga masiva:
+
+En editar_contenedor.php, al subir un Excel desde el formulario de carga masiva, se muestra un spinner durante 3 segundos antes de enviar el archivo al preview.
+
+Regla tecnica:
+
+El input file no se deshabilita durante el spinner, porque un input file disabled no se envia por POST. Solo se deshabilita el boton de envio.
+
+Preview:
+
+eventos_preview_importacion.php muestra un estado de validacion con spinner durante 3 segundos y luego revela la tabla de preview con los eventos leidos del Excel.
+
+La importacion real sigue ocurriendo solo cuando el usuario marca checkboxes y confirma con:
+
+Cargar eventos seleccionados
+
+Ajuste de navegacion sin salto:
+
+Las flechas del calendario publico actualizan el mes mediante fetch sobre el mismo componente calendario_eventos_home.php. Esto evita que al cambiar de mes la pagina suba o baje por recarga completa o por salto al ancla.
+
+El enlace con cal_mes y #calendario-eventos-home se mantiene como fallback para navegadores sin JavaScript.
+
+--------------------------------------------------
+MÓDULO ANALÍTICA DE ACCESOS
+--------------------------------------------------
+
+Archivo creado:
+
+analitica.php
+
+Archivos modificados:
+
+includes/admin_layout.php
+
+Nav items agregado:
+
+'analitica' => ['href' => 'analitica.php', 'icon' => 'bi-bar-chart-line', 'label' => 'Analítica']
+
+Nav group agregado:
+
+'ANALÍTICA' => ['analitica']
+
+Fuente de datos:
+
+Tabla: auditoria_log con LEFT JOIN a usuario.
+
+No se crearon tablas nuevas. Todos los campos usados están definidos en qaseduc_colegio_spablo.sql.
+
+Campos de auditoria_log usados:
+
+id_log, id_usuario, id_institucion, modulo, tabla_afectada, accion, descripcion, datos_antes, datos_despues, ip_usuario, user_agent, fecha_hora
+
+Campos de usuario usados (vía LEFT JOIN):
+
+nombre, apellido, usuario, email
+
+Secciones del módulo:
+
+1. KPIs (4 tarjetas):
+   - Total logins (accion = 'login')
+   - Usuarios activos últimos 7 días (DISTINCT id_usuario, INTERVAL 7 DAY)
+   - IPs únicas (DISTINCT ip_usuario)
+   - Total de acciones registradas + fecha de la última
+
+2. Gráfico de línea (Chart.js 4.x desde CDN):
+   - Actividad diaria de los últimos 30 días
+   - Rellena días sin registros con 0 en PHP
+
+3. Historial de accesos:
+   - Filtra accion IN ('login','logout')
+   - Columnas: fecha, usuario, acción, IP, navegador, OS
+   - DataTables ordenado por fecha DESC
+
+4. Actividad por usuario:
+   - COUNT(*) AS total_acciones, MAX(fecha_hora) AS ultima_accion
+   - GROUP BY id_usuario
+   - DataTables
+
+5. IPs registradas:
+   - COUNT(*) AS total, MAX(fecha_hora) AS ultima
+   - GROUP BY ip_usuario
+   - Limitado a 30 IPs
+   - DataTables
+
+6. Acciones por módulo:
+   - COUNT(*), COUNT(DISTINCT id_usuario), MAX(fecha_hora)
+   - GROUP BY modulo
+   - DataTables
+
+Parseo de User Agent:
+
+Función anl_parse_ua(string $ua): array
+PHP puro, sin librerías externas.
+Detecta: Edge, Opera, Chrome, Firefox, Safari, IE
+Detecta OS: Windows 10/11, 8.1, 7, macOS, iOS (iPhone/iPad), Android, Linux
+
+Patrón de archivo:
+
+Igual que auditoria_log.php:
+session_start → protección → requires → cms_get_connection → cms_get_site_data → auditoriaTablaLista → queries → admin_render_layout_start → HTML → admin_render_layout_end
+
+Usa variables CSS del admin: --adm-primary, --adm-secondary, --adm-border, --adm-muted, --adm-surface, --adm-text.
+
+--------------------------------------------------
+PANEL MENUS Y SUBMENUS - REDISEÑO CON DRAG-DROP Y MODAL
+--------------------------------------------------
+
+Archivos modificados:
+
+admin.php
+includes/cms_helpers.php
+
+Tablas usadas:
+
+menus
+sub_menus
+
+Cambios en cms_helpers.php:
+
+Se eliminó el campo orden del UPDATE en cms_save_menu(). El orden ya no se edita manualmente: se asigna automáticamente por MAX(orden)+1 en INSERT.
+
+Se eliminó el campo orden del UPDATE en cms_save_submenu(). El orden ya no se edita manualmente: se asigna automáticamente por MAX(orden)+1 dentro del mismo id_menu en INSERT.
+
+Se agregaron dos nuevas funciones:
+
+cms_reorder_menus(mysqli $db, array $ids): void
+  → actualiza el campo orden de cada fila en menus según la posición en el array recibido (1-based).
+
+cms_reorder_submenus(mysqli $db, array $ids): void
+  → actualiza el campo orden de cada fila en sub_menus según la posición en el array recibido (1-based).
+
+Cambios en admin.php (lógica POST):
+
+Se agregaron dos nuevos handlers:
+
+accion = reorder_menus
+  → recibe items[] (array de id_menu en orden deseado) y llama cms_reorder_menus().
+  → responde JSON si es AJAX.
+
+accion = reorder_submenus
+  → recibe items[] (array de id_sub_menu en orden deseado) y llama cms_reorder_submenus().
+  → responde JSON si es AJAX.
+
+Cambios en admin.php (panel menus, panel=menus):
+
+Se eliminó el layout de dos columnas (tabla + formulario lateral).
+Se eliminó el input de Orden del formulario de menús.
+La tabla ahora es de ancho completo con una columna de drag handle (≡) al inicio.
+El tbody tiene id="menusSortableTbody" para SortableJS.
+Cada fila tiene data-id con el id_menu.
+El botón de editar ya no es un enlace href a ?menu=ID. Ahora es un <button> con data-attributes (data-id, data-nombre, data-url, data-icono, data-estado) que llama a la función JS abrirModalMenu(this).
+El botón Nuevo menú abre el mismo modal vacío mediante abrirModalMenu(null).
+Se agregó un modal Bootstrap (#modalMenu) con campos Nombre, URL, Ícono y switch Activo. Sin campo Orden.
+
+Cambios en admin.php (panel submenus, panel=submenus):
+
+Se eliminó el layout de dos columnas (tabla + formulario lateral).
+Se eliminó el input de Orden del formulario de submenús.
+Los submenús ahora se agrupan por menú padre. Cada grupo tiene su propio tbody con clase submenusSortableTbody y atributo data-id-menu.
+El reorden es por grupo: al soltar un elemento, se envía solo el array de ids del grupo correspondiente.
+Cada fila de submenú tiene data-attributes para el modal (data-id, data-id-menu, data-nombre, data-url, data-icono, data-estado).
+El botón de editar llama a abrirModalSubmenu(this).
+El botón Nuevo submenú abre abrirModalSubmenu(null) con el modal vacío.
+Se agregó un modal Bootstrap (#modalSubmenu) con campos Menú padre (select), Nombre, URL, Ícono y switch Activo. Sin campo Orden.
+
+Cambios en admin.php (JavaScript):
+
+Se eliminó la inicialización de DataTables para #menusTable y #submenusTable.
+Se agregó SortableJS desde CDN (sortablejs@1.15.2).
+Se inicializa SortableJS en #menusSortableTbody para reordenar menús vía AJAX.
+Se inicializa SortableJS en cada .submenusSortableTbody para reordenar submenús por grupo vía AJAX.
+Se agregaron las funciones globales abrirModalMenu(btn) y abrirModalSubmenu(btn) que pueblan y muestran los modales Bootstrap correspondientes.
+
+Flujo administrativo:
+
+Crear menú → botón Nuevo menú → modal vacío → POST accion=guardar_menu (sin orden).
+Editar menú → botón ✎ → modal pre-poblado → POST accion=guardar_menu (sin orden).
+Reordenar menús → drag & drop → AJAX accion=reorder_menus → cms_reorder_menus().
+Toggle activo/inactivo → switch → POST accion=toggle_menu (sin cambio).
+
+Mismo flujo para submenús con la adición del selector de menú padre.
+
+Flujo público:
+
+Sin cambios. El header sigue leyendo menus y sub_menus ordenados por orden ASC.
+
+La tabla calendario complementa el calendario visual con feriados, fines de semana, nombre_feriado y color del feriado cuando esas columnas existan en la base real.
+
+La base actual incluye además la tabla:
+
+dia_semana
+
+Esta tabla define los nombres de lunes a domingo, orden y si corresponde a fin de semana. El calendario público puede usar los datos ya denormalizados de calendario, pero no se debe olvidar que dia_semana forma parte del modelo real del calendario institucional.
+
+Para que eventos del mes actual no desaparezcan cuando la fecha exacta ya pasó, el componente debe buscar eventos desde el primer día del mes actual cuando no encuentre eventos en el mes configurado. Ejemplo: si hoy es 2026-05-23 y existe un evento 2026-05-22, debe seguir mostrándose dentro del calendario de Mayo 2026.
+
+---
+
+# AUDITORIA CENTRAL DEL CMS
+
+El CMS incorpora una capa backend reutilizable de auditoria en:
+
+includes/funciones_auditoria.php
+
+La auditoria trabaja con mysqli y con la tabla real:
+
+auditoria_log
+
+Campos esperados:
+
+id_log
+id_usuario
+id_institucion
+modulo
+tabla_afectada
+id_registro
+accion
+descripcion
+datos_antes
+datos_despues
+ip_usuario
+user_agent
+fecha_hora
+
+La funcion principal es:
+
+registrarAuditoria($conexion, $modulo, $tablaAfectada, $idRegistro, $accion, $descripcion = '', $datosAntes = null, $datosDespues = null)
+
+Si auditoria_log no existe o le faltan columnas, la funcion no rompe el flujo administrativo: registra el problema en error_log y retorna false.
+
+Funciones auxiliares:
+
+obtenerRegistroAuditoria($conexion, $tabla, $campoId, $id)
+normalizarDatosAuditoria($datos)
+auditoriaTablaLista($conexion)
+
+La lectura de registros para datos antes/despues usa lista blanca:
+
+usuario.id_usuario
+institucion.id_institucion
+menus.id_menu
+sub_menus.id_sub_menu
+seccion.id_seccion
+seccion_config.id_config
+seccion_item.id_item
+eventos.id_evento
+
+No se permiten tablas arbitrarias.
+
+Campos sensibles ocultos en JSON:
+
+clave
+password
+token
+token_reinicio
+
+Acciones estandar:
+
+login
+logout
+crear
+editar
+eliminar
+activar
+desactivar
+ocultar
+publicar
+cancelar
+importar
+descargar
+error
+
+Integraciones iniciales:
+
+login_check.php registra login correcto y login fallido.
+admin.php registra menus, sub_menus y visibilidad de seccion.
+editar_contenedor.php registra eventos, seccion_config y seccion_item.
+eventos_descargar_plantilla.php registra descarga de plantilla.
+eventos_importar_confirmados.php registra importacion masiva confirmada.
+
+Vista administrativa:
+
+auditoria_log.php
+
+Solo usuarios con sesion admin pueden acceder. Si no hay sesion, redirige a index.php.
+
+La vista usa el layout administrativo, DataTables y Bootstrap. Permite filtrar por usuario, modulo, accion, fecha desde y fecha hasta. El detalle se abre en offcanvas derecho con datos generales, JSON antes/despues y comparacion visual de diferencias de primer nivel.
+
+El acceso visual queda integrado al sidebar izquierdo del panel mediante includes/admin_layout.php con el modulo:
+
+Auditoria / Logs
+
+Icono:
+
+bi-clock-history
+
+Regla visual del layout administrativo:
+
+El sidebar izquierdo debe mantener la capacidad de colapsarse en escritorio mediante el boton del topbar. En modo colapsado deben quedar visibles los iconos y ocultarse los textos del menu, sin eliminar el acceso a Auditoria / Logs. En pantallas pequenas el mismo boton abre/cierra el sidebar como menu movil.
+
+El topbar debe mostrar el nombre del usuario logueado junto al circulo de iniciales, usando los datos de sesion admin_nombre y admin_rol.
+
+--------------------------------------------------
+CONTENEDOR GALERIA HOME
+--------------------------------------------------
+
+Cambio implementado:
+
+Se agrego el componente publico:
+
+componentes/galeria_home.php
+
+Objetivo:
+
+Incorporar en index.php la seccion visual del prototipo colegiosanpablo_odd.php:
+
+<section class="sp-galeria" id="galeria">
+
+Reglas aplicadas:
+
+- No se usa colegiosanpablo.php.
+- No se modifica index.php porque ya carga componentes dinamicamente desde seccion.nombre_interno.
+- No se modifica el layout administrativo ni el sidebar.
+- El contenedor logico existente galeria_home se renderiza mediante componentes/galeria_home.php.
+- El ancla de vista previa del CMS para galeria_home apunta a index.php#galeria.
+
+Administracion:
+
+La galeria se administra desde admin.php > Contenedores > Galeria home > Items.
+
+Tabla usada:
+
+seccion_item
+
+Campos usados:
+
+titulo
+descripcion
+imagen
+url
+visible
+orden
+
+Render publico:
+
+- Solo se muestran items visibles con imagen.
+- Se muestran maximo 6 imagenes para respetar el layout original.
+- La primera imagen usa la clase large.
+- Si no hay items cargados en seccion_item, se usan imagenes fallback institucionales existentes en assets/images para que la seccion no quede vacia.
+- Si una imagen configurada no existe en disco, se reemplaza por assets/images/frontis_01.jpg para evitar iconos de imagen rota.
+
+Estilo:
+
+Se reutilizan las clases ya existentes en assets/css/pages/colegiosanpablo.css:
+
+sp-galeria
+gallery-grid
+g-item
+overlay
+
+Configuracion opcional del contenedor:
+
+etiqueta
+titulo_bloque
+titulo_resaltado
+descripcion_bloque
+
+--------------------------------------------------
+AJUSTE PLANTILLA EXCEL EVENTOS
+--------------------------------------------------
+
+Archivo modificado:
+
+includes/eventos_excel_helpers.php
+
+Motivo:
+
+La plantilla .xlsx descargada podia abrir en Excel mostrando las hojas EVENTOS y AYUDA, pero sin pintar correctamente el contenido visible de la hoja EVENTOS.
+
+Ajuste aplicado:
+
+- La generacion .xlsx mantiene las hojas EVENTOS y AYUDA.
+- La hoja EVENTOS mantiene encabezados desde fila 5.
+- Se mantiene el flujo de carga masiva solo sobre la tabla eventos.
+- No se modifica la tabla calendario.
+- No se agregan columnas nuevas.
+- No se cambia la importacion ni el preview.
+- El archivo .xlsx ahora usa sharedStrings.xml para las cadenas de texto.
+- Se agregan dimension, sheetFormatPr, alturas de fila, pageMargins y orden OOXML mas compatible para sheetData, autoFilter, mergeCells y dataValidations.
+
+Columnas mantenidas:
+
+titulo
+descripcion_corta
+descripcion
+fecha_inicio
+fecha_termino
+hora_inicio
+hora_termino
+categoria
+ubicacion
+color
+destacado
+visible
+orden
+
+--------------------------------------------------
+REDISENO DASHBOARD ADMINISTRATIVO
+--------------------------------------------------
+
+Archivos modificados:
+
+admin.php
+prompt_desarrollo_contenedores.txt
+
+Correccion importante:
+
+El topbar publico de index.php y componentes/topbar.php no debe modificarse para este pedido. Se restaura el cambio visual aplicado al sitio publico y el trabajo queda limitado al contenido interno del dashboard administrativo.
+
+Reglas aplicadas:
+
+- No se modifica el menu lateral del administrador.
+- No se modifica el header publico.
+- No se modifica index.php para este rediseño.
+- No se modifica componentes/topbar.php para este rediseño.
+- Se mantiene includes/admin_layout.php como layout base del panel.
+- Se rediseña solo el contenido del panel dashboard dentro de admin.php.
+
+Dashboard:
+
+El panel dashboard muestra:
+
+- Metricas principales: contenedores, menus, submenus y eventos del mes.
+- Proximos eventos desde la tabla eventos usando cms_list_public_events().
+- Mini calendario mensual informativo.
+- Accesos rapidos a eventos, menus y configuracion.
+- Listado resumido de contenedores del home desde la tabla seccion.
+- Actividad reciente desde auditoria_log si la tabla existe.
+- Estado del sitio con contenedores activos y usuario administrador.
+
+Tablas consultadas:
+
+seccion
+menus
+sub_menus
+eventos
+auditoria_log
+
+No se crean tablas nuevas ni columnas nuevas.
+
+--------------------------------------------------
+DIFERENCIA ENTRE carpeta componentes/ Y carpeta contenedores/
+--------------------------------------------------
+
+contenedores/
+    Contiene los bloques HTML ESTATICOS originales del tema comprado (HTML template).
+    Son archivos de referencia visual, con contenido hardcodeado, sin PHP dinamico.
+    Se usan SOLO como referencia para ver como era el diseño original del bloque.
+    Ejemplo: contenedores/video.php tiene el HTML del bloque video con URL hardcodeada.
+    NUNCA se incluyen directamente en index.php ni en el sitio publico.
+
+componentes/
+    Contiene los componentes PHP DINAMICOS que se renderizan realmente en el sitio publico.
+    Cada archivo lee datos desde la base de datos via $sectionItemsMap y $sectionConfigsMap.
+    Se incluyen dinamicamente en index.php segun las secciones activas en la tabla seccion.
+    El nombre del archivo coincide con el campo nombre_interno de la tabla seccion.
+    Ejemplo: componentes/video_destacado_home.php es el componente real del video.
+
+Regla: cuando se construye un componente nuevo, el archivo de contenedores/ es la referencia
+visual, y el archivo de componentes/ es el que hace el trabajo real con datos de la BD.
+
+--------------------------------------------------
+CONTENEDOR video_destacado_home
+--------------------------------------------------
+
+Seccion en tabla seccion:
+
+nombre_interno = video_destacado_home
+tipo_seccion = video
+
+Archivo del componente publico:
+
+componentes/video_destacado_home.php
+
+Tablas usadas:
+
+seccion_item  (guarda el URL del video)
+seccion_config  (guarda imagen_fondo opcional y titulo_bloque)
+
+Campos de seccion_item usados:
+
+etiqueta = 'video_destacado'
+titulo   = titulo interno del item (ej: "Video destacado")
+url      = URL del video (YouTube o video local)
+visible  = si/no
+orden    = posicion
+
+Campos de seccion_config usados:
+
+imagen_fondo  = ruta a imagen de fondo del bloque (opcional)
+titulo_bloque = texto del bloque (opcional)
+video_url     = URL de video fallback si seccion_item esta vacio (legacy, no recomendado)
+
+Logica de imagen de fondo (imagen_fondo):
+
+1. Si imagen_fondo esta configurada en seccion_config se usa esa imagen.
+2. Si no esta configurada y el video es de YouTube, se extrae automaticamente
+   el thumbnail de YouTube usando: https://img.youtube.com/vi/{VIDEO_ID}/maxresdefault.jpg
+3. Si tampoco hay URL de YouTube, se usa el fallback: assets/images/video/video-eight-image.jpg
+
+Esto evita que aparezca la imagen placeholder del tema HTML (video-eight-image.jpg)
+cuando hay una URL de YouTube configurada.
+
+Logica del video:
+
+Si url es YouTube → se abre en popup iframe con magnificPopup (tipo: 'iframe').
+Si url es video local → se abre en popup inline con magnificPopup (tipo: 'inline').
+
+Flujo administrativo:
+
+El admin va a Contenedores > Video destacado > Items > Editar item.
+Ahi ingresa la URL de YouTube en el campo "URL de YouTube".
+El thumbnail de YouTube se usa automaticamente como fondo del bloque.
+Si quiere una imagen personalizada, agrega la clave imagen_fondo en la pestaña General
+con la ruta al archivo de imagen (ej: assets/images/mi-imagen.jpg).
+
+Administracion del item en editar_contenedor.php:
+
+El modal de item para tipo video muestra:
+- Titulo interno
+- URL de YouTube
+- Video local (archivo mp4/webm/mov/m4v)
+- Visible
+- Orden
+
+NO muestra campo imagen porque la imagen de fondo se controla desde seccion_config (imagen_fondo).
+
+Pagina publica donde se renderiza:
+
+index.php (seccion con id video_destacado_home)
+
+Ancla de vista previa del CMS:
+
+index.php#video-destacado-home
+
+MODAL DE VIDEO (reproductor propio, sin magnificPopup):
+
+Se eliminó la dependencia de magnificPopup para este contenedor.
+El componente tiene su propio overlay/modal sin dependencias externas.
+
+Flujo del modal YouTube:
+1. El botón play tiene data-url con la URL del CMS.
+2. Al hacer clic se extrae solo el video_id con regex.
+3. Se construye URL limpia: https://www.youtube.com/embed/{ID}?autoplay=1&rel=0&modestbranding=1
+4. Se abre el overlay con iframe que carga esa URL.
+
+REGLA YouTube embedding:
+No todos los videos de YouTube permiten embedding. Si el video tiene embedding
+deshabilitado por su dueño, mostrará error dentro del iframe. Eso no es código.
+Para verificar: youtube.com > Compartir > Incorporar > "reproduccion en otros sitios deshabilitada".
+Usar siempre URLs directas sin list=RDMM ni start_radio=1 para mejores resultados.
+
+El modal propio usa: overlay backdrop blur, escala animada, cierre con X / ESC / clic fondo.
+
+--------------------------------------------------
+CALENDARIO DE EVENTOS - MIGRACIÓN A FULLCALENDAR
+--------------------------------------------------
+
+Archivos modificados:
+
+componentes/calendario_eventos_home.php
+
+Archivo nuevo:
+
+calendario_eventos_json.php
+
+Cambio:
+
+Se reemplazó la tabla HTML/PHP del calendario por FullCalendar v6 (librería).
+El componente ya no construye el HTML del calendario en PHP.
+FullCalendar carga los eventos via AJAX desde calendario_eventos_json.php.
+
+CDN usado:
+
+https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js
+
+Este bundle incluye todos los plugins (dayGrid, timeGrid, list) y todos los locales.
+No hay que instalar nada en el servidor. El CSS se inyecta automáticamente via JS.
+
+Endpoint JSON (calendario_eventos_json.php):
+
+- Recibe parametros start y end de FullCalendar (ISO 8601).
+- Consulta la tabla eventos via cms_list_public_events().
+- Consulta la tabla calendario via cms_list_calendar_days() para feriados.
+- Retorna array JSON con formato FullCalendar (id, title, start, end, color, url).
+- Los feriados se incluyen como display: 'background' para no tapar eventos.
+- No requiere sesion de admin. Es endpoint público.
+- Mapeo categoría → color (igual que el CSS existente):
+    academico    → color_primario
+    pastoral     → color_secundario
+    deportivo    → color_terciario
+    institucional→ color_cuaternario
+    default      → color_primario
+
+Colores institucionales:
+
+Los colores se leen de la tabla institucion (color_primario, color_secundario, etc.)
+en el endpoint JSON y también en el componente PHP.
+Se aplican a los eventos via propiedad 'color' del JSON.
+Se aplican al header del calendario y botones de nav via CSS variables de FullCalendar.
+
+Barra lateral Próximos eventos:
+
+Se mantiene en PHP. Pero ahora consulta eventos desde HOY hacia adelante (+120 dias)
+en vez de mostrar eventos del mes visualizado en el calendario. Asi siempre muestra
+eventos próximos relevantes sin importar qué mes está abierto en FullCalendar.
+
+Lo que se eliminó:
+
+- El PHP que construía la tabla del calendario (for loop de celdas).
+- La navegación mensual por URL (?cal_mes=YYYY-MM).
+- El fetch de cambio de mes via AJAX.
+- Las clases calendar-day, calendar-empty, event-day del CSS (ya no se generan).
+  (el CSS de esas clases puede dejarse para no romper nada).
+
+Configuración de FullCalendar:
+
+- locale: 'es' (español, fechas y textos en español).
+- firstDay: 1 (semana empieza el lunes, como en el calendario anterior).
+- initialView: 'dayGridMonth'.
+- dayMaxEvents: 3 (muestra +N para días con muchos eventos).
+- Los botones prev/next son circulares con color primario institucional.
+- El dia de hoy se resalta con un fondo muy suave del color primario.
+- Al hacer clic en un evento se navega a evento_detalle.php?id_evento=X.
+- Hover muestra tooltip nativo con titulo + hora + ubicacion.
+
+REGLA IMPORTANTE sobre el CSS existente en colegiosanpablo.css:
+
+Las reglas CSS de .calendario-eventos-table, .calendar-day, .calendar-empty,
+.event-day, .calendar-day-number etc. quedaron huérfanas (ya no generan HTML esas clases).
+Pueden dejarse o eliminarse en una limpieza posterior. No rompen nada.
+Las reglas de .calendario-eventos-next, .calendario-event-card, .event-date-box,
+.event-card-body si siguen en uso (barra lateral PHP).
+Los overrides de FullCalendar se agregan en el <style> inline del componente
+porque necesitan los valores PHP de los colores institucionales.
+
+--------------------------------------------------
+CONTENEDOR ELIMINADO
+--------------------------------------------------
+
+Seccion en tabla seccion:
+
+nombre_interno = eliminado
+tipo_seccion = modal
+orden = 99
+
+La sección se crea automáticamente via cms_sync_sections() al cargar cualquier página
+del sitio que llame a cms_get_site_data() (incluyendo index.php y editar_contenedor.php).
+
+Archivo del componente publico:
+
+componentes/eliminado.php
+
+Tablas usadas:
+
+seccion_item  → contenido del modal (imagen, titulo, descripcion, boton)
+seccion_config → comportamiento del modal (mostrar, delay_ms)
+
+Campos de seccion_item usados:
+
+imagen        → imagen superior del modal (opcional, 880x340px recomendado)
+titulo        → titular del modal
+descripcion   → texto del cuerpo (soporta saltos de linea con nl2br)
+boton_1_texto → texto del botón CTA (dejar vacío para no mostrar botón)
+boton_1_url   → URL destino del botón
+visible       → si/no (solo el primer item visible se usa)
+orden         → para ordenar si hay más de un item
+
+Campos de seccion_config usados:
+
+mostrar    → 'una_vez' (default, una vez por sesión del navegador)
+             'siempre' (cada vez que carga la página)
+delay_ms   → milisegundos antes de aparecer (default: 1200)
+
+Lógica de visibilidad (JS con Web Storage):
+
+1. Si hay un dismiss guardado en localStorage < 7 días → no mostrar.
+2. Si mostrar = 'una_vez' y ya fue visto en esta sesión (sessionStorage) → no mostrar.
+3. Si mostrar = 'siempre' → mostrar siempre (pero solo una vez por carga de página).
+4. El botón "No volver a mostrar" → guarda timestamp en localStorage (7 días).
+5. El botón X y el backdrop → solo cierran (no guardan dismiss permanente).
+
+El modal se muestra solo cuando tiene al menos UN item visible con contenido.
+Si la sección tiene visible = 'no', index.php no incluye el componente.
+
+Diseño visual:
+
+- Barra superior con gradiente institucional (color_primario → color_secundario).
+- Botón X con rotación al hover.
+- Imagen a ancho completo con efecto zoom suave al hover.
+- Título con color_primario institucional.
+- Botón CTA con color_primario, bordes redondeados (pill), sombra.
+- Animación de entrada: fade in + slide up + scale.
+- Backdrop con blur.
+- Responsive: se adapta a móviles sin scroll.
+
+Administración desde el CMS:
+
+admin.php > Contenedores > Modal de bienvenida
+
+Pestaña General:
+- Visible: si/no (activa o desactiva el modal completo)
+- Clave mostrar → 'una_vez' o 'siempre'
+- Clave delay_ms → número de milisegundos
+
+Pestaña Items:
+- Formulario específico con: imagen, título, mensaje, botón texto, botón URL, visible, orden
+- Vista previa de imagen actual si ya hay una cargada
+
+Archivos modificados además del componente:
+
+includes/cms_helpers.php → referencia eliminada del sistema de contenedores
+editar_contenedor.php → se agregó $isModal y formulario específico para tipo modal
+
+NOTA DE MIGRACIÓN:
+El componente fue eliminado.
+La BD no debe conservar esta sección antigua.
+El sistema maneja esto con dos mecanismos:
+1. Fallback eliminado.
+2. Archivo eliminado.
+3. Render eliminado.
+El admin ya no debe mostrar esta sección antigua.
+
+--------------------------------------------------
+CONTENEDOR noticias_home - CARRUSEL CON SWIPER
+--------------------------------------------------
+
+Archivo modificado:
+
+componentes/noticias_home.php
+
+Archivo nuevo:
+
+todas_noticias.php
+
+Cambio:
+
+Se reemplazó el grid Bootstrap fijo (máx 4 columnas) por un carrusel con Swiper.js.
+Swiper ya estaba cargado en index.php (assets/js/swiper-bundle.min.js).
+
+Comportamiento:
+
+- Carga todos los items visibles (hasta cantidad_items, default 12).
+- Muestra 4 a la vez en desktop, menos en pantallas chicas.
+- Flechas prev/next circulares en los costados (color institucional color_primario).
+- Las flechas se deshabilitan automáticamente al llegar al inicio/fin.
+- Cada card es un link: usa boton_1_url del item o cae a url_boton (todas_noticias.php).
+- El botón "Ver todas las noticias" apunta a todas_noticias.php (default).
+
+Campos de seccion_config:
+
+cantidad_items  → cuántos items cargar en total (default: 12)
+titulo_bloque   → título del bloque (default: Últimas Noticias)
+subtitulo_bloque→ subtítulo encima del título (default: Novedades)
+texto_boton     → texto del botón ver más (default: Ver todas las noticias)
+url_boton       → URL del botón ver más (default: todas_noticias.php)
+
+todas_noticias.php:
+
+Página pública vacía con estructura base:
+- Reutiliza header_principal y footer_principal via cms_get_component_path().
+- Hero con gradiente institucional (color_primario → color_secundario).
+- Breadcrumb: Inicio / Noticias.
+- Cuerpo placeholder "Próximamente" para completar después.
+- Botón volver a index.php#noticias.
+
+--------------------------------------------------
+AJUSTE MODAL INFORMATIVO - EVITAR PESTAÑAZO
+--------------------------------------------------
+
+Archivo modificado:
+
+componentes/eliminado.php
+
+Motivo:
+
+El modal podia generar un pestañazo al cargar nuevamente la pagina porque el componente se
+renderizaba siempre y la decision de no mostrarlo dependia completamente del JS despues del
+parseo del HTML.
+
+Ajuste aplicado:
+
+- El modal queda oculto por defecto con display:none!important, visibility:hidden y opacity:0.
+- Solo se muestra cuando el JS confirma que corresponde abrirlo y agrega las clases
+  sp-mi-ready y sp-mi-open.
+- Si ya fue visto en la sesion o existe dismiss vigente en localStorage, el nodo se elimina
+  inmediatamente del DOM para evitar cualquier parpadeo visual.
+- Se agrega control pageshow para cubrir restauraciones desde cache del navegador.
+- El guard PHP ahora acepta MODAL_INFO_DONE y MODAL_INFORMATIVO_RENDERED para mantener
+  compatibilidad con el nombre documentado y evitar doble render.
+
+Tablas usadas:
+
+seccion
+seccion_config
+seccion_item
+institucion
+
+--------------------------------------------------
+LIMPIEZA CONTENEDOR LEGACY MENU_PRINCIPAL
+--------------------------------------------------
+
+Archivos modificados:
+
+index.php
+includes/cms_helpers.php
+logica/qaseduc_colegio_spablo.sql
+logica/prompt_desarrollo_contenedores.txt
+
+Archivo eliminado:
+
+componentes/menu_principal.php
+
+Motivo:
+
+El contenedor menu_principal era una compatibilidad legacy. La navegacion publica ya vive
+dentro de header_principal y se renderiza desde componentes/header.php usando las tablas
+menus y sub_menus. Activar menu_principal desde el panel no renderizaba menu propio y
+confundia al administrador.
+
+Ajuste aplicado:
+
+- menu_principal se elimina del dump qaseduc_colegio_spablo.sql.
+- menu_principal se elimina de la lista de contenedores fijos del CMS.
+- menu_principal se elimina del mapa de preview.
+- index.php ya no necesita saltar explicitamente menu_principal.
+- Se elimina componentes/menu_principal.php porque solo contenia un comentario legacy.
+- cms_sync_sections() ejecuta una limpieza segura de la seccion legacy menu_principal y
+  sus posibles registros en seccion_config y seccion_item para que no reaparezca en bases
+  ya instaladas.
+
+Regla actual:
+
+El menu publico del sitio debe administrarse desde el modulo Menus/Submenus y se renderiza
+solo dentro del contenedor header_principal. No recrear menu_principal como contenedor de
+seccion.
+
+Tablas usadas:
+
+seccion
+menus
+sub_menus
+
+--------------------------------------------------
+PAGINAS DINAMICAS PARA SUBMENUS
+--------------------------------------------------
+
+Objetivo:
+
+Cada sub_menu activo puede abrir una pagina interna administrable sin crear archivos PHP
+individuales por submenu. La navegacion sigue en menus/sub_menus y el contenido editorial
+vive en tablas propias.
+
+Archivos modificados:
+
+admin.php
+includes/cms_helpers.php
+logica/qaseduc_colegio_spablo.sql
+logica/prompt_desarrollo_contenedores.txt
+
+Archivo nuevo:
+
+pagina_submenu.php
+
+Tablas nuevas:
+
+sub_menu_paginas
+sub_menu_pagina_media
+
+Tablas relacionadas:
+
+menus
+sub_menus
+institucion
+
+Regla de responsabilidad:
+
+menus controla el menu padre.
+sub_menus controla la navegacion, nombre, orden, estado y URL.
+sub_menu_paginas controla el contenido editorial de la pagina interna del submenu.
+sub_menu_pagina_media controla imagenes de galeria y multimedia adicional.
+
+Campos principales de sub_menu_paginas:
+
+id_sub_menu
+titulo
+bajada
+contenido
+imagen_hero
+hero_video_url
+hero_video_archivo
+imagen_secundaria
+video_url
+video_archivo
+boton_texto
+boton_url
+meta_title
+meta_description
+actualizado_en
+actualizado_por
+
+Campos principales de sub_menu_pagina_media:
+
+id_sub_menu
+tipo
+archivo
+url
+titulo
+descripcion
+visible
+orden
+
+Flujo administrativo:
+
+En el panel Menus/Submenus, el mismo boton editar del submenu abre un modal ampliado.
+El modal permite editar:
+
+- datos del enlace: menu padre, nombre, URL, icono y estado.
+- pagina: titulo, bajada, contenido, boton opcional.
+- multimedia: imagen hero, imagen secundaria, video local, URL YouTube/Vimeo y galeria.
+- video hero: URL o archivo local para reemplazar visualmente la imagen del hero superior.
+- SEO: meta title y meta description.
+
+Si el campo URL del submenu queda vacio o en #, cms_save_submenu() asigna automaticamente:
+
+pagina_submenu.php?id=ID_SUB_MENU
+
+Si el administrador escribe una URL externa o interna manual, se conserva esa URL.
+
+Flujo publico:
+
+pagina_submenu.php?id=ID_SUB_MENU carga:
+
+- header_principal con menus y sub_menus.
+- hero con imagen administrable o fallback assets/images/frontis_01.jpg.
+- hero con video administrable cuando existe hero_video_url o hero_video_archivo.
+- titulo y bajada desde sub_menu_paginas, con fallback al nombre del submenu.
+- contenido principal administrable en columna izquierda.
+- imagen secundaria y galeria en columna derecha como carrusel.
+- video embebido YouTube/Vimeo o video local debajo del bloque texto/imagenes.
+- footer_principal dinamico.
+
+Reglas:
+
+No crear un archivo por submenu.
+No guardar textos largos ni multimedia directamente en sub_menus.
+Los submenus existentes con URL NULL o # deben poder abrir pagina_submenu.php mediante
+cms_submenu_public_url() incluso antes de ser guardados nuevamente.
+
+Ajuste UX posterior:
+
+- El editor de submenu deja de abrirse como modal centrado y pasa a abrirse como
+  offcanvas-bottom desde la parte inferior del panel administrativo.
+- El offcanvas ocupa 78vh en escritorio y usa scroll interno para editar paginas largas.
+- En mobile el offcanvas usa 82vh para mejorar la edicion.
+- El offcanvas organiza la edicion en pestanas horizontales propias: Datos, Pagina,
+  Multimedia y SEO. Los datos basicos del submenu ya no quedan encima de las pestanas.
+- En pagina_submenu.php se elimina la navegacion lateral de submenus hermanos para dejar el
+  contenido principal centrado y sin el bloque lateral marcado visualmente como sobrante.
+
+--------------------------------------------------
+CONTENEDOR MODAL INFORMATIVO - VERSION ADMINISTRABLE
+
+Objetivo:
+
+Crear un modal de bienvenida/noticia importante administrable desde el CMS. Debe aparecer al
+cargar el sitio por primera vez y permitir cambiar su contenido en el futuro sin tocar codigo.
+
+Contenedor:
+
+nombre_interno = modal_informativo
+titulo_admin = Modal informativo
+tipo_seccion = modal
+variante = bienvenida
+orden = 99
+
+Archivos:
+
+componentes/modal_informativo.php
+includes/cms_helpers.php
+editar_contenedor.php
+
+Tablas usadas:
+
+seccion
+seccion_item
+seccion_config
+
+Mapeo de seccion_item:
+
+titulo          -> titulo principal del modal.
+descripcion     -> cuerpo del mensaje. Soporta **texto en negrita**.
+imagen          -> imagen superior opcional.
+boton_1_texto   -> texto del boton principal.
+boton_1_url     -> URL del boton. Si es # solo cierra el modal.
+visible         -> activa/desactiva el item.
+orden           -> prioridad si hay mas de un item visible.
+
+Mapeo de seccion_config:
+
+mostrar      -> una_vez o siempre. Default: una_vez.
+delay_ms     -> retardo antes de abrir el modal. Default: 650.
+color_boton  -> color hexadecimal del boton principal. Default: #ef4444.
+
+Comportamiento publico:
+
+- El modal se renderiza oculto para evitar pestañeos visuales.
+- Se abre por JavaScript despues del retardo configurado.
+- Si mostrar = una_vez, se guarda en localStorage con una clave basada en el hash del contenido.
+- Si cambia titulo, descripcion, imagen o boton, cambia el hash y el modal vuelve a mostrarse
+  como nuevo.
+- Cierra con boton X, click en fondo, tecla ESC o boton principal.
+- No depende de endpoints AJAX ni payload externo.
+
+Contenido inicial:
+
+cms_sync_sections() crea automaticamente un item inicial si el contenedor no tiene items:
+
+Titulo: Bienvenido a la version 2025.
+Boton: Comenzar a navegar.
+Mensaje: bienvenida al nuevo sitio, menu por niveles, acceso a Mi San Pablo, noticias actualizadas
+y diseno responsivo.
+
+--------------------------------------------------
+# MEJORA ADMIN CONTENEDORES - ORDEN Y RESUMEN
+
+Archivos modificados:
+
+admin.php
+includes/cms_helpers.php
+editar_contenedor.php
+ajax/guardar_orden_contenedores.php
+logica/migracion_20260531_seccion_actualizado.sql
+logica/prompt_desarrollo_contenedores.txt
+
+Tabla usada:
+
+seccion
+
+Campos usados:
+
+id_seccion
+nombre_interno
+titulo_admin
+observacion
+tipo_seccion
+visible
+estado
+orden
+fecha_creacion
+actualizado_en
+actualizado_por
+
+La tabla seccion de la base actual tenia fecha_creacion, pero no actualizado_en.
+Se agrega migracion segura para incorporar:
+
+actualizado_en DATETIME NULL
+actualizado_por INT NULL
+
+actualizado_por apunta logicamente a usuario.id_usuario, pero no se fuerza FK para mantener
+compatibilidad con bases existentes.
+
+Pagina publica actual:
+
+index.php
+
+Todos los contenedores actuales se administran para la pagina principal index.php.
+No se usa la columna "Pagina publica" porque todos apuntan a index.php.
+No existe boton "Nuevo contenedor" en esta etapa. La logica de nuevos componentes
+pagados/descargables queda pendiente para una etapa posterior.
+
+Contenedores fijos:
+
+topbar
+header_principal
+menu_principal
+footer_principal
+contenedor_eliminado
+
+Estos contenedores no se pueden arrastrar. En el listado admin deben mostrar candado
+o estado "Fijo".
+
+Contenedores movibles:
+
+hero_principal
+noticias_home
+calendario_eventos_home
+video_destacado_home
+galeria_home
+faq_home
+about_home
+
+Solo estos contenedores pueden cambiar su orden visual dentro del administrador.
+
+Reglas de la pantalla CMS > Contenedores del sitio:
+
+- Mantiene el CSS y estilo actual del panel.
+- Agrega tarjetas superiores de resumen:
+  Total de contenedores activos, visibles, ocultos y ultima actualizacion general.
+- Cambia el encabezado "Observacion" por "Que controla".
+- Agrega la columna "Ultima modificacion".
+- La columna "Ultima modificacion" muestra actualizado_en y usuario cuando existe.
+  Si no hay dato real, usa el fallback visual "Sin registro".
+- Mantiene las acciones actuales:
+  Ver / preview, Editar y Activar / ocultar visible.
+- Mantiene DataTables con buscador. Para evitar conflicto con drag and drop, el listado
+  de contenedores usa DataTables sin ordenamiento interactivo ni paginacion.
+
+Reglas del endpoint de ordenamiento:
+
+Archivo:
+
+ajax/guardar_orden_contenedores.php
+
+- Valida sesion admin.
+- Recibe JSON con un array items que contiene id_seccion y orden.
+- Usa la conexion existente del proyecto via cms_get_connection().
+- Valida que todos los id_seccion pertenezcan a la institucion activa.
+- Permite ordenar solo los contenedores movibles.
+- Rechaza intentos de mover topbar, header_principal, menu_principal, footer_principal
+  o contenedor_eliminado.
+- Al guardar el nuevo orden actualiza solamente el campo orden de la tabla seccion.
+- No modifica nombre_interno, tipo_seccion, variante ni archivos de componentes.
+- Responde JSON con ok true/false y mensaje de error cuando corresponde.
+
+Regla importante de sincronizacion:
+
+cms_sync_sections() ya no debe sobrescribir el campo orden de secciones existentes.
+El orden por defecto se usa solo al insertar secciones nuevas. Esto evita que el
+orden guardado por el administrador se pierda en la siguiente carga del CMS o de index.php.
+
+--------------------------------------------------
+GALERIA HOME ADMIN - VISTA DE CARDS CON DRAG-AND-DROP
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+La galería se administraba via la tabla general de items (texto, sin imágenes visibles).
+Se reemplaza por una vista de cards visuales igual que el carrusel principal.
+
+Ajuste aplicado:
+
+- Se agrega $isGalleryAdmin = ($section['tipo_seccion'] ?? '') === 'gallery'.
+- La galería ya NO cae en la tabla general de items. Se excluye con !$isGalleryAdmin.
+- Se agrega un branch elseif ($isGalleryAdmin) que renderiza un grid de cards con:
+  - Imagen a ancho completo (carousel-admin-media).
+  - Badge Activo/Oculto clickeable vía AJAX (js-toggle-badge, mismo handler del carrusel).
+  - Menú 3 puntos con Editar (link a modal=item&item=ID) y Eliminar.
+  - Mensaje vacío cuando no hay items.
+- Drag-and-drop con SortableJS en #gallerySortable → guarda vía reorder_items AJAX.
+- Notify auto-cierre al guardar orden.
+
+Tablas usadas:
+
+seccion_item
+
+Campos usados:
+
+titulo → alt/caption de la imagen
+descripcion → descripción interna
+imagen → archivo subido
+url → enlace al hacer clic en la imagen
+visible → si/no
+orden → posición en la galería
+
+Flujo admin:
+
+Agregar item → modal con imagen, título/alt, descripción, url, visible.
+Editar → mismo modal con datos precargados (vía URL param item=ID).
+Orden → drag-and-drop visual, guarda automáticamente.
+Activar/Desactivar → badge clickeable en la card.
+Eliminar → 3 puntos → Eliminar (con confirm).
+
+--------------------------------------------------
+VIDEO DESTACADO ADMIN - RESTRICCIONES DE UI
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+El contenedor video_destacado_home está diseñado para UN SOLO video. No tiene sentido
+que el administrador pueda agregar más items ni cambiar el orden de la sección en la página.
+
+Ajuste aplicado:
+
+- El botón "Agregar item" se oculta cuando $isVideoFeatured es true.
+  La condición pasa de !$isEventsCalendar a !$isEventsCalendar && !$isVideoFeatured.
+- El campo "Orden" en la pestaña General se oculta para $isVideoFeatured.
+  Se conserva como input oculto igual que en $isCarouselAdmin.
+- El ancho de Observación se amplía a col-md-9 cuando no se muestra Orden.
+- Se elimina la state-switch-track sobrante que quedaba del switch de Visible.
+
+Tablas usadas:
+
+seccion
+
+Regla:
+
+El contenedor video tipo video solo permite editar el item existente (pencil en la tabla),
+no agregar nuevos. Si necesita cambiar el video, edita el único item.
+
+--------------------------------------------------
+CARRUSEL ADMIN - MENÚ 3 PUNTOS CON VISTA PREVIA
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+El menú de 3 puntos de cada card del carrusel solo tenía Editar y Eliminar.
+Se agrega la opción Mostrar modal para previsualizar el slide inline.
+
+Ajuste aplicado:
+
+- El dropdown de 3 puntos ahora tiene tres opciones: Editar, Mostrar modal, Eliminar.
+- Mostrar modal abre el modal #carouselItemPreviewModal con imagen, título, etiqueta,
+  descripcion y badge de estado del slide.
+- Se usa el patrón data-item-* en el botón para pasar los datos del item al modal via JS.
+- El modal tiene un botón Editar que lleva a la URL de edición del item.
+- Se agrega un separador dropdown-divider entre Mostrar modal y Eliminar.
+- El modal de vista previa solo se renderiza cuando $isCarouselAdmin es true.
+- El handler JS de .js-carousel-preview se inicializa en el bloque $(function(){}).
+
+Tablas usadas:
+
+seccion
+seccion_item
+
+--------------------------------------------------
+AJUSTE CARRUSEL ADMIN - GENERAL, SWITCHES Y CARDS
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+En "Carrusel principal" el orden de la seccion no debe editarse desde la pantalla general,
+porque la ubicacion del bloque dentro del home es fija. Ademas los valores si/no deben verse
+como switches y los slides deben administrarse con una vista mas visual.
+
+Ajuste aplicado:
+
+- En la configuracion general del carrusel se elimina el campo visible de orden, pero se conserva
+  el valor actual en un input oculto para no mover la seccion.
+- Visible del contenedor pasa a switch Si/No con el mismo patron visual usado en Topbar.
+- Las configuraciones cuyo valor actual sea si/no se muestran como switch y guardan el valor
+  en seccion_config.
+- Los items del carrusel dejan de duplicarse en tabla y se muestran como cards.
+- Cada card centra la imagen del slide en la parte superior.
+- Las acciones del slide pasan a menu de tres puntos con Editar y Eliminar.
+- El delete conserva confirmacion antes de borrar.
+
+Tablas usadas:
+
+seccion
+seccion_config
+seccion_item
+
+Flujo publico:
+
+index.php ya no incluye este componente eliminado.
+mostrar = una_vez o siempre, delay_ms, sessionStorage para visto por sesion y localStorage para
+"No volver a mostrar" durante 7 dias.
+
+--------------------------------------------------
+NORMALIZACION DE ARCHIVOS _1.PHP
+--------------------------------------------------
+
+Archivos renombrados:
+
+index_1.php -> index.php
+admin_1.php -> admin.php
+preview_contenedor_1.php -> preview_contenedor.php
+eventos_descargar_plantilla_1.php -> eventos_descargar_plantilla.php
+eventos_importar_excel_1.php -> eventos_importar_excel.php
+componentes/calendario_eventos_home_1.php -> componentes/calendario_eventos_home.php
+
+Motivo:
+
+Los nombres con sufijo _1.php eran una compatibilidad temporal por bloqueos de escritura
+del entorno local. Al corregirse esos bloqueos, el sistema vuelve a usar los nombres
+canonicos.
+
+Ajuste aplicado:
+
+- Las referencias internas ahora apuntan a index.php, admin.php y preview_contenedor.php.
+- Los endpoints de eventos usan eventos_descargar_plantilla.php y eventos_importar_excel.php.
+- cms_get_component_path() ya carga directamente componentes/calendario_eventos_home.php.
+- .htaccess queda simplificado con DirectoryIndex index.php, sin rewrites hacia archivos _1.
+
+Regla actual:
+
+No crear nuevos archivos con sufijo _1.php. Si aparece una referencia antigua a index_1.php,
+admin_1.php, preview_contenedor_1.php o calendario_eventos_home_1.php, debe actualizarse al
+nombre canonico correspondiente.
+
+--------------------------------------------------
+MODAL INFORMATIVO - CAMBIO A COOKIE DE SERVIDOR
+--------------------------------------------------
+
+Archivo modificado:
+
+componentes/eliminado.php
+
+Motivo:
+
+El modal seguia generando pestañazo en la segunda carga cuando la decision de no mostrarlo
+dependia de sessionStorage/localStorage del navegador, porque el HTML del modal se imprimia
+igual y luego el JS lo ocultaba.
+
+Ajuste aplicado:
+
+- Se reemplaza la decision principal por cookies leidas desde PHP.
+- Al abrirse por primera vez, el JS escribe una cookie de sesion sp_mi_s_HASH.
+- En la siguiente carga, PHP detecta esa cookie y retorna antes de imprimir el modal.
+- El boton "No volver a mostrar" escribe sp_mi_d_HASH con Max-Age de 7 dias.
+- El HASH depende del contenido del modal, por lo que si cambia titulo, descripcion, imagen
+  o boton, se considera un modal nuevo y puede volver a mostrarse.
+- Se mantiene mostrar = siempre como excepcion: en ese modo no se bloquea por cookie de sesion.
+
+Regla:
+
+Para evitar pestañazos, el modal no debe depender solo de ocultamiento visual con JS. La
+segunda carga eliminada junto con el render.
+
+--------------------------------------------------
+REDISENO VISUAL ADMIN - COLORES INSTITUCIONALES
+--------------------------------------------------
+
+Archivos modificados:
+
+includes/admin_layout.php
+admin.php
+editar_contenedor.php
+auditoria_log.php
+index.php
+
+Archivo nuevo:
+
+payload_eliminado.php
+
+Motivo:
+
+La administracion usaba colores fijos verdes y las pestañas del editor de contenedores
+heredaban estilos globales de .nav-item, quedando una debajo de la otra. Se requiere una
+interfaz administrativa mas elegante, sobria y basada en los colores institucionales.
+
+Ajuste aplicado:
+
+- includes/admin_layout.php ahora toma color_primario, color_secundario, color_terciario y
+  color_cuaternario desde la tabla institucion.
+- Esos colores alimentan variables CSS globales del admin: botones, sidebar activo, avatar,
+  badges, iconos, foco de formularios, paginacion y DataTables.
+- editar_contenedor.php usa pestañas horizontales compactas General / Items con iconos y
+  estilo institucional.
+- Se reemplazan verdes/azules fijos de botones de carga, ayudas, spinners y acciones por
+  variables institucionales.
+- Las tablas administrativas mantienen .table-modern pero con encabezado, filas, buscador,
+  paginacion y hover mas cercanos al estilo sobrio del ejemplo visual entregado.
+- admin.php, editar_contenedor.php y auditoria_log.php pasan los colores institucionales al
+  layout base.
+- index.php deja de renderizar el modal informativo dentro del HTML inicial y lo solicita
+  se retiro la carga diferida asociada al componente eliminado.
+
+Tablas usadas:
+
+institucion
+seccion
+seccion_config
+seccion_item
+
+Regla:
+
+Los nuevos estilos del panel administrativo deben usar los colores de institucion, no colores
+fijos ajenos a la identidad del colegio.
+
+--------------------------------------------------
+SWITCHES ADMIN - MIGRACIÓN A BOOTSTRAP FORM-SWITCH
+--------------------------------------------------
+
+Archivo modificado:
+
+editar_contenedor.php
+
+Motivo:
+
+Los switches personalizados (state-switch con track de gradiente y texto Si/No)
+fueron reemplazados por el Bootstrap form-switch estándar en todo el editor.
+
+Ajuste aplicado:
+
+- Se eliminó todo el CSS de .state-switch-track, .state-switch::before/::after
+  y variantes is-compact, is-readonly, gradiente, etc.
+- La clase .state-switch se conserva como selector JS pero ya no tiene estilos propios.
+- Todos los spans de .state-switch ahora también tienen form-check form-switch mb-0.
+- Se eliminaron todos los <span class="state-switch-track"> del HTML.
+- Se agrega padding-left:0 y margin-left:0 al form-check dentro de setting-toggle
+  y table-check para mantener el alineamiento del switch a la derecha del card.
+- El color del switch activo hereda de admin_layout.php:
+  .form-check-input:checked → background-color: var(--adm-primary)
+  (usa el color institucional).
+
+Campo imagen_mobile eliminado del modal de items:
+
+- El campo "Imagen mobile" fue quitado del formulario de items de tipo carousel/hero.
+- Las imágenes deben diseñarse responsivas desde el origen.
+- El campo Imagen pasa de col-md-6 a col-md-8.
+- El campo imagen_mobile sigue existiendo en la tabla seccion_item pero ya no se
+  expone en el formulario admin para no confundir al usuario.
+
+--------------------------------------------------
+AJUSTE TOPBAR ADMIN - VISIBILIDAD, CONFIRMACION E ICONOS
+
+Archivos modificados:
+
+editar_contenedor.php
+componentes/topbar.php
+
+Motivo:
+
+El editor de "Topbar superior" mostraba campos poco claros para el administrador, especialmente
+orden en la configuracion general y selects Si/No para valores booleanos. Tambien era incomodo
+pedir manualmente la clase Font Awesome para cada red social.
+
+Ajuste aplicado:
+
+- Se elimina el campo orden de la configuracion general del Topbar. El backend conserva el orden
+  existente de la seccion para no alterar la posicion del contenedor.
+- Visible, mostrar direccion, mostrar telefono, mostrar correo, mostrar redes y mostrar boton
+  ingresar pasan a controles tipo check Si/No.
+- Los checks del Topbar se muestran como switch con texto interno Si/No. Si esta activo usa
+  color institucional y si esta apagado queda gris.
+- El guardado general del Topbar muestra un modal de confirmacion antes de enviar el formulario.
+- En el listado de redes sociales, la columna visible se muestra como switch Si/No y permite
+  activar/desactivar la red social desde la tabla.
+- El switch de visibilidad de redes sociales se guarda por AJAX, sin recargar la pagina y sin
+  mostrar alerta verde de validacion, para evitar pestañeos.
+- En el modal de red social se agregan presets con imagenes locales para Instagram, Facebook,
+  YouTube y Twitter desde assets/redes_sociales.
+- La clase del icono se autodetecta desde el nombre o la URL cuando coincide con redes comunes.
+- La clase tecnica del icono no se muestra al administrador. El formulario guarda el valor en
+  un input oculto y el usuario solo elige el logo de la red social.
+- En la tabla de redes sociales se muestra el logo de la red, no la clase Font Awesome.
+- componentes/topbar.php soporta iconos guardados como rutas de imagen y mantiene compatibilidad
+  con clases antiguas, mapeandolas a las imagenes locales cuando corresponda.
+- En el index/topbar publico las redes sociales se muestran como botones circulares elegantes,
+  con sombra suave y logo centrado, evitando circulos grises con imagenes pequenas.
+- Se incorpora LinkedIn usando el archivo local assets/redes_sociales/linkeding.png y se mapea
+  tanto en el admin como en componentes/topbar.php.
+- En la tabla admin de redes sociales, las acciones usan iconos ojo/editar/eliminar en vez de
+  botones de texto.
+- Al guardar una red social se muestra modal de confirmacion de exito con el texto
+  "La red social fue guardada correctamente.".
+- El layout administrativo aplica el estado colapsado del sidebar antes del primer render usando
+  localStorage y una clase temprana en html, para que al recargar se mantenga colapsado sin
+  pestañeo visual.
+- Los botones principales del admin, pestañas activas y switches activos usan un gradiente
+  institucional construido con institucion.color_primario, color_secundario, color_terciario y
+  color_cuaternario.
+- El editor de contenedor agrega una tercera accion tipo pestana llamada "Vista previa", que abre
+  el mismo modal de preview usado por el boton ojo del listado de contenedores.
+- El orden se mantiene solo en los items de redes sociales porque define cuales son las primeras
+  redes visibles en el sitio.
+
+Tablas usadas:
+
+seccion
+seccion_config
+seccion_item
+institucion

@@ -1,25 +1,30 @@
 <?php
 /**
- * login_check.php — Verifica credenciales de administrador vía AJAX (POST).
- * Tabla: usuarios | Columnas: usuario, clave, estado
- * Responde JSON: { ok: bool, msg: string, redirect?: string }
+ * Verifica credenciales de administrador via AJAX.
+ *
+ * Tabla real del sistema: usuario
+ * Campos usados: id_usuario, id_institucion, nombre, apellido, usuario, email,
+ * clave, rol, estado.
+ *
+ * Respuesta JSON:
+ * { ok: bool, msg?: string, redirect?: string }
  */
 session_start();
+
 header('Content-Type: application/json; charset=utf-8');
 
-// Solo acepta POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     http_response_code(405);
-    echo json_encode(['ok' => false, 'msg' => 'Método no permitido']);
+    echo json_encode(['ok' => false, 'msg' => 'Metodo no permitido']);
     exit;
 }
 
 require_once __DIR__ . '/class/conexion.php';
+require_once __DIR__ . '/includes/funciones_auditoria.php';
 
-$usuario = trim($_POST['usuario'] ?? '');
-$clave   = trim($_POST['clave']   ?? '');
+$usuario = trim((string) ($_POST['usuario'] ?? ''));
+$clave = trim((string) ($_POST['clave'] ?? ''));
 
-// Validar que vengan ambos campos
 if ($usuario === '' || $clave === '') {
     echo json_encode(['ok' => false, 'msg' => 'Completa usuario y clave']);
     exit;
@@ -28,60 +33,75 @@ if ($usuario === '' || $clave === '') {
 try {
     $db = (new Conexion())->getConexion();
 
-    // Buscar usuario activo por columna "usuario"
     $stmt = $db->prepare(
-        "SELECT id_usuario, nombre, apellido, usuario, clave, estado
-           FROM usuarios
-          WHERE usuario = ?
+        "SELECT id_usuario, id_institucion, nombre, apellido, email, usuario, clave, rol, estado
+           FROM usuario
+          WHERE usuario = ? OR email = ?
           LIMIT 1"
     );
-    $stmt->bind_param('s', $usuario);
+
+    if (!$stmt) {
+        throw new RuntimeException('No fue posible preparar la consulta de login.');
+    }
+
+    $stmt->bind_param('ss', $usuario, $usuario);
     $stmt->execute();
     $result = $stmt->get_result();
-    $user   = $result->fetch_assoc();
+    $user = $result ? $result->fetch_assoc() : null;
     $stmt->close();
 
-    // Usuario no encontrado
     if (!$user) {
+        registrarAuditoria($db, 'Login administrador', 'usuario', null, 'error', 'Intento de login fallido: usuario no encontrado', null, [
+            'usuario_input' => $usuario,
+            'motivo' => 'usuario_no_encontrado',
+        ]);
         echo json_encode(['ok' => false, 'msg' => 'Usuario o clave incorrectos']);
         exit;
     }
 
-    // Verificar que esté activo
-    if (strtolower($user['estado']) !== 'activo') {
-        echo json_encode(['ok' => false, 'msg' => 'Tu cuenta no está activa. Contacta al administrador.']);
+    if (strtolower((string) ($user['estado'] ?? '')) !== 'activo') {
+        registrarAuditoria($db, 'Login administrador', 'usuario', (int) $user['id_usuario'], 'error', 'Intento de login fallido: cuenta inactiva', $user, [
+            'usuario_input' => $usuario,
+            'motivo' => 'cuenta_inactiva',
+        ]);
+        echo json_encode(['ok' => false, 'msg' => 'Tu cuenta no esta activa. Contacta al administrador.']);
         exit;
     }
 
-    // Verificar clave: soporta password_hash(), MD5 y texto plano
-    $claveDB = $user['clave'];
-    $valid   = false;
+    $claveDb = (string) ($user['clave'] ?? '');
+    $valid = false;
 
-    if (password_get_info($claveDB)['algo']) {
-        // Hasheada con password_hash()
-        $valid = password_verify($clave, $claveDB);
-    } elseif (strlen($claveDB) === 32 && ctype_xdigit($claveDB)) {
-        // MD5
-        $valid = (md5($clave) === $claveDB);
+    if (password_get_info($claveDb)['algo']) {
+        $valid = password_verify($clave, $claveDb);
+    } elseif (strlen($claveDb) === 32 && ctype_xdigit($claveDb)) {
+        $valid = md5($clave) === strtolower($claveDb);
     } else {
-        // Texto plano
-        $valid = ($clave === $claveDB);
+        $valid = hash_equals($claveDb, $clave);
     }
 
     if (!$valid) {
+        registrarAuditoria($db, 'Login administrador', 'usuario', (int) $user['id_usuario'], 'error', 'Intento de login fallido: clave incorrecta', $user, [
+            'usuario_input' => $usuario,
+            'motivo' => 'clave_incorrecta',
+        ]);
         echo json_encode(['ok' => false, 'msg' => 'Usuario o clave incorrectos']);
         exit;
     }
 
-    // ── Login exitoso → guardar sesión ──
-    $_SESSION['admin_logged']   = true;
-    $_SESSION['admin_id']       = $user['id_usuario'];
-    $_SESSION['admin_usuario']  = $user['usuario'];
-    $_SESSION['admin_nombre']   = trim(($user['nombre'] ?? '') . ' ' . ($user['apellido'] ?? ''));
+    $_SESSION['admin_logged'] = true;
+    $_SESSION['admin_id'] = (int) $user['id_usuario'];
+    $_SESSION['id_usuario'] = (int) $user['id_usuario'];
+    $_SESSION['id_institucion'] = (int) $user['id_institucion'];
+    $_SESSION['admin_usuario'] = (string) ($user['usuario'] ?: $user['email']);
+    $_SESSION['admin_email'] = (string) ($user['email'] ?? '');
+    $_SESSION['admin_nombre'] = trim((string) ($user['nombre'] ?? '') . ' ' . (string) ($user['apellido'] ?? ''));
+    $_SESSION['admin_rol'] = (string) ($user['rol'] ?? '');
+
+    registrarAuditoria($db, 'Login administrador', 'usuario', (int) $user['id_usuario'], 'login', 'Login correcto en panel CMS', null, $user);
 
     echo json_encode(['ok' => true, 'redirect' => 'admin.php']);
-
-} catch (RuntimeException $e) {
-    error_log('login_check.php error: ' . $e->getMessage());
+} catch (Throwable $exception) {
+    error_log('login_check.php: ' . $exception->getMessage());
+    http_response_code(500);
     echo json_encode(['ok' => false, 'msg' => 'Error del servidor, intenta nuevamente']);
 }

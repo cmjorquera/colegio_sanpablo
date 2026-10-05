@@ -15,13 +15,7 @@ if (!function_exists('cfg')) {
     }
 }
 
-if (!function_exists('sp_public_hex_color')) {
-    function sp_public_hex_color(?string $value, string $fallback): string
-    {
-        $value = trim((string) $value);
-        return preg_match('/^#(?:[0-9a-fA-F]{3}){1,2}$/', $value) ? $value : $fallback;
-    }
-}
+require_once __DIR__ . '/includes/public_theme.php';
 
 $institution = null;
 

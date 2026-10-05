@@ -291,3 +291,63 @@ bloqueo del scroll. Reproductores de terceros se aislaron en el fixture de
 multimedia; no se verifico la disponibilidad o reproduccion de videos externos.
 La funcion de video compartida coincide exactamente con la extraccion original.
 PHP lint, node --check y git diff --check completados. Sin SQL, commit ni push.
+
+
+BIBLIOTECA: ANCHO E IDENTIDAD INSTITUCIONAL (2026-10-05)
+
+Ajuste visual exclusivamente. Se conservan consultas, contenido, multimedia,
+orden, anchors, biblioteca.js y administracion. No se ejecuta SQL.
+El limite provenia de .container de Bootstrap: 1140px desde 1200px y
+1194px desde 1400px en la copia instalada; el ancho restante se repartia
+en margenes automaticos.
+El marco de .sp-library-layout y .sp-library-hero__content pasa a width:100%,
+max-width:1800px y padding-inline:clamp(24px,4vw,80px), centrado. El hero solo
+alinea su texto; no se redisenan imagen, altura ni overlay. El indice conserva
+255px y la columna de contenido recibe el resto con minmax(0,1fr), gap 52px.
+Bajo 1200px: padding clamp(24px,3vw,36px), indice 220px, gap 32px y
+multimedia en una columna. Bajo 992px:
+una columna e indice movil details/summary existente. Bajo 576px: margenes
+internos de 22px. No hay desplazamientos artificiales ni cambios globales
+sobre .container. Header y footer mantienen sus propios contenedores.
+
+Origen de colores: el array institution ya cargado por cms_get_site_data().
+No hay consulta adicional ni sistema paralelo de configuracion. Se extrae
+sp_public_hex_color() de index.php a includes/public_theme.php sin cambiar su
+validacion o los defaults del inicio. index.php solo importa ese mismo helper;
+su HTML, colores y comportamiento conservan los valores anteriores.
+Biblioteca expone en su main las variables existentes --sp-db-primary,
+--sp-db-secondary, --sp-db-tertiary y --sp-db-quaternary, correspondientes a
+color_primario/secundario/terciario/cuaternario de institucion. Se limita ese
+alcance al contenido de Biblioteca, para no recolorear el header/footer.
+No se agregan bloques style; se transmiten variables como ya hace index.php.
+
+cms_public_institution_theme() agrega --sp-db-accent-background y
+--sp-db-accent-foreground. No existia un helper PUBLICO de usar_gradientes:
+ahora se decide centralmente entre primario plano y gradiente primario/secundario.
+Si ambos extremos no permiten un texto comun legible, el segundo extremo se
+mezcla con el primario para mantener contraste. El texto de la tarjeta puede
+ser blanco o negro segun luminancia. Los defaults centrales son los mismos
+que ya tenia la portada, para colores ausentes/invalidos; Biblioteca NO guarda
+una paleta propia ni una copia de los colores del colegio en su CSS.
+
+biblioteca.css deriva --sp-library-accent, --sp-library-accent-ink,
+--sp-library-accent-soft, --sp-library-accent-hover y
+--sp-library-accent-border con color-mix. Se usan en
+encabezado del indice, seleccion, hover, indicadores, etiquetas, enlaces,
+botones y foco. Texto oscuro derivado y tintes suaves mantienen legibilidad.
+Los neutros y el overlay original del hero no son colores de identidad.
+fuente_principal no tenia un consumidor publico centralizado; se reviso y
+se conserva la tipografia actual para respetar el alcance visual solicitado.
+Cambiar color_primario en administracion se refleja en la siguiente carga
+sin editar biblioteca.css. usar_gradientes=0 muestra color plano; =1 gradiente.
+
+Validacion visual: 52 comprobaciones de Chrome a 1920,1600,1366,1024,768,390
+ y 320px, con antes/despues, contenido identico, indice compacto, anchors,
+seleccion, offcanvas sin backdrop y recursos locales correctos. Columna de
+contenido: 863->1339px a 1920, 863->1150px a 1600 y 809->935px a 1366.
+En movil conserva 22px de margen y la navegacion existente. Se comprobaron
+paletas alternativas plana, gradiente y extremos claro/oscuro con fixtures,
+ademas de 9 comprobaciones PHP de validacion y generacion de variables.
+No se ejecuto SQL ni se cambio configuracion institucional real. PHP lint y
+git diff --check correctos. Sin cambios a biblioteca.js, helpers de datos,
+rutas, consultas ni credenciales. Los fixtures se eliminan al finalizar.

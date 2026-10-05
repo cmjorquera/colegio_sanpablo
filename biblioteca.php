@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/includes/cms_helpers.php';
 require_once __DIR__ . '/includes/biblioteca_helpers.php';
+require_once __DIR__ . '/includes/public_theme.php';
 
 if (!function_exists('e')) {
     function e(?string $value): string { return cms_e($value); }
@@ -67,7 +68,7 @@ $libraryTitle = $library['title'] ?? 'Biblioteca';
 </head>
 <body class="sp-library-page">
     <?php include __DIR__ . '/componentes/header.php'; ?>
-    <main id="biblioteca-contenido">
+    <main id="biblioteca-contenido" style="<?= e(cms_public_institution_theme($institution ?? [])) ?>">
         <?php if ($library !== null): ?>
             <section class="sp-library-hero" aria-labelledby="biblioteca-titulo">
                 <img class="sp-library-hero__image" src="<?= e($library['hero']) ?>" alt="" fetchpriority="high">

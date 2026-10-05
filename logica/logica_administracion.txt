@@ -1,0 +1,423 @@
+DOCUMENTACION OFICIAL DEL AREA ADMINISTRATIVA
+Colegio San Pablo - CMS
+
+Este documento describe la logica vigente del area administrativa del CMS.
+Las tablas existentes son la fuente oficial de datos. No se deben recrear
+tablas que ya existen ni generar scripts CREATE TABLE para ellas.
+
+
+1. MENU ADMINISTRATIVO
+
+Tabla utilizada:
+
+- admin_menu
+
+Proposito:
+
+Administrar dinami  camente los modulos visibles del sidebar del CMS.
+El menu lateral administrativo se construye desde la tabla admin_menu y no
+desde arreglos hardcodeados en el codigo.
+
+Campos esperados:
+
+- id_admin_menu
+- clave
+- grupo
+- label
+- href
+- icono
+- orden
+- visible
+- estado
+
+Reglas de consulta:
+
+- Solo se leen registros con visible = 1.
+- Solo se leen registros con estado = 'activo'.
+- El orden de visualizacion es grupo, orden, id_admin_menu.
+
+Uso en el sistema:
+
+- includes/admin_layout.php consulta admin_menu para dibujar el sidebar.
+- La columna grupo define el encabezado visual del bloque en el sidebar.
+- La columna clave identifica el modulo y se compara con active_panel para
+  marcar el item activo.
+- La columna label contiene el texto visible.
+- La columna href contiene la URL del modulo administrativo.
+- La columna icono contiene la clase de Bootstrap Icons usada en el sidebar.
+
+Ejemplos de modulos administrables:
+
+- Dashboard
+- Contenedores
+- Menus
+- Comunicados
+- Configuracion
+- Auditoria
+- Analitica
+
+Importante:
+
+Para agregar, ocultar, reordenar o desactivar un modulo administrativo, se debe
+actualizar admin_menu. No se debe editar el sidebar agregando items fijos en
+includes/admin_layout.php.
+
+
+2. COMUNICADOS
+
+Tablas utilizadas:
+
+- comunicado_categoria
+- comunicado
+
+Relacion entre tablas:
+
+- comunicado_categoria contiene las categorias disponibles para organizar los
+  comunicados.
+- comunicado contiene cada comunicado publicado o administrado.
+- comunicado.id_categoria_comunicado se relaciona con
+  comunicado_categoria.id_categoria_comunicado.
+- Ambas tablas tambien se asocian a la institucion mediante id_institucion,
+  cuando corresponda segun la estructura existente.
+
+Flujo administrativo:
+
+1. El administrador mantiene categorias en comunicado_categoria.
+2. El administrador crea o edita comunicados en comunicado.
+3. Cada comunicado se asocia a una categoria.
+4. El comunicado puede tener titulo, descripcion o contenido, fecha de
+   publicacion, archivo asociado y estado de publicacion, de acuerdo con los
+   campos existentes en la tabla.
+5. Los estados permiten controlar si un comunicado esta disponible para el
+   publico o si permanece como borrador, oculto o inactivo, segun los valores
+   definidos en la base de datos existente.
+
+Flujo publico:
+
+1. La vista publica consulta comunicado junto con comunicado_categoria.
+2. Se muestran solo comunicados publicados o visibles, respetando los campos
+   de estado/visibilidad existentes.
+3. El usuario puede filtrar comunicados por categoria.
+4. Si el comunicado tiene un archivo PDF asociado, la vista publica debe
+   ofrecer su descarga o apertura.
+
+Filtros por categoria:
+
+- Los filtros publicos y administrativos deben usar comunicado_categoria como
+  fuente de categorias.
+- El filtro se aplica contra comunicado.id_categoria_comunicado.
+- Las categorias no visibles o inactivas no deben ofrecerse en la vista publica,
+  si la tabla contiene dichos campos.
+
+Descarga de archivos PDF:
+
+- Los comunicados pueden asociar archivos PDF cuando la estructura existente
+  de comunicado lo permita.
+- La descarga debe usar la ruta guardada en comunicado.
+- La administracion debe validar que el archivo sea PDF cuando se implemente
+  o mantenga el modulo de carga.
+
+Estados de publicacion:
+
+- Los estados de publicacion se leen desde los campos existentes de comunicado.
+- El modulo administrativo debe permitir cambiar el estado sin alterar la
+  estructura de la tabla, salvo que se detecte una inconsistencia real.
+- La vista publica debe excluir comunicados no publicados, ocultos o inactivos,
+  segun la convencion vigente de datos.
+
+Importante:
+
+Las tablas comunicado y comunicado_categoria ya existen. No se deben recrear,
+renombrar ni modificar estructuralmente salvo que exista una inconsistencia
+real detectada y documentada.
+
+
+3. DIFERENCIA ENTRE MENUS
+
+Menu publico:
+
+- menus
+- sub_menus
+
+Proposito:
+
+Controlar la navegacion publica del sitio institucional. Estas tablas definen
+los menus y submenus que ven los visitantes del sitio web.
+
+Menu administrativo:
+
+- admin_menu
+
+Proposito:
+
+Controlar los modulos visibles dentro del CMS administrativo. Esta tabla define
+el sidebar del panel administrativo.
+
+Independencia:
+
+El menu publico y el menu administrativo son sistemas independientes.
+
+- Cambiar menus o sub_menus afecta la navegacion publica.
+- Cambiar admin_menu afecta el sidebar administrativo.
+- Un cambio en admin_menu no debe modificar menus ni sub_menus.
+- Un cambio en menus o sub_menus no debe modificar admin_menu.
+
+
+4. VALIDACION OPERATIVA
+
+Estado esperado del sistema:
+
+- includes/admin_layout.php obtiene los modulos del sidebar desde admin_menu.
+- includes/admin_layout.php no mantiene arrays fijos para los items del sidebar.
+- admin_menu es la fuente oficial del menu administrativo.
+- comunicado y comunicado_categoria permanecen intactas y disponibles para
+  futuros modulos de administracion y visualizacion publica.
+- Este archivo documenta la logica real usada por el area administrativa.
+
+
+5. MODULO COMUNICADOS
+
+Archivos creados:
+
+- comunicados.php
+- admin_comunicados.php
+
+Tablas usadas:
+
+- comunicado
+- comunicado_categoria
+- institucion
+- admin_menu
+
+Conexion:
+
+- El modulo usa cms_get_connection(), definido en includes/cms_helpers.php.
+- cms_get_connection() obtiene la conexion desde class/conexion.php.
+- No se deben declarar credenciales ni DSN directamente en comunicados.php ni
+  admin_comunicados.php.
+- Las operaciones del modulo usan consultas preparadas con mysqli.
+
+Flujo administrativo:
+
+El administrador ingresa al modulo Comunicados desde el sidebar del CMS. El
+acceso se obtiene desde admin_menu, usando el registro con clave comunicados y
+href admin_comunicados.php. El layout administrativo marca activo el item cuando
+la URL actual corresponde a admin_comunicados.php.
+
+Desde admin_comunicados.php el administrador puede:
+
+- Listar comunicados.
+- Crear comunicados.
+- Editar comunicados.
+- Activar comunicados, dejando estado = 'publicado' y visible = 1.
+- Inactivar comunicados, dejando estado = 'oculto' y visible = 0.
+- Ocultar comunicados desde la accion Eliminar/Ocultar, sin eliminar la tabla ni
+  recrear estructuras.
+- Asociar una categoria visible desde comunicado_categoria.
+- Definir fecha_publicacion.
+- Marcar visible desde un switch en el listado o desde el formulario.
+- Adjuntar un archivo PDF o imagen.
+
+Campos administrados en comunicado:
+
+- titulo
+- descripcion_corta
+- id_categoria_comunicado
+- fecha_publicacion
+- archivo
+- estado
+- visible
+- orden
+
+Reglas de archivo:
+
+- El archivo es obligatorio al crear.
+- El archivo es opcional al editar.
+- Si se sube un nuevo archivo al editar, reemplaza al archivo anterior.
+- Se permiten PDF, JPG, JPEG, PNG y WEBP.
+- Los archivos se guardan en uploads/comunicados/.
+- El nombre se genera con el formato slug-del-titulo-YYYYMMDDHHMMSS.ext.
+- No se permiten rutas fuera de uploads/comunicados/.
+
+Flujo publico:
+
+La comunidad accede a comunicados.php. La pagina reutiliza el header y footer
+existentes del sitio y toma los colores institucionales desde institucion. La
+vista publica muestra solo comunicados con estado = 'publicado' y visible = 1.
+Tambien exige que la categoria asociada este visible.
+
+La pagina publica permite:
+
+- Ver un banner superior con el titulo Comunicados.
+- Ver el subtitulo Informacion importante para nuestra comunidad educativa.
+- Filtrar por categoria.
+- Usar el boton Todas como filtro visual, sin guardar esa categoria en la base.
+- Buscar por titulo o descripcion_corta.
+- Ver fecha_publicacion.
+- Descargar o visualizar el archivo asociado cuando existe fisicamente.
+- Navegar resultados con paginacion.
+- Ver un mensaje amigable cuando no existan resultados.
+
+Categorias:
+
+- Las categorias salen de comunicado_categoria.
+- En administracion se cargan solo categorias con id_institucion vigente y
+  visible = 1.
+- En publico se usan los colores de comunicado_categoria.color para los badges.
+- La categoria Todas no es una categoria real del filtro publico; solo limpia
+  el parametro categoria de la URL.
+
+Estados:
+
+- Borrador: estado = 'borrador'.
+- Activo: estado = 'publicado' y visible = 1.
+- Inactivo: estado = 'oculto' o visible = 0.
+- En publico solo se muestran comunicados publicados y visibles.
+
+Reglas:
+
+- No se crean tablas nuevas para este modulo.
+- No se ejecutan scripts CREATE TABLE.
+- No se modifica la estructura de comunicado ni comunicado_categoria.
+- No se toca menus ni sub_menus para este modulo, porque esas tablas pertenecen
+  al menu publico.
+- El menu administrativo se controla por admin_menu.
+- No se crea footer nuevo; comunicados.php reutiliza el footer existente.
+
+
+6. MENU ADMINISTRATIVO CON SUBMENUS
+
+Tablas usadas:
+
+- admin_menu
+- admin_submenu
+
+admin_menu define los modulos principales del sidebar administrativo.
+admin_submenu define las opciones internas de cada modulo principal.
+
+Reglas:
+
+- includes/admin_layout.php carga admin_menu con visible = 1 y estado = 'activo'.
+- includes/admin_layout.php carga admin_submenu con visible = 1 y estado = 'activo'.
+- Si un registro de admin_menu tiene submenus activos, se muestra como
+  desplegable/acordeon.
+- Si no tiene submenus activos, funciona como enlace normal.
+- El menu padre queda activo si la URL actual coincide con su href o con el href
+  de cualquiera de sus submenus.
+
+Ejemplo esperado:
+
+Configuracion
+- Usuarios
+- Perfiles
+- Configuracion del sitio
+
+En ese caso:
+
+- Configuracion queda activo cuando se abre admin_usuarios.php,
+  admin_perfiles.php o admin_institucion.php.
+- Usuarios queda activo cuando se abre admin_usuarios.php.
+
+El sidebar administrativo sigue siendo independiente del menu publico. No se
+deben usar menus ni sub_menus para gestionar opciones del CMS.
+
+
+7. MANTENEDOR DE USUARIOS
+
+Archivo:
+
+- admin_usuarios.php
+
+Tabla principal:
+
+- usuario
+
+Tablas relacionadas:
+
+- institucion
+- perfiles
+- usuario_perfil
+
+Conexion:
+
+- El modulo usa cms_get_connection(), que obtiene la conexion desde
+  class/conexion.php.
+- Las consultas se ejecutan con mysqli y consultas preparadas.
+- No se declaran credenciales directamente en admin_usuarios.php.
+
+Regla multi-institucion:
+
+- super_admin puede ver usuarios de todas las instituciones.
+- admin_institucion solo puede administrar usuarios de su institucion.
+- editor solo ve usuarios de su institucion si se le permite acceder al modulo.
+
+Funciones disponibles:
+
+- Listar usuarios.
+- Crear usuario.
+- Editar usuario.
+- Activar o inactivar usuario.
+- Eliminar/Inactivar usuario, cambiando estado a inactivo.
+- Enviar correo para cambio de clave.
+
+Campos administrados:
+
+- nombre
+- apellido
+- email
+- usuario
+- rol
+- estado
+- id_institucion
+- clave
+
+Reglas:
+
+- nombre es obligatorio.
+- email es obligatorio y debe ser valido.
+- usuario puede ser igual al email.
+- rol es obligatorio.
+- estado es obligatorio.
+- id_institucion es obligatorio.
+- La clave es obligatoria al crear.
+- Al editar, si clave queda vacia no se modifica.
+- Las claves se guardan con password_hash.
+- Los roles permitidos son super_admin, admin_institucion y editor.
+
+
+8. CAMBIO DE CLAVE POR CORREO
+
+Archivos:
+
+- admin_usuarios.php
+- cambiar_clave.php
+
+Campos usados en usuario:
+
+- reset_token
+- reset_token_expira
+
+Si esos campos no existen, se debe ejecutar:
+
+ALTER TABLE usuario
+ADD COLUMN reset_token VARCHAR(255) NULL AFTER intento_fallido,
+ADD COLUMN reset_token_expira DATETIME NULL AFTER reset_token;
+
+Flujo:
+
+1. Desde admin_usuarios.php se presiona Enviar correo cambio clave.
+2. El sistema genera un token seguro con bin2hex(random_bytes(32)).
+3. Guarda reset_token y reset_token_expira con una duracion de 1 hora.
+4. Envia correo mediante PHPMailer ubicado en PHPMailer/.
+5. El enlace enviado apunta a cambiar_clave.php?token=TOKEN.
+6. cambiar_clave.php valida token y expiracion.
+7. El usuario ingresa una nueva clave.
+8. La clave se guarda con password_hash.
+9. Se limpian reset_token y reset_token_expira.
+
+Seguridad:
+
+- Nunca se envian claves por correo.
+- No se muestran claves actuales.
+- Los tokens expiran.
+- Las salidas HTML se escapan con cms_e/htmlspecialchars.

@@ -1,17 +1,15 @@
 <?php
 /**
  * Conexion simple con MySQL usando mysqli.
- * Mas adelante conviene migrar estas credenciales a variables de entorno.
+ * Las credenciales se cargan desde la configuracion local del entorno.
  */
 class Conexion
 {
-    private string $host = 'localhost';
-    private string $db = 'qaseduc_colegio_spablo';
-    private string $user = 'qaseduc_ucomun';
-    private string $pass = 'jorquera86;';
-    private string $charset = 'utf8mb4';
-        // $this->conexion = mysqli_connect('localhost', 'qaseduc_ucomun', 'jorquera86;', "qaseduc_calculo_horario");
-        // $this->conexion = mysqli_connect('localhost', 'qaseduc_ucomun', 'jorquera86;', "qaseduc_calculo_horario");
+    private string $host;
+    private string $db;
+    private string $user;
+    private string $pass;
+    private string $charset;
 
     private ?mysqli $conexion = null;
 
@@ -19,6 +17,19 @@ class Conexion
     {
         if ($this->conexion instanceof mysqli) {
             return $this->conexion;
+        }
+
+        $configPath = __DIR__ . '/conexion_local.php';
+        if (!is_file($configPath)) {
+            throw new RuntimeException('Falta la configuracion local de base de datos: class/conexion_local.php.');
+        }
+
+        $config = require $configPath;
+        foreach (['host', 'db', 'user', 'pass', 'charset'] as $key) {
+            if (!is_array($config) || !isset($config[$key]) || !is_string($config[$key])) {
+                throw new RuntimeException('La configuracion local de base de datos no es valida.');
+            }
+            $this->$key = $config[$key];
         }
 
         mysqli_report(MYSQLI_REPORT_OFF);
@@ -32,7 +43,7 @@ class Conexion
 
         if ($this->conexion->connect_error) {
             throw new RuntimeException(
-                'No fue posible conectar con la base de datos: ' . $this->conexion->connect_error
+                'No fue posible conectar con la base de datos.'
             );
         }
 

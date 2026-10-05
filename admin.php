@@ -15,7 +15,33 @@ $institutionId = cms_get_institution_id($db);
 cms_sync_sections($db, $institutionId);
 
 $panel = $_GET['panel'] ?? 'contenedores';
+if ($panel === 'calendario') {
+    cms_redirect('admin_calendario.php');
+}
+if ($panel === 'permisos') {
+    cms_redirect('admin_permisos.php');
+}
 $sectionId = isset($_GET['section']) ? (int) $_GET['section'] : 0;
+$panelPermissionMap = [
+    'dashboard' => 'dashboard',
+    'contenedores' => 'contenedores',
+    'menus' => 'menus_publicos',
+    'submenus' => 'submenus_publicos',
+    'configuracion' => 'datos_institucionales',
+    'noticias' => 'noticias',
+    'logos-colores' => 'logos_colores',
+    'redes-sociales' => 'redes_sociales',
+    'perfiles' => 'perfiles',
+    'configuracion-sistema' => 'configuracion_general',
+];
+$activePermissionKey = $panelPermissionMap[$panel] ?? 'contenedores';
+
+try {
+    admin_requerir_permiso($activePermissionKey, 'ver');
+} catch (Throwable $e) {
+    cms_set_flash('danger', $e->getMessage());
+    cms_redirect('admin.php?panel=dashboard');
+}
 
 try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -23,9 +49,30 @@ try {
         $sectionId = (int) ($_POST['id_seccion'] ?? $sectionId);
         $isAjax = strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest';
 
+        $permissionChecks = [
+            'toggle_seccion' => ['contenedores', 'editar'],
+            'guardar_menu' => ['menus_publicos', ((int) ($_POST['id_menu'] ?? 0) > 0 ? 'editar' : 'crear')],
+            'toggle_menu' => ['menus_publicos', 'editar'],
+            'eliminar_menu' => ['menus_publicos', 'eliminar'],
+            'guardar_submenu' => ['submenus_publicos', ((int) ($_POST['id_sub_menu'] ?? 0) > 0 ? 'editar' : 'crear')],
+            'toggle_submenu' => ['submenus_publicos', 'editar'],
+            'reorder_menus' => ['menus_publicos', 'editar'],
+            'reorder_submenus' => ['submenus_publicos', 'editar'],
+            'reorder_submenu_media' => ['submenus_publicos', 'editar'],
+            'add_submenu_media' => ['submenus_publicos', 'editar'],
+            'delete_submenu_media' => ['submenus_publicos', 'editar'],
+            'toggle_submenu_media' => ['submenus_publicos', 'editar'],
+            'guardar_institucion' => ['datos_institucionales', 'editar'],
+        ];
+        if (isset($permissionChecks[$action])) {
+            [$permissionKey, $permissionAction] = $permissionChecks[$action];
+            admin_requerir_permiso($permissionKey, $permissionAction);
+        }
+
         if ($action === 'toggle_seccion' && $sectionId > 0) {
             $datosAntes = obtenerRegistroAuditoria($db, 'seccion', 'id_seccion', $sectionId);
-            cms_toggle_section_visibility($db, $sectionId);
+            $nextVisible = ((string) ($_POST['visible'] ?? '') === 'si') ? 'si' : 'no';
+            cms_set_section_visibility($db, $sectionId, $nextVisible);
             $datosDespues = obtenerRegistroAuditoria($db, 'seccion', 'id_seccion', $sectionId);
             registrarAuditoria($db, 'Contenedores del sitio', 'seccion', $sectionId, ($datosDespues['visible'] ?? '') === 'si' ? 'activar' : 'ocultar', 'Se cambió la visibilidad de un contenedor', $datosAntes, $datosDespues);
             if ($isAjax) {
@@ -84,9 +131,21 @@ try {
             $savedSubMenuId = cms_save_submenu($db, $_POST);
             $datosDespues = obtenerRegistroAuditoria($db, 'sub_menus', 'id_sub_menu', $savedSubMenuId);
             registrarAuditoria($db, 'Submenús', 'sub_menus', $savedSubMenuId, $idSubMenuAudit > 0 ? 'editar' : 'crear', $idSubMenuAudit > 0 ? 'Se modificó un submenú' : 'Se creó un submenú', $datosAntes, $datosDespues);
+            if ($isAjax) {
+                $savedSubmenu = cms_get_submenu($db, $savedSubMenuId) ?? [];
+                $savedSubmenu['pagina_media'] = cms_list_submenu_page_media($db, $savedSubMenuId);
+                header('Content-Type: application/json; charset=UTF-8');
+                echo json_encode([
+                    'ok' => true,
+                    'message' => 'Cambios guardados correctamente',
+                    'submenu' => $savedSubmenu,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                exit;
+            }
             $returnPanel = in_array($_POST['return_panel'] ?? '', ['menus', 'submenus'], true) ? $_POST['return_panel'] : 'submenus';
             $savedStatus = $idSubMenuAudit > 0 ? 'submenu_updated' : 'submenu_created';
-            cms_redirect('admin.php?panel=' . $returnPanel . '&saved=' . $savedStatus);
+            $activeSubmenuTab = preg_replace('/[^A-Za-z0-9_-]/', '', (string) ($_POST['submenu_active_tab'] ?? 'submenuTabDatos'));
+            cms_redirect('admin.php?panel=' . $returnPanel . '&saved=' . $savedStatus . '&submenu=' . $savedSubMenuId . '&keep_submenu=1&submenu_tab=' . $activeSubmenuTab);
         }
 
         if ($action === 'toggle_submenu') {
@@ -125,6 +184,47 @@ try {
                 exit;
             }
             cms_redirect('admin.php?panel=submenus');
+        }
+
+        if ($action === 'reorder_submenu_media') {
+            $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
+            $ids = array_map('intval', (array) ($_POST['items'] ?? []));
+            if ($idSubMenuMedia <= 0) {
+                throw new RuntimeException('No se pudo identificar el submenú.');
+            }
+            cms_reorder_submenu_page_media($db, $idSubMenuMedia, $ids);
+            if ($isAjax) {
+                header('Content-Type: application/json; charset=UTF-8');
+                echo json_encode(['ok' => true]);
+                exit;
+            }
+            cms_redirect('admin.php?panel=submenus');
+        }
+
+        if ($action === 'add_submenu_media') {
+            $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
+            $media = cms_add_submenu_gallery_image($db, $idSubMenuMedia, $_POST);
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['ok' => true, 'media' => $media], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+
+        if ($action === 'delete_submenu_media') {
+            $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
+            $idMedia = (int) ($_POST['id_media'] ?? 0);
+            cms_delete_submenu_gallery_media($db, $idSubMenuMedia, $idMedia);
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['ok' => true, 'id_media' => $idMedia], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        if ($action === 'toggle_submenu_media') {
+            $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
+            $idMedia = (int) ($_POST['id_media'] ?? 0);
+            $visible = cms_toggle_submenu_gallery_media($db, $idSubMenuMedia, $idMedia);
+            header('Content-Type: application/json; charset=UTF-8');
+            echo json_encode(['ok' => true, 'id_media' => $idMedia, 'visible' => $visible], JSON_UNESCAPED_UNICODE);
+            exit;
         }
 
         if ($action === 'guardar_institucion') {
@@ -220,6 +320,27 @@ $pageTitles = [
     'configuracion' => ['title' => 'Configuración institucional', 'crumb' => 'Datos globales del sitio'],
 ];
 $pageMeta = $pageTitles[$panel] ?? $pageTitles['contenedores'];
+$adminPanelPermissions = [
+    'contenedores' => [
+        'crear' => admin_tiene_permiso('contenedores', 'crear'),
+        'editar' => admin_tiene_permiso('contenedores', 'editar'),
+        'eliminar' => admin_tiene_permiso('contenedores', 'eliminar'),
+    ],
+    'menus' => [
+        'crear' => admin_tiene_permiso('menus_publicos', 'crear'),
+        'editar' => admin_tiene_permiso('menus_publicos', 'editar'),
+        'eliminar' => admin_tiene_permiso('menus_publicos', 'eliminar'),
+    ],
+    'submenus' => [
+        'crear' => admin_tiene_permiso('submenus_publicos', 'crear'),
+        'editar' => admin_tiene_permiso('submenus_publicos', 'editar'),
+        'eliminar' => admin_tiene_permiso('submenus_publicos', 'eliminar'),
+    ],
+    'configuracion' => [
+        'editar' => admin_tiene_permiso('datos_institucionales', 'editar'),
+    ],
+];
+$adminPanelPermissionsJson = json_encode($adminPanelPermissions, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
 admin_render_layout_start([
     'title' => 'Panel CMS | Colegio San Pablo',
@@ -235,214 +356,7 @@ admin_render_layout_start([
     'color_cuaternario' => $institution['color_cuaternario'] ?? '',
     'admin_name' => $_SESSION['admin_nombre'] ?? $_SESSION['admin_usuario'] ?? 'Administrador',
     'header_actions' => '',
-    'extra_head' => <<<'HTML'
-    <style>
-        /* Dashboard */
-        .dashboard-grid { display: grid; gap: 20px; }
-        .dashboard-metrics { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; }
-        .dash-panel {
-            background: var(--adm-card);
-            border: 1px solid var(--adm-border);
-            border-radius: var(--adm-radius);
-            box-shadow: var(--adm-shadow-sm);
-            padding: 18px;
-            height: 100%;
-        }
-        .dash-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
-        .dash-panel-title { display: flex; align-items: center; gap: 8px; font-size: .95rem; font-weight: 700; color: var(--adm-text); margin: 0; }
-        .dash-panel-title i { color: var(--adm-primary); }
-        .dash-event-list, .dash-list { display: flex; flex-direction: column; gap: 10px; }
-        .dash-event {
-            display: grid;
-            grid-template-columns: 52px minmax(0,1fr) auto;
-            align-items: center;
-            gap: 12px;
-            padding: 10px;
-            border: 1px solid var(--adm-border);
-            border-radius: var(--adm-radius-sm);
-            color: inherit;
-            transition: background var(--adm-transition);
-        }
-        .dash-event:hover { background: #f8fafc; }
-        .dash-event-date {
-            height: 52px; border-radius: 10px;
-            display: grid; place-items: center;
-            background: linear-gradient(135deg,var(--adm-primary),var(--adm-secondary));
-            color: #fff; font-weight: 800; line-height: 1; font-size: .95rem;
-        }
-        .dash-event-date small { display: block; font-size: .62rem; margin-top: 3px; font-weight: 600; }
-        .dash-event strong, .dash-list strong { display: block; color: var(--adm-text); font-weight: 600; font-size: .87rem; }
-        .dash-event span,   .dash-list span   { display: block; color: var(--adm-muted); font-size: .78rem; margin-top: 2px; }
-        .dash-actions { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 10px; }
-        .dash-action {
-            min-height: 80px; border-radius: var(--adm-radius);
-            display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 6px;
-            color: var(--adm-text-2); background: #f8fafc; border: 1px solid var(--adm-border);
-            font-size: .82rem; font-weight: 600; text-align: center;
-            transition: box-shadow var(--adm-transition), background var(--adm-transition);
-        }
-        .dash-action:hover { background: var(--adm-primary-soft); border-color: var(--adm-primary); color: var(--adm-primary); }
-        .dash-action i {
-            width: 38px; height: 38px; border-radius: 10px;
-            display: grid; place-items: center;
-            background: linear-gradient(135deg,var(--adm-primary),var(--adm-accent));
-            color: #fff; font-size: 1.1rem;
-        }
-        .dash-home-row {
-            display: grid;
-            grid-template-columns: 20px minmax(0,1fr) auto auto;
-            align-items: center;
-            gap: 10px;
-            padding: 10px 0;
-            border-bottom: 1px solid var(--adm-border);
-        }
-        .dash-home-row:last-child { border-bottom: 0; }
-        .dash-mini-calendar { display: grid; grid-template-columns: repeat(7,1fr); gap: 6px; text-align: center; }
-        .dash-mini-calendar span { color: var(--adm-muted); font-size: .72rem; font-weight: 700; padding: 2px 0; }
-        .dash-mini-calendar b {
-            min-height: 30px; border-radius: 999px;
-            display: grid; place-items: center;
-            color: var(--adm-text); font-size: .8rem; font-weight: 400;
-        }
-        .dash-mini-calendar b.has-event { background: var(--adm-primary-soft); color: var(--adm-primary); font-weight: 700; }
-        .dash-mini-calendar b.today { background: linear-gradient(135deg,var(--adm-primary),var(--adm-accent)); color: #fff; font-weight: 700; }
-        .cms-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
-        .cms-order-cell { display: flex; align-items: center; gap: 10px; min-width: 112px; }
-        .cms-drag-handle { width: 32px; height: 32px; border: 1px solid var(--adm-border); border-radius: 8px; display: inline-grid; place-items: center; color: var(--adm-muted); background: #fff; cursor: grab; }
-        .cms-drag-handle:hover { color: var(--adm-primary); border-color: var(--adm-primary); background: var(--adm-primary-soft); }
-        .cms-fixed-lock { width: 32px; height: 32px; border-radius: 8px; display: inline-grid; place-items: center; color: var(--adm-muted); background: #f8fafc; border: 1px solid var(--adm-border); }
-        .cms-row-fixed { background: linear-gradient(90deg, rgba(248,250,252,.95), rgba(255,255,255,.95)); }
-        .cms-row-movable.sortable-ghost { opacity: .35; }
-        .cms-row-movable.sortable-chosen { box-shadow: 0 12px 28px rgba(15, 23, 42, .14); }
-        .cms-last-update strong { display: block; color: var(--adm-text); font-size: .84rem; font-weight: 700; }
-        .cms-last-update span { display: block; color: var(--adm-muted); font-size: .75rem; margin-top: 2px; }
-        .cms-list-shell.table-responsive { overflow: visible; }
-        .cms-list-shell .dataTables_wrapper > .row:first-child {
-            align-items: center;
-            margin: 0;
-            padding: 10px 14px;
-            border-bottom: 1px solid var(--adm-border);
-            background: #fff;
-        }
-        .cms-list-shell .dataTables_wrapper > .row:first-child .col-sm-12 {
-            padding-left: 0;
-            padding-right: 0;
-        }
-        .cms-list-shell .dataTables_length label,
-        .cms-list-shell .dataTables_filter label {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            margin: 0;
-            color: var(--adm-text-2);
-            font-size: .82rem;
-            font-weight: 600;
-        }
-        .cms-list-shell .dataTables_filter { text-align: right; }
-        .cms-list-shell .dataTables_filter input {
-            min-height: 34px;
-            border-radius: 8px;
-            border-color: var(--adm-border);
-            box-shadow: none;
-            margin-left: 4px;
-        }
-        .cms-list-shell .dataTables_length select {
-            min-height: 34px;
-            border-radius: 8px;
-            border-color: var(--adm-border);
-            box-shadow: none;
-        }
-        .cms-list-shell .dataTables_wrapper > .row:last-child {
-            align-items: center;
-            margin: 0;
-            padding: 10px 14px;
-            border-top: 1px solid var(--adm-border);
-            background: #fff;
-            color: var(--adm-muted);
-            font-size: .82rem;
-        }
-        .cms-list-table thead th {
-            background: #f8fafc;
-            color: var(--adm-muted);
-            font-size: .72rem;
-            font-weight: 800;
-            letter-spacing: .04em;
-            padding-top: 10px;
-            padding-bottom: 10px;
-        }
-        .cms-list-table tbody td {
-            padding-top: 10px;
-            padding-bottom: 10px;
-            font-size: .84rem;
-        }
-        .cms-list-table tbody tr:hover { background: #fbfdff; }
-        .cms-item-title {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 0;
-        }
-        .cms-item-icon {
-            width: 34px;
-            height: 34px;
-            border-radius: 9px;
-            display: inline-grid;
-            place-items: center;
-            flex: 0 0 34px;
-            color: var(--adm-primary);
-            background: var(--adm-primary-soft);
-            border: 1px solid rgba(var(--adm-primary-rgb), .12);
-        }
-        .cms-item-copy strong {
-            display: block;
-            color: var(--adm-text);
-            font-size: .88rem;
-            font-weight: 800;
-            line-height: 1.2;
-        }
-        .cms-item-copy code {
-            display: block;
-            color: var(--adm-muted);
-            font-size: .74rem;
-            margin-top: 2px;
-        }
-        .cms-muted-text {
-            max-width: 620px;
-            color: var(--adm-text-2);
-            line-height: 1.35;
-            white-space: normal;
-        }
-        .cms-last-update strong,
-        .cms-last-update span {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .cms-last-update strong {
-            color: var(--adm-text-2);
-            font-size: .78rem;
-            font-weight: 700;
-        }
-        .cms-last-update span {
-            color: var(--adm-muted);
-            font-size: .75rem;
-            margin-top: 3px;
-        }
-        .cms-row-actions {
-            display: flex;
-            justify-content: flex-end;
-            gap: 8px;
-        }
-        .cms-list-table .badge-soft {
-            border-radius: 7px;
-            padding: 5px 9px;
-            font-size: .74rem;
-        }
-        @media (max-width: 1399px) { .dashboard-metrics { grid-template-columns: repeat(2,minmax(0,1fr)); } }
-        @media (max-width: 1199px) { .cms-summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-        @media (max-width: 767px) { .dashboard-metrics, .dash-actions, .cms-summary-grid { grid-template-columns: 1fr; } }
-    </style>
-HTML,
+    'extra_head' => '<link rel="stylesheet" href="assets/css/admin_dashboard.css"><link rel="stylesheet" href="assets/css/submenu_historia_admin.css">',
 ]);
 ?>
 
@@ -594,7 +508,7 @@ HTML,
                         <th>Orden</th>
                         <th>Contenedor</th>
                         <th>Qué controla</th>
-                        <th>Tipo</th>
+                        <th>Estado</th>
                         <th>Última modificación</th>
                         <th>Visible</th>
                         <th>Acciones</th>
@@ -615,6 +529,19 @@ HTML,
                             if ($updatedUser === '') {
                                 $updatedUser = (string) ($section['actualizado_por_usuario'] ?? $section['actualizado_por_email'] ?? '');
                             }
+                            $sectionStatus = strtolower(trim((string) ($section['estado'] ?? 'activo')));
+                            $statusLabels = [
+                                'activo' => 'Activo',
+                                'inactivo' => 'Inactivo',
+                                'borrador' => 'Borrador',
+                            ];
+                            $statusClasses = [
+                                'activo' => 'success',
+                                'inactivo' => 'dark',
+                                'borrador' => 'warning',
+                            ];
+                            $statusLabel = $statusLabels[$sectionStatus] ?? ucfirst($sectionStatus !== '' ? $sectionStatus : 'activo');
+                            $statusClass = $statusClasses[$sectionStatus] ?? 'dark';
                         ?>
                         <tr class="<?= $isMovableSection ? 'cms-row-movable' : 'cms-row-fixed' ?>" data-id="<?= (int) $section['id_seccion'] ?>" data-order="<?= (int) $section['orden'] ?>" data-fixed="<?= $isFixedSection ? '1' : '0' ?>" data-movable="<?= $isMovableSection ? '1' : '0' ?>">
                             <td class="js-section-updated-cell">
@@ -640,7 +567,7 @@ HTML,
                                 </div>
                             </td>
                             <td><div class="cms-muted-text"><?= cms_e($section['observacion'] ?? '') ?></div></td>
-                            <td><span class="badge-soft dark"><?= cms_e($section['tipo_seccion']) ?></span></td>
+                            <td><span class="badge-soft <?= cms_e($statusClass) ?>"><?= cms_e($statusLabel) ?></span></td>
                             <td>
                                 <div class="cms-last-update">
                                     <?php if ($updatedAt !== ''): ?>
@@ -656,8 +583,9 @@ HTML,
                                 <form method="post" class="m-0 js-toggle-seccion-form">
                                     <input type="hidden" name="accion" value="toggle_seccion">
                                     <input type="hidden" name="id_seccion" value="<?= (int) $section['id_seccion'] ?>">
+                                    <input type="hidden" name="visible" class="js-toggle-seccion-value" value="<?= ($section['visible'] ?? '') === 'si' ? 'si' : 'no' ?>">
                                     <div class="form-check form-switch d-inline-flex align-items-center gap-2">
-                                        <input class="form-check-input js-toggle-seccion" type="checkbox" role="switch" <?= ($section['visible'] ?? '') === 'si' ? 'checked' : '' ?>>
+                                        <input class="form-check-input js-toggle-seccion" type="checkbox" role="switch" <?= ($section['visible'] ?? '') === 'si' ? 'checked' : '' ?><?= $adminPanelPermissions['contenedores']['editar'] ? '' : ' disabled data-admin-denied="' . cms_e(admin_permiso_denegado_mensaje('editar')) . '"' ?>>
                                         <label class="form-check-label js-toggle-label"><?= ($section['visible'] ?? '') === 'si' ? 'Activo' : 'Oculto' ?></label>
                                     </div>
                                 </form>
@@ -679,118 +607,7 @@ HTML,
         </div>
     </section>
 <?php elseif ($panel === 'menus'): ?>
-<style>
-.mnu-list { display:flex; flex-direction:column; gap:6px; }
-.mnu-card { border:1px solid var(--adm-border); border-radius:0; background:#fff; overflow:hidden; transition:box-shadow .15s; }
-.mnu-card:first-child { border-top-left-radius:10px; border-top-right-radius:10px; }
-.mnu-card:last-child { border-bottom-left-radius:10px; border-bottom-right-radius:10px; }
-.mnu-card + .mnu-card { margin-top:-1px; }
-.mnu-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.07); }
-.mnu-card.sortable-ghost { opacity:.28; border:2px dashed var(--adm-primary); }
-.mnu-card.sortable-chosen { box-shadow:0 10px 28px rgba(0,0,0,.12); }
-.mnu-head,
-.mnu-row { display:grid; grid-template-columns:36px 54px minmax(190px,1.1fr) minmax(130px,.75fr) 130px 130px 180px 138px 46px; align-items:center; gap:10px; }
-.mnu-head { padding:10px 14px; border:1px solid var(--adm-border); border-bottom:0; border-radius:10px 10px 0 0; background:#f8fafc; color:var(--adm-muted); font-size:.72rem; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
-.mnu-row { padding:9px 14px; min-height:58px; }
-.mnu-order { color:var(--adm-text-2); font-weight:700; font-size:.84rem; }
-.mnu-name { display:flex; align-items:center; gap:10px; min-width:0; font-weight:800; font-size:.9rem; color:var(--adm-text); }
-.mnu-icon { width:34px; height:34px; border-radius:9px; display:inline-grid; place-items:center; color:var(--adm-primary); background:var(--adm-primary-soft); flex:0 0 34px; }
-.mnu-url code { display:block; color:var(--adm-text-2); font-size:.78rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.mnu-sub-badge { display:inline-flex; align-items:center; gap:5px; width:max-content; border-radius:7px; padding:5px 9px; background:#f1f5f9; color:var(--adm-primary); font-size:.76rem; font-weight:700; }
-.mnu-updated strong, .mnu-updated span { display:flex; align-items:center; gap:6px; line-height:1.25; }
-.mnu-updated strong { color:var(--adm-text-2); font-size:.78rem; font-weight:600; }
-.mnu-updated span { color:var(--adm-muted); font-size:.76rem; margin-top:3px; }
-.mnu-actions { display:flex; align-items:center; justify-content:flex-end; gap:8px; }
-.mnu-expand-btn { border:none; background:none; padding:5px 8px; border-radius:7px; cursor:pointer; color:var(--adm-muted); display:flex; align-items:center; gap:5px; transition:background .15s; }
-.mnu-expand-btn:hover { background:var(--adm-surface); color:var(--adm-text); }
-.mnu-expand-btn .expand-icon { font-size:.78rem; transition:transform .22s ease; }
-.mnu-expand-btn[aria-expanded="true"] .expand-icon { transform:rotate(180deg); }
-.mnu-sub-area { border-top:1px solid var(--adm-border); background:#f9fafb; border-left:3px solid var(--adm-primary); padding-left:42px; }
-.mnu-sub-table { width:100%; border-collapse:collapse; }
-.mnu-sub-table tr { border-bottom:1px solid var(--adm-border); }
-.mnu-sub-table tr:last-child { border-bottom:none; }
-.mnu-sub-table td { padding:7px 12px; font-size:.84rem; vertical-align:middle; }
-.mnu-sub-table .sub-drag { width:36px; padding-left:8px; }
-.mnu-sub-table .sub-name { font-weight:600; min-width:130px; }
-.mnu-sub-table .sub-url { }
-.mnu-sub-table .sub-toggle { width:130px; }
-.mnu-sub-table .sub-edit { width:38px; }
-.mnu-sub-footer { padding:8px 14px 10px 8px; }
-.submenu-editor-canvas {
-    height: 78vh !important;
-    max-height: 78vh;
-    border-radius: 18px 18px 0 0;
-    border-top: 1px solid var(--adm-border);
-    box-shadow: 0 -18px 48px rgba(15, 23, 42, .18);
-}
-.submenu-editor-form {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-.submenu-editor-header {
-    flex: 0 0 auto;
-    padding: 18px 24px;
-    border-bottom: 1px solid var(--adm-border);
-}
-.submenu-editor-body {
-    flex: 1 1 auto;
-    overflow-y: auto;
-    padding: 20px 24px;
-}
-.submenu-editor-footer {
-    flex: 0 0 auto;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    padding: 14px 24px;
-    border-top: 1px solid var(--adm-border);
-    background: #fff;
-}
-.submenu-editor-tabs {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
-    list-style: none;
-    margin: 0 0 18px;
-    padding: 0 0 14px;
-    border-bottom: 1px solid var(--adm-border);
-}
-.submenu-editor-tabs li {
-    display: block;
-    margin: 0;
-    padding: 0;
-}
-.submenu-editor-tabs button {
-    border: 1px solid transparent;
-    border-radius: 999px;
-    background: #fff;
-    padding: 8px 14px;
-    font-weight: 700;
-    color: var(--adm-muted);
-    line-height: 1.2;
-}
-.submenu-editor-tabs button.active {
-    border-color: rgba(240,160,0,.35);
-    background: rgba(240,160,0,.12);
-    color: var(--adm-primary);
-}
-@media (max-width: 1199px) {
-    .mnu-head { display:none; }
-    .mnu-row { grid-template-columns:32px 42px minmax(0,1fr) auto; }
-    .mnu-row > .mnu-url,
-    .mnu-row > .mnu-submenus,
-    .mnu-row > .mnu-state,
-    .mnu-row > .mnu-updated { grid-column:3 / 5; }
-    .mnu-actions { justify-content:flex-start; }
-    .submenu-editor-canvas {
-        height: 82vh !important;
-        max-height: 82vh;
-    }
-}
-</style>
+
     <div class="cms-summary-grid">
         <div class="stat-card"><div class="stat-icon blue"><i class="bi bi-list-ul"></i></div><div class="stat-body"><strong><?= (int) $menuSummary['total_menus'] ?></strong><span>Menús principales</span><small>Total de menús configurados</small></div></div>
         <div class="stat-card"><div class="stat-icon green"><i class="bi bi-diagram-3"></i></div><div class="stat-body"><strong><?= (int) $menuSummary['total_submenus'] ?></strong><span>Submenús</span><small>Total de todos los submenús</small></div></div>
@@ -812,7 +629,6 @@ HTML,
                 <span></span>
                 <span>Orden</span>
                 <span>Menú</span>
-                <span>URL / Destino</span>
                 <span>Submenús</span>
                 <span>Estado</span>
                 <span>Última modificación</span>
@@ -840,7 +656,6 @@ HTML,
                             <span class="mnu-icon"><i class="<?= cms_e($menuIcon) ?>"></i></span>
                             <span><?= cms_e($menuName) ?></span>
                         </div>
-                        <div class="mnu-url"><code><?= cms_e($menuUrl) ?></code></div>
                         <div class="mnu-submenus">
                             <span class="mnu-sub-badge"><i class="bi bi-folder2-open"></i><?= $subCount ?> submenú<?= $subCount === 1 ? '' : 's' ?></span>
                         </div>
@@ -894,12 +709,27 @@ HTML,
                     <div class="collapse mnu-sub-area" id="menuSubs-<?= (int) $menu['id_menu'] ?>">
                         <?php if (!empty($menuSubs)): ?>
                         <table class="mnu-sub-table">
+                            <thead><tr><th></th><th>Submenú</th><th>Contenido</th><th>Multimedia</th><th>Estado</th><th>Última modificación</th><th>Acciones</th></tr></thead>
                             <tbody class="submenusSortableTbody" data-id-menu="<?= (int) $menu['id_menu'] ?>">
                                 <?php foreach ($menuSubs as $sub): ?>
+                                <?php
+                                    $contentState = (string) ($sub['estado_contenido'] ?? 'vacio');
+                                    $contentLabels = ['completo'=>'Completo','incompleto'=>'Incompleto','vacio'=>'Vacío','externo'=>'Enlace externo'];
+                                    $imageCount = (int) ($sub['media_imagenes'] ?? 0);
+                                    $videoCount = (int) ($sub['media_videos'] ?? 0);
+                                    $mediaParts = [];
+                                    if (!empty($sub['media_tiene_hero'])) { $mediaParts[] = 'Hero'; }
+                                    if ($imageCount > 0) { $mediaParts[] = $imageCount . ' imagen' . ($imageCount === 1 ? '' : 'es'); }
+                                    if ($videoCount > 0) { $mediaParts[] = $videoCount . ' video' . ($videoCount === 1 ? '' : 's'); }
+                                    $mediaSummary = $mediaParts ? implode(' · ', $mediaParts) : 'Sin multimedia';
+                                    $subUpdatedAt = trim((string) ($sub['editorial_actualizado_en'] ?? ''));
+                                    $subUpdatedUser = trim((string) ($sub['editorial_actualizado_usuario'] ?? ''));
+                                ?>
                                 <tr data-id="<?= (int) $sub['id_sub_menu'] ?>">
                                     <td class="sub-drag"><i class="bi bi-grip-vertical sub-drag-handle" style="cursor:grab;color:var(--adm-muted);font-size:1rem;"></i></td>
-                                    <td class="sub-name"><?= cms_e($sub['nombre']) ?></td>
-                                    <td class="sub-url"><code style="font-size:.78rem;color:var(--adm-muted);"><?= cms_e($sub['url']) ?: '—' ?></code></td>
+                                    <td class="sub-name"><?= cms_e($sub['nombre']) ?><?php if ($contentState === 'externo'): ?><span class="submenu-external-badge">Enlace externo</span><?php endif; ?></td>
+                                    <td><span class="submenu-content-badge is-<?= cms_e($contentState) ?>"><?= cms_e($contentLabels[$contentState] ?? 'Vacío') ?></span></td>
+                                    <td class="submenu-media-summary"><?= cms_e($mediaSummary) ?></td>
                                     <td class="sub-toggle">
                                         <div class="form-check form-switch d-inline-flex align-items-center gap-2">
                                             <input class="form-check-input js-submenu-toggle" type="checkbox" role="switch"
@@ -909,6 +739,7 @@ HTML,
                                             <label class="form-check-label" style="font-size:.82rem;"><?= (int) $sub['estado'] === 1 ? 'Activo' : 'Inactivo' ?></label>
                                         </div>
                                     </td>
+                                    <td class="submenu-updated"><?php if ($subUpdatedAt !== ''): ?><strong><?= cms_e(date('d/m/Y H:i', strtotime($subUpdatedAt))) ?></strong><span><?= $subUpdatedUser !== '' ? cms_e($subUpdatedUser) : 'Usuario no registrado' ?></span><?php else: ?><span>Sin modificación</span><?php endif; ?></td>
                                     <td class="sub-edit">
                                         <button class="btn-icon edit" title="Editar submenú"
                                             data-id="<?= (int) $sub['id_sub_menu'] ?>"
@@ -995,6 +826,7 @@ HTML,
                     <input type="hidden" name="accion" value="guardar_submenu">
                     <input type="hidden" name="return_panel" value="menus">
                     <input type="hidden" name="id_sub_menu" id="modalSubmenuId" value="0">
+                    <input type="hidden" name="submenu_active_tab" id="modalSubmenuActiveTab" value="submenuTabDatos">
                     <div class="offcanvas-header submenu-editor-header">
                         <h5 class="modal-title" id="modalSubmenuLabel">Submenú</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
@@ -1004,8 +836,9 @@ HTML,
                             <li role="presentation"><button class="active" type="button" data-bs-toggle="tab" data-bs-target="#submenuTabDatos" role="tab">Datos</button></li>
                             <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabContenido" role="tab">Página</button></li>
                             <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabMedia" role="tab">Multimedia</button></li>
-                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabSeo" role="tab">SEO</button></li>
                         </ul>
+                        <input type="hidden" name="pagina_meta_title" id="modalPaginaMetaTitle">
+                        <input type="hidden" name="pagina_meta_description" id="modalPaginaMetaDescription">
                         <div class="tab-content">
                             <div class="tab-pane fade show active" id="submenuTabDatos" role="tabpanel">
                                 <div class="row g-3">
@@ -1022,14 +855,7 @@ HTML,
                                         <label class="form-label">Nombre <span class="text-danger">*</span></label>
                                         <input class="form-control" name="nombre" id="modalSubmenuNombre" required>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL</label>
-                                        <input class="form-control" name="url" id="modalSubmenuUrl" placeholder="#">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Ícono <small class="text-muted">(clase Bootstrap Icons)</small></label>
-                                        <input class="form-control" name="icono" id="modalSubmenuIcono" placeholder="bi-file-text">
-                                    </div>
+                                    <input type="hidden" name="url" id="modalSubmenuUrl">
                                     <div class="col-12">
                                         <div class="form-check form-switch">
                                             <input class="form-check-input" type="checkbox" name="estado" id="modalSubmenuEstado">
@@ -1040,81 +866,68 @@ HTML,
                             </div>
                             <div class="tab-pane fade" id="submenuTabContenido" role="tabpanel">
                                 <div class="row g-3">
-                                    <div class="col-md-7">
-                                        <label class="form-label">Título de página</label>
-                                        <input class="form-control" name="pagina_titulo" id="modalPaginaTitulo" placeholder="Si queda vacío usa el nombre del submenú">
+                                    <div class="col-lg-5">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label">Título de página</label>
+                                                <input class="form-control" name="pagina_titulo" id="modalPaginaTitulo" placeholder="Si queda vacío usa el nombre del submenú">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Bajada</label>
+                                                <input class="form-control" name="pagina_bajada" id="modalPaginaBajada" placeholder="Resumen breve para el hero">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Texto del botón</label>
+                                                <input class="form-control" name="pagina_boton_texto" id="modalPaginaBotonTexto" placeholder="Opcional">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">URL del botón</label>
+                                                <input class="form-control" name="pagina_boton_url" id="modalPaginaBotonUrl" placeholder="#contacto">
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">Texto del botón</label>
-                                        <input class="form-control" name="pagina_boton_texto" id="modalPaginaBotonTexto" placeholder="Opcional">
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Bajada</label>
-                                        <input class="form-control" name="pagina_bajada" id="modalPaginaBajada" placeholder="Resumen breve para el hero">
-                                    </div>
-                                    <div class="col-12">
+                                    <div class="col-lg-7">
                                         <label class="form-label">Contenido</label>
-                                        <textarea class="form-control" name="pagina_contenido" id="modalPaginaContenido" rows="7" placeholder="Texto principal de la página"></textarea>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL del botón</label>
-                                        <input class="form-control" name="pagina_boton_url" id="modalPaginaBotonUrl" placeholder="#contacto">
+                                        <textarea class="form-control h-100 js-submenu-editor" name="pagina_contenido" id="modalPaginaContenido" rows="12" placeholder="Texto principal de la página"></textarea>
                                     </div>
                                 </div>
                             </div>
                             <div class="tab-pane fade" id="submenuTabMedia" role="tabpanel">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Imagen hero</label>
-                                        <input class="form-control" type="file" name="pagina_imagen_hero" accept="image/*">
-                                        <small class="text-muted" id="modalPaginaHeroActual"></small>
+                                <div class="submenu-media-grid">
+                                    <div class="submenu-media-card submenu-media-primary">
+                                        <label class="form-label">Imagen/video principal</label>
+                                        <div class="submenu-hero-mode">
+                                            <label><input type="radio" name="pagina_hero_tipo" value="imagen" checked><span><i class="bi bi-image"></i> Imagen</span></label>
+                                            <label><input type="radio" name="pagina_hero_tipo" value="video"><span><i class="bi bi-play-btn"></i> Video</span></label>
+                                        </div>
+                                        <div data-hero-panel="imagen">
+                                            <div class="submenu-media-preview" id="modalPaginaHeroPreview">Sin imagen hero</div>
+                                            <input class="form-control js-submenu-image-preview" type="file" name="pagina_imagen_hero" accept="image/*" data-preview-target="modalPaginaHeroPreview">
+                                            <small class="submenu-media-note" id="modalPaginaHeroActual"></small>
+                                            <label class="submenu-media-danger js-delete-hero-image"><input class="form-check-input" type="checkbox" name="delete_pagina_imagen_hero" value="1"> Eliminar imagen principal</label>
+                                        </div>
+                                        <div data-hero-panel="video">
+                                            <div class="submenu-media-preview" id="modalPaginaHeroVideoPreview"><span>Sin video principal</span></div>
+                                            <label class="form-label">URL video hero</label>
+                                            <input class="form-control mb-2" name="pagina_hero_video_url" id="modalPaginaHeroVideoUrl" placeholder="YouTube, Vimeo o URL directa">
+                                            <label class="form-label">Video hero local</label>
+                                            <input class="form-control" type="file" name="pagina_hero_video_archivo" accept="video/mp4,video/webm,video/quicktime">
+                                            <small class="submenu-media-note" id="modalPaginaHeroVideoActual"></small>
+                                            <label class="submenu-media-danger js-delete-hero-video"><input class="form-check-input" type="checkbox" name="delete_pagina_hero_video" value="1"> Eliminar video principal</label>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Video hero local</label>
-                                        <input class="form-control" type="file" name="pagina_hero_video_archivo" accept="video/mp4,video/webm,video/quicktime">
-                                        <small class="text-muted" id="modalPaginaHeroVideoActual"></small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL video hero</label>
-                                        <input class="form-control" name="pagina_hero_video_url" id="modalPaginaHeroVideoUrl" placeholder="YouTube, Vimeo o URL directa">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Imagen secundaria</label>
-                                        <input class="form-control" type="file" name="pagina_imagen_secundaria" accept="image/*">
-                                        <small class="text-muted" id="modalPaginaSecundariaActual"></small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Video local</label>
-                                        <input class="form-control" type="file" name="pagina_video_archivo" accept="video/mp4,video/webm,video/quicktime">
-                                        <small class="text-muted" id="modalPaginaVideoActual"></small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL YouTube / Vimeo</label>
-                                        <input class="form-control" name="pagina_video_url" id="modalPaginaVideoUrl" placeholder="https://youtube.com/...">
-                                    </div>
-                                    <div class="col-md-7">
-                                        <label class="form-label">Agregar imagen a galería</label>
-                                        <input class="form-control" type="file" name="pagina_galeria_imagen" accept="image/*">
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">Título de imagen</label>
-                                        <input class="form-control" name="pagina_galeria_titulo" placeholder="Opcional">
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="small fw-semibold mb-2">Galería actual</div>
-                                        <div id="modalPaginaMediaActual" class="d-flex flex-wrap gap-2"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade" id="submenuTabSeo" role="tabpanel">
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        <label class="form-label">Meta título</label>
-                                        <input class="form-control" name="pagina_meta_title" id="modalPaginaMetaTitle">
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Meta descripción</label>
-                                        <textarea class="form-control" name="pagina_meta_description" id="modalPaginaMetaDescription" rows="3"></textarea>
+                                    <div class="submenu-media-card submenu-media-gallery">
+                                        <div class="small fw-semibold mb-2">Galería</div>
+                                        <div class="submenu-gallery-add">
+                                            <div class="submenu-media-preview" id="modalPaginaGaleriaNuevaPreview">Sin imagen seleccionada</div>
+                                            <div class="submenu-gallery-add-fields">
+                                                <input class="form-control js-submenu-image-preview" type="file" name="pagina_galeria_imagen" accept="image/*" data-preview-target="modalPaginaGaleriaNuevaPreview">
+                                                <input class="form-control" name="pagina_galeria_titulo" placeholder="Título opcional">
+                                                <button type="button" class="btn btn-premium js-submenu-gallery-add"><i class="bi bi-plus-lg"></i> Agregar</button>
+                                            </div>
+                                        </div>
+                                        <div class="small fw-semibold mt-3 mb-2">Galería actual</div>
+                                        <div id="modalPaginaMediaActual" class="submenu-gallery-preview"></div>
                                     </div>
                                 </div>
                             </div>
@@ -1151,30 +964,32 @@ HTML,
                         <thead>
                             <tr>
                                 <th style="width:38px"></th>
-                                <th>Nombre</th>
-                                <th>URL</th>
-                                <th>Ícono</th>
-                                <th>Activo</th>
-                                <th style="width:56px">Editar</th>
+                                <th>Submenú</th><th>Contenido</th><th>Multimedia</th><th>Estado</th><th>Última modificación</th><th style="width:56px">Acciones</th>
                             </tr>
                         </thead>
                         <tbody class="submenusSortableTbody" data-id-menu="<?= (int) $menuPadre['id_menu'] ?>">
                             <?php foreach ($submenusByMenu[$menuPadre['id_menu']] as $submenu): ?>
+                                <?php
+                                    $contentState = (string) ($submenu['estado_contenido'] ?? 'vacio');
+                                    $contentLabels = ['completo'=>'Completo','incompleto'=>'Incompleto','vacio'=>'Vacío','externo'=>'Enlace externo'];
+                                    $mediaParts=[]; $imageCount=(int)($submenu['media_imagenes']??0); $videoCount=(int)($submenu['media_videos']??0);
+                                    if(!empty($submenu['media_tiene_hero'])){$mediaParts[]='Hero';}
+                                    if($imageCount){$mediaParts[]=$imageCount.' imagen'.($imageCount===1?'':'es');}
+                                    if($videoCount){$mediaParts[]=$videoCount.' video'.($videoCount===1?'':'s');}
+                                    $subUpdatedAt=trim((string)($submenu['editorial_actualizado_en']??''));
+                                ?>
                                 <tr data-id="<?= (int) $submenu['id_sub_menu'] ?>">
                                     <td><i class="bi bi-grip-vertical drag-handle" style="cursor:grab;color:var(--adm-muted);font-size:1.15rem;"></i></td>
-                                    <td><strong><?= cms_e($submenu['nombre']) ?></strong></td>
-                                    <td><code><?= cms_e($submenu['url']) ?></code></td>
-                                    <td><?= cms_e($submenu['icono']) ?></td>
-                                    <td>
-                                        <form method="post" class="m-0">
-                                            <input type="hidden" name="accion" value="toggle_submenu">
-                                            <input type="hidden" name="id_sub_menu" value="<?= (int) $submenu['id_sub_menu'] ?>">
+                                    <td class="sub-name"><strong><?= cms_e($submenu['nombre']) ?></strong><?php if($contentState==='externo'): ?><span class="submenu-external-badge">Enlace externo</span><?php endif; ?></td>
+                                    <td><span class="submenu-content-badge is-<?= cms_e($contentState) ?>"><?= cms_e($contentLabels[$contentState]??'Vacío') ?></span></td>
+                                    <td class="submenu-media-summary"><?= cms_e($mediaParts?implode(' · ',$mediaParts):'Sin multimedia') ?></td>
+                                    <td class="sub-toggle">
                                             <div class="form-check form-switch d-inline-flex align-items-center gap-2">
-                                                <input class="form-check-input" type="checkbox" role="switch" <?= (int) $submenu['estado'] === 1 ? 'checked' : '' ?> onchange="this.form.submit()">
+                                                <input class="form-check-input js-submenu-toggle" data-id="<?= (int)$submenu['id_sub_menu'] ?>" data-nombre="<?= cms_e($submenu['nombre']) ?>" type="checkbox" role="switch" <?= (int) $submenu['estado'] === 1 ? 'checked' : '' ?>>
                                                 <label class="form-check-label"><?= (int) $submenu['estado'] === 1 ? 'Activo' : 'Inactivo' ?></label>
                                             </div>
-                                        </form>
                                     </td>
+                                    <td class="submenu-updated"><?php if($subUpdatedAt!==''): ?><strong><?= cms_e(date('d/m/Y H:i',strtotime($subUpdatedAt))) ?></strong><span><?= cms_e($submenu['editorial_actualizado_usuario']??'Usuario no registrado') ?></span><?php else: ?><span>Sin modificación</span><?php endif; ?></td>
                                     <td>
                                         <button class="btn-icon edit" title="Editar"
                                             data-id="<?= (int) $submenu['id_sub_menu'] ?>"
@@ -1215,6 +1030,7 @@ HTML,
                 <form method="post" id="formModalSubmenu" enctype="multipart/form-data" class="submenu-editor-form">
                     <input type="hidden" name="accion" value="guardar_submenu">
                     <input type="hidden" name="id_sub_menu" id="modalSubmenuId" value="0">
+                    <input type="hidden" name="submenu_active_tab" id="modalSubmenuActiveTab" value="submenuTabDatos">
                     <div class="offcanvas-header submenu-editor-header">
                         <h5 class="modal-title" id="modalSubmenuLabel">Submenú</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
@@ -1224,8 +1040,9 @@ HTML,
                             <li role="presentation"><button class="active" type="button" data-bs-toggle="tab" data-bs-target="#submenuTabDatos" role="tab">Datos</button></li>
                             <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabContenido" role="tab">Página</button></li>
                             <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabMedia" role="tab">Multimedia</button></li>
-                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#submenuTabSeo" role="tab">SEO</button></li>
                         </ul>
+                        <input type="hidden" name="pagina_meta_title" id="modalPaginaMetaTitle">
+                        <input type="hidden" name="pagina_meta_description" id="modalPaginaMetaDescription">
                         <div class="tab-content">
                             <div class="tab-pane fade show active" id="submenuTabDatos" role="tabpanel">
                                 <div class="row g-3">
@@ -1242,14 +1059,7 @@ HTML,
                                         <label class="form-label">Nombre <span class="text-danger">*</span></label>
                                         <input class="form-control" name="nombre" id="modalSubmenuNombre" required>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL</label>
-                                        <input class="form-control" name="url" id="modalSubmenuUrl" placeholder="#">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Ícono <small class="text-muted">(clase Bootstrap Icons)</small></label>
-                                        <input class="form-control" name="icono" id="modalSubmenuIcono" placeholder="bi-file-text">
-                                    </div>
+                                    <input type="hidden" name="url" id="modalSubmenuUrl">
                                     <div class="col-12">
                                         <div class="form-check form-switch">
                                             <input class="form-check-input" type="checkbox" name="estado" id="modalSubmenuEstado">
@@ -1260,81 +1070,68 @@ HTML,
                             </div>
                             <div class="tab-pane fade" id="submenuTabContenido" role="tabpanel">
                                 <div class="row g-3">
-                                    <div class="col-md-7">
-                                        <label class="form-label">Título de página</label>
-                                        <input class="form-control" name="pagina_titulo" id="modalPaginaTitulo" placeholder="Si queda vacío usa el nombre del submenú">
+                                    <div class="col-lg-5">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label class="form-label">Título de página</label>
+                                                <input class="form-control" name="pagina_titulo" id="modalPaginaTitulo" placeholder="Si queda vacío usa el nombre del submenú">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Bajada</label>
+                                                <input class="form-control" name="pagina_bajada" id="modalPaginaBajada" placeholder="Resumen breve para el hero">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">Texto del botón</label>
+                                                <input class="form-control" name="pagina_boton_texto" id="modalPaginaBotonTexto" placeholder="Opcional">
+                                            </div>
+                                            <div class="col-12">
+                                                <label class="form-label">URL del botón</label>
+                                                <input class="form-control" name="pagina_boton_url" id="modalPaginaBotonUrl" placeholder="#contacto">
+                                            </div>
+                                        </div>
                                     </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">Texto del botón</label>
-                                        <input class="form-control" name="pagina_boton_texto" id="modalPaginaBotonTexto" placeholder="Opcional">
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Bajada</label>
-                                        <input class="form-control" name="pagina_bajada" id="modalPaginaBajada" placeholder="Resumen breve para el hero">
-                                    </div>
-                                    <div class="col-12">
+                                    <div class="col-lg-7">
                                         <label class="form-label">Contenido</label>
-                                        <textarea class="form-control" name="pagina_contenido" id="modalPaginaContenido" rows="7" placeholder="Texto principal de la página"></textarea>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL del botón</label>
-                                        <input class="form-control" name="pagina_boton_url" id="modalPaginaBotonUrl" placeholder="#contacto">
+                                        <textarea class="form-control h-100 js-submenu-editor" name="pagina_contenido" id="modalPaginaContenido" rows="12" placeholder="Texto principal de la página"></textarea>
                                     </div>
                                 </div>
                             </div>
                             <div class="tab-pane fade" id="submenuTabMedia" role="tabpanel">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label">Imagen hero</label>
-                                        <input class="form-control" type="file" name="pagina_imagen_hero" accept="image/*">
-                                        <small class="text-muted" id="modalPaginaHeroActual"></small>
+                                <div class="submenu-media-grid">
+                                    <div class="submenu-media-card submenu-media-primary">
+                                        <label class="form-label">Imagen/video principal</label>
+                                        <div class="submenu-hero-mode">
+                                            <label><input type="radio" name="pagina_hero_tipo" value="imagen" checked><span><i class="bi bi-image"></i> Imagen</span></label>
+                                            <label><input type="radio" name="pagina_hero_tipo" value="video"><span><i class="bi bi-play-btn"></i> Video</span></label>
+                                        </div>
+                                        <div data-hero-panel="imagen">
+                                            <div class="submenu-media-preview" id="modalPaginaHeroPreview">Sin imagen hero</div>
+                                            <input class="form-control js-submenu-image-preview" type="file" name="pagina_imagen_hero" accept="image/*" data-preview-target="modalPaginaHeroPreview">
+                                            <small class="submenu-media-note" id="modalPaginaHeroActual"></small>
+                                            <label class="submenu-media-danger js-delete-hero-image"><input class="form-check-input" type="checkbox" name="delete_pagina_imagen_hero" value="1"> Eliminar imagen principal</label>
+                                        </div>
+                                        <div data-hero-panel="video">
+                                            <div class="submenu-media-preview" id="modalPaginaHeroVideoPreview"><span>Sin video principal</span></div>
+                                            <label class="form-label">URL video hero</label>
+                                            <input class="form-control mb-2" name="pagina_hero_video_url" id="modalPaginaHeroVideoUrl" placeholder="YouTube, Vimeo o URL directa">
+                                            <label class="form-label">Video hero local</label>
+                                            <input class="form-control" type="file" name="pagina_hero_video_archivo" accept="video/mp4,video/webm,video/quicktime">
+                                            <small class="submenu-media-note" id="modalPaginaHeroVideoActual"></small>
+                                            <label class="submenu-media-danger js-delete-hero-video"><input class="form-check-input" type="checkbox" name="delete_pagina_hero_video" value="1"> Eliminar video principal</label>
+                                        </div>
                                     </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Video hero local</label>
-                                        <input class="form-control" type="file" name="pagina_hero_video_archivo" accept="video/mp4,video/webm,video/quicktime">
-                                        <small class="text-muted" id="modalPaginaHeroVideoActual"></small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL video hero</label>
-                                        <input class="form-control" name="pagina_hero_video_url" id="modalPaginaHeroVideoUrl" placeholder="YouTube, Vimeo o URL directa">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Imagen secundaria</label>
-                                        <input class="form-control" type="file" name="pagina_imagen_secundaria" accept="image/*">
-                                        <small class="text-muted" id="modalPaginaSecundariaActual"></small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">Video local</label>
-                                        <input class="form-control" type="file" name="pagina_video_archivo" accept="video/mp4,video/webm,video/quicktime">
-                                        <small class="text-muted" id="modalPaginaVideoActual"></small>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="form-label">URL YouTube / Vimeo</label>
-                                        <input class="form-control" name="pagina_video_url" id="modalPaginaVideoUrl" placeholder="https://youtube.com/...">
-                                    </div>
-                                    <div class="col-md-7">
-                                        <label class="form-label">Agregar imagen a galería</label>
-                                        <input class="form-control" type="file" name="pagina_galeria_imagen" accept="image/*">
-                                    </div>
-                                    <div class="col-md-5">
-                                        <label class="form-label">Título de imagen</label>
-                                        <input class="form-control" name="pagina_galeria_titulo" placeholder="Opcional">
-                                    </div>
-                                    <div class="col-12">
-                                        <div class="small fw-semibold mb-2">Galería actual</div>
-                                        <div id="modalPaginaMediaActual" class="d-flex flex-wrap gap-2"></div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="tab-pane fade" id="submenuTabSeo" role="tabpanel">
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        <label class="form-label">Meta título</label>
-                                        <input class="form-control" name="pagina_meta_title" id="modalPaginaMetaTitle">
-                                    </div>
-                                    <div class="col-12">
-                                        <label class="form-label">Meta descripción</label>
-                                        <textarea class="form-control" name="pagina_meta_description" id="modalPaginaMetaDescription" rows="3"></textarea>
+                                    <div class="submenu-media-card submenu-media-gallery">
+                                        <div class="small fw-semibold mb-2">Galería</div>
+                                        <div class="submenu-gallery-add">
+                                            <div class="submenu-media-preview" id="modalPaginaGaleriaNuevaPreview">Sin imagen seleccionada</div>
+                                            <div class="submenu-gallery-add-fields">
+                                                <input class="form-control js-submenu-image-preview" type="file" name="pagina_galeria_imagen" accept="image/*" data-preview-target="modalPaginaGaleriaNuevaPreview">
+                                                <input class="form-control" name="pagina_galeria_titulo" placeholder="Título opcional">
+                                                <button type="button" class="btn btn-premium js-submenu-gallery-add"><i class="bi bi-plus-lg"></i> Agregar</button>
+                                            </div>
+                                        </div>
+                                        <div class="small fw-semibold mt-3 mb-2">Galería actual</div>
+                                        <div id="modalPaginaMediaActual" class="submenu-gallery-preview"></div>
                                     </div>
                                 </div>
                             </div>
@@ -1347,20 +1144,7 @@ HTML,
                 </form>
     </div>
 <?php elseif ($panel === 'configuracion'): ?>
-<style>
-.cfg-group { border: 1px solid var(--adm-border); border-radius: 12px; background: #fff; padding: 18px 20px; margin-bottom: 18px; }
-.cfg-group-title { font-size: .78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--adm-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
-.color-field { display: flex; align-items: center; gap: 10px; }
-.color-field input[type="color"] { width: 44px; height: 44px; padding: 2px; border: 1px solid var(--adm-border); border-radius: 10px; cursor: pointer; flex-shrink: 0; background: #fff; }
-.color-field .form-control { font-family: monospace; font-size: .85rem; flex: 1; }
-.img-preview-wrap { position: relative; width: 100%; min-height: 72px; background: #f8fafc; border: 1px solid var(--adm-border); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; overflow: hidden; }
-.img-preview-wrap img { max-height: 72px; max-width: 100%; object-fit: contain; display: block; }
-.img-preview-placeholder { color: var(--adm-muted); font-size: .8rem; padding: 12px; text-align: center; }
-.favicon-preview-wrap { width: 48px; height: 48px; background: #f8fafc; border: 1px solid var(--adm-border); border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; overflow: hidden; }
-.favicon-preview-wrap img { width: 32px; height: 32px; object-fit: contain; }
-.qv-logo { max-height: 56px; max-width: 160px; object-fit: contain; margin-bottom: 10px; display: block; }
-.qv-color { width: 44px; height: 44px; border-radius: 12px; border: 2px solid rgba(0,0,0,.06); flex-shrink: 0; }
-</style>
+
 <section class="section-card">
     <div class="section-head">
         <div>
@@ -1554,6 +1338,72 @@ HTML,
 </script>
 <?php endif; ?>
 
+<script>
+(function () {
+    var permissions = <?= $adminPanelPermissionsJson ?: '{}' ?>;
+    var deniedMessage = <?= json_encode(admin_permiso_denegado_mensaje('editar'), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+    var actionMap = {
+        toggle_seccion: ['contenedores', 'editar'],
+        guardar_menu: ['menus', 'crear'],
+        toggle_menu: ['menus', 'editar'],
+        eliminar_menu: ['menus', 'eliminar'],
+        guardar_submenu: ['submenus', 'crear'],
+        toggle_submenu: ['submenus', 'editar'],
+        reorder_menus: ['menus', 'editar'],
+        reorder_submenus: ['submenus', 'editar'],
+        reorder_submenu_media: ['submenus', 'editar'],
+        add_submenu_media: ['submenus', 'editar'],
+        delete_submenu_media: ['submenus', 'editar'],
+        toggle_submenu_media: ['submenus', 'editar'],
+        guardar_institucion: ['configuracion', 'editar']
+    };
+
+    function can(moduleKey, action) {
+        return Boolean(permissions[moduleKey] && permissions[moduleKey][action]);
+    }
+
+    function resolvePair(form, actionValue) {
+        var pair = actionMap[actionValue];
+        if (!pair) { return null; }
+        if (actionValue === 'guardar_menu') {
+            var idMenu = parseInt((form.querySelector('input[name="id_menu"]') || {}).value || '0', 10);
+            return ['menus', idMenu > 0 ? 'editar' : 'crear'];
+        }
+        if (actionValue === 'guardar_submenu') {
+            var idSubmenu = parseInt((form.querySelector('input[name="id_sub_menu"]') || {}).value || '0', 10);
+            return ['submenus', idSubmenu > 0 ? 'editar' : 'crear'];
+        }
+        return pair;
+    }
+
+    document.querySelectorAll('form').forEach(function (form) {
+        var actionInput = form.querySelector('input[name="accion"]');
+        if (!actionInput || !actionMap[actionInput.value]) { return; }
+        var initialPair = resolvePair(form, actionInput.value);
+        var maySubmit = initialPair && can(initialPair[0], initialPair[1]);
+        if (!maySubmit && !['guardar_menu', 'guardar_submenu'].includes(actionInput.value)) {
+            form.dataset.adminDeniedForm = '1';
+            form.querySelectorAll('button[type="submit"], input[type="submit"]').forEach(function (button) {
+                button.setAttribute('data-admin-denied', deniedMessage);
+                button.classList.add('is-disabled');
+            });
+        }
+        form.addEventListener('submit', function (event) {
+            var pair = resolvePair(form, actionInput.value);
+            if (!pair || can(pair[0], pair[1])) { return; }
+            event.preventDefault();
+            if (window.Swal) {
+                Swal.fire({ icon: 'warning', title: 'Permiso requerido', text: deniedMessage, confirmButtonColor: '#2b64d8' });
+            } else if (window.adminNotify) {
+                adminNotify({ title: 'Permiso requerido', msg: deniedMessage, type: 'warning' });
+            } else {
+                alert(deniedMessage);
+            }
+        });
+    });
+})();
+</script>
+
 <?php
 admin_render_layout_end([
     'extra_scripts' => <<<'HTML'
@@ -1562,6 +1412,9 @@ admin_render_layout_end([
             var urlParams = new URLSearchParams(window.location.search);
             var savedParam = urlParams.get('saved');
             var activePanel = urlParams.get('panel') || 'contenedores';
+            var savedSubmenuId = urlParams.get('submenu') || '';
+            var keepSubmenuOpen = urlParams.get('keep_submenu') === '1';
+            var savedSubmenuTab = urlParams.get('submenu_tab') || 'submenuTabDatos';
 
             if (savedParam === 'config') {
                 window.history.replaceState({}, document.title, window.location.pathname + '?panel=configuracion');
@@ -1574,6 +1427,15 @@ admin_render_layout_end([
                     msg: savedParam === 'submenu_created' ? 'El sub-menú fue creado correctamente.' : 'El sub-menú fue actualizado correctamente.',
                     type: 'info'
                 });
+                if (keepSubmenuOpen && savedSubmenuId) {
+                    window.setTimeout(function () {
+                        var safeSubmenuId = savedSubmenuId.replace(/[^0-9]/g, '');
+                        var editButton = safeSubmenuId ? document.querySelector('[onclick^="abrirModalSubmenu"][data-id="' + safeSubmenuId + '"]') : null;
+                        if (editButton) {
+                            abrirModalSubmenu(editButton, null, savedSubmenuTab);
+                        }
+                    }, 150);
+                }
             }
             if (savedParam === 'menu_deleted') {
                 window.history.replaceState({}, document.title, window.location.pathname + '?panel=menus');
@@ -1591,15 +1453,37 @@ admin_render_layout_end([
             };
             if ($('#contenedoresTable').length) {
                 $('#contenedoresTable').DataTable(Object.assign({}, dtConfig, {
-                    pageLength: 25,
-                    paging: false,
+                    pageLength: 5,
+                    lengthChange: false,
+                    paging: true,
                     ordering: false,
-                    info: false
+                    info: true,
+                    language: {
+                        emptyTable: 'No hay contenedores para mostrar',
+                        info: 'Mostrando _START_ a _END_ de _TOTAL_ contenedores',
+                        infoEmpty: 'Mostrando 0 a 0 de 0 contenedores',
+                        infoFiltered: '(filtrado de _MAX_ contenedores)',
+                        loadingRecords: 'Cargando...',
+                        processing: 'Procesando...',
+                        search: 'Buscar:',
+                        zeroRecords: 'No se encontraron contenedores',
+                        paginate: {
+                            previous: 'Anterior',
+                            next: 'Siguiente'
+                        }
+                    }
                 }));
             }
 
             function updateContenedoresSummary(data) {
-                var toggles = Array.from(document.querySelectorAll('.js-toggle-seccion'));
+                var toggles = [];
+                if ($.fn.DataTable && $.fn.DataTable.isDataTable('#contenedoresTable')) {
+                    toggles = Array.from($('#contenedoresTable').DataTable().rows().nodes()).map(function (row) {
+                        return row.querySelector('.js-toggle-seccion');
+                    }).filter(Boolean);
+                } else {
+                    toggles = Array.from(document.querySelectorAll('.js-toggle-seccion'));
+                }
                 var visible = toggles.filter(function (input) { return input.checked; }).length;
                 var hidden = toggles.length - visible;
                 var visibleEl = document.getElementById('cmsTotalVisible');
@@ -1611,13 +1495,18 @@ admin_render_layout_end([
                 if (lastEl && data && data.updated_at_label) { lastEl.textContent = data.updated_at_label; }
             }
 
-            $('.js-toggle-seccion').on('change', function () {
+            $(document).off('change.cmsToggleSeccion', '.js-toggle-seccion').on('change.cmsToggleSeccion', '.js-toggle-seccion', function () {
                 var checkbox = this;
                 var form = checkbox.closest('.js-toggle-seccion-form');
                 var label = form.querySelector('.js-toggle-label');
                 var row = checkbox.closest('tr');
-                var formData = new FormData(form);
+                var hiddenVisible = form.querySelector('.js-toggle-seccion-value');
                 var previousState = !checkbox.checked;
+                var desiredVisible = checkbox.checked ? 'si' : 'no';
+                if (hiddenVisible) {
+                    hiddenVisible.value = desiredVisible;
+                }
+                var formData = new FormData(form);
 
                 checkbox.disabled = true;
 
@@ -1639,6 +1528,9 @@ admin_render_layout_end([
                             throw new Error(data.message || 'No se pudo actualizar la visibilidad.');
                         }
                         checkbox.checked = data.visible === 'si';
+                        if (hiddenVisible) {
+                            hiddenVisible.value = data.visible === 'si' ? 'si' : 'no';
+                        }
                         label.textContent = data.label;
                         updateContenedoresSummary(data);
                         if (row && data.updated_at_label) {
@@ -1652,6 +1544,9 @@ admin_render_layout_end([
                     })
                     .catch(function (error) {
                         checkbox.checked = previousState;
+                        if (hiddenVisible) {
+                            hiddenVisible.value = previousState ? 'si' : 'no';
+                        }
                         label.textContent = previousState ? 'Activo' : 'Oculto';
                         adminConfirm({ title: 'Error', msg: error.message, type: 'danger', btnText: 'OK', onConfirm: function(){} });
                     })
@@ -1832,8 +1727,14 @@ admin_render_layout_end([
             });
         });
     </script>
+    <script src="https://cdn.ckeditor.com/4.22.1/full/ckeditor.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script src="assets/js/submenu_historia_admin.js"></script>
     <script>
+        if (window.CKEDITOR) {
+            CKEDITOR.config.versionCheck = false;
+        }
+
         // --- Toggle menú/submenú con confirmación AJAX ---
         (function () {
             var confirmModalEl = document.getElementById('confirmModal');
@@ -1918,15 +1819,15 @@ admin_render_layout_end([
             modal.show();
         }
 
-        function abrirModalSubmenu(btn, defaultIdMenu) {
+        function abrirModalSubmenu(btn, defaultIdMenu, preferredTabId) {
             var submenuEditor = document.getElementById('modalSubmenu');
             var modal = bootstrap.Offcanvas.getOrCreateInstance(submenuEditor);
             var titulo = document.getElementById('modalSubmenuLabel');
             var idInput = document.getElementById('modalSubmenuId');
+            var activeTabInput = document.getElementById('modalSubmenuActiveTab');
             var idMenuSelect = document.getElementById('modalSubmenuIdMenu');
             var nombreInput = document.getElementById('modalSubmenuNombre');
             var urlInput = document.getElementById('modalSubmenuUrl');
-            var iconoInput = document.getElementById('modalSubmenuIcono');
             var estadoCheck = document.getElementById('modalSubmenuEstado');
             var pageFields = {
                 titulo: document.getElementById('modalPaginaTitulo'),
@@ -1938,40 +1839,205 @@ admin_render_layout_end([
                 metaTitle: document.getElementById('modalPaginaMetaTitle'),
                 metaDescription: document.getElementById('modalPaginaMetaDescription'),
                 heroActual: document.getElementById('modalPaginaHeroActual'),
+                heroPreview: document.getElementById('modalPaginaHeroPreview'),
                 heroVideoUrl: document.getElementById('modalPaginaHeroVideoUrl'),
+                heroVideoPreview: document.getElementById('modalPaginaHeroVideoPreview'),
                 heroVideoActual: document.getElementById('modalPaginaHeroVideoActual'),
                 secundariaActual: document.getElementById('modalPaginaSecundariaActual'),
+                secundariaPreview: document.getElementById('modalPaginaSecundariaPreview'),
                 videoActual: document.getElementById('modalPaginaVideoActual'),
+                galeriaNuevaPreview: document.getElementById('modalPaginaGaleriaNuevaPreview'),
                 mediaActual: document.getElementById('modalPaginaMediaActual')
             };
 
+            if (submenuEditor) {
+                submenuEditor.querySelectorAll('input[type="file"]').forEach(function (fileInput) {
+                    fileInput.value = '';
+                });
+                submenuEditor.querySelectorAll('input[type="checkbox"]').forEach(function (checkbox) {
+                    checkbox.checked = false;
+                });
+            }
+
+            function getSubmenuEditor() {
+                return window.CKEDITOR && CKEDITOR.instances.modalPaginaContenido
+                    ? CKEDITOR.instances.modalPaginaContenido
+                    : null;
+            }
+
+            function setSubmenuEditorData(value) {
+                var editor = getSubmenuEditor();
+                if (editor) {
+                    editor.setData(value || '');
+                }
+            }
+
             function setField(field, value) {
-                if (field) { field.value = value || ''; }
+                if (field) {
+                    field.value = value || '';
+                    if (field.id === 'modalPaginaContenido') {
+                        setSubmenuEditorData(value || '');
+                    }
+                }
             }
 
             function setCurrentText(field, label, value) {
                 if (field) { field.textContent = value ? label + ': ' + value : ''; }
             }
 
+            function renderImageBox(field, value, emptyText) {
+                if (!field) { return; }
+                var src = value || '';
+                if (!src) {
+                    field.innerHTML = '<span>' + emptyText + '</span>';
+                    return;
+                }
+                field.innerHTML = '<img src="' + src.replace(/"/g, '&quot;') + '" alt="">';
+            }
+
+            function renderVideoBox(field, url, archivo) {
+                if (!field) { return; }
+                var source = archivo || url || '';
+                if (!source) { field.innerHTML = '<span>Sin video principal</span>'; return; }
+                var youtube = String(url || '').match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([A-Za-z0-9_-]{6,})/);
+                if (youtube) {
+                    field.innerHTML = '<iframe src="https://www.youtube.com/embed/' + youtube[1] + '" title="Vista previa de video" loading="lazy" allowfullscreen></iframe>';
+                } else {
+                    field.innerHTML = '<video src="' + escapeHtml(source) + '" controls preload="metadata"></video>';
+                }
+            }
+
+            function syncHeroMode(mode, clearInactive) {
+                var selectedMode = mode === 'video' ? 'video' : 'imagen';
+                if (!submenuEditor) { return; }
+                submenuEditor.querySelectorAll('input[name="pagina_hero_tipo"]').forEach(function (radio) {
+                    radio.checked = radio.value === selectedMode;
+                });
+                submenuEditor.querySelectorAll('[data-hero-panel]').forEach(function (panel) {
+                    var isActive = panel.getAttribute('data-hero-panel') === selectedMode;
+                    panel.style.display = isActive ? '' : 'none';
+                    panel.querySelectorAll('input, textarea, select').forEach(function (field) {
+                        if (field.name === 'pagina_hero_tipo') { return; }
+                        field.disabled = !isActive;
+                    });
+                });
+                if (!clearInactive) { return; }
+                if (selectedMode === 'video') {
+                    var heroImageInput = submenuEditor.querySelector('input[name="pagina_imagen_hero"]');
+                    if (heroImageInput) { heroImageInput.value = ''; }
+                    renderImageBox(pageFields.heroPreview, '', 'Sin imagen principal');
+                    setCurrentText(pageFields.heroActual, '', '');
+                } else {
+                    if (pageFields.heroVideoUrl) { pageFields.heroVideoUrl.value = ''; }
+                    var heroVideoFile = submenuEditor.querySelector('input[name="pagina_hero_video_archivo"]');
+                    if (heroVideoFile) { heroVideoFile.value = ''; }
+                    setCurrentText(pageFields.heroVideoActual, '', '');
+                }
+            }
+
+            function setHeroMode(mode) {
+                syncHeroMode(mode, false);
+            }
+
+            function escapeHtml(value) {
+                return String(value || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+            }
+
+            function initSubmenuGallerySortable() {
+                if (!pageFields.mediaActual || typeof Sortable === 'undefined') { return; }
+                if (pageFields.mediaActual._sortableInstance) {
+                    pageFields.mediaActual._sortableInstance.destroy();
+                }
+                pageFields.mediaActual._sortableInstance = Sortable.create(pageFields.mediaActual, {
+                    animation: 180,
+                    draggable: '.submenu-gallery-card',
+                    filter: 'input,button,.dropdown-menu,.submenu-gallery-card-tools',
+                    preventOnFilter: false,
+                    ghostClass: 'sortable-ghost',
+                    chosenClass: 'sortable-chosen',
+                    onEnd: function () {
+                        var idSubmenu = idInput ? idInput.value : '0';
+                        if (!idSubmenu || idSubmenu === '0') { return; }
+                        var ids = Array.from(pageFields.mediaActual.querySelectorAll('.submenu-gallery-card'))
+                            .map(function (card) { return card.getAttribute('data-id'); })
+                            .filter(Boolean);
+                        var fd = new FormData();
+                        fd.append('accion', 'reorder_submenu_media');
+                        fd.append('id_sub_menu', idSubmenu);
+                        ids.forEach(function (id) { fd.append('items[]', id); });
+                        fetch('admin.php?panel=' + encodeURIComponent(activePanel), {
+                            method: 'POST',
+                            body: fd,
+                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                        })
+                        .then(function (r) { return r.json(); })
+                        .then(function (data) {
+                            if (data.ok) {
+                                adminNotify({ title: 'Orden guardado', msg: 'El orden de la galería fue actualizado.', type: 'info', autoClose: 1800 });
+                            }
+                        })
+                        .catch(function () {});
+                    }
+                });
+            }
+
             function renderMedia(raw) {
                 if (!pageFields.mediaActual) { return; }
+                window.submenuRenderMedia = renderMedia;
+                if (pageFields.mediaActual._sortableInstance) {
+                    pageFields.mediaActual._sortableInstance.destroy();
+                    pageFields.mediaActual._sortableInstance = null;
+                }
                 pageFields.mediaActual.innerHTML = '';
                 var media = [];
                 try { media = raw ? JSON.parse(raw) : []; } catch (e) { media = []; }
+                window.submenuCurrentMedia = media;
+                var currentSubmenuId = idInput ? String(idInput.value || '') : '';
+                var currentEditButton = currentSubmenuId ? document.querySelector('[onclick^="abrirModalSubmenu"][data-id="' + currentSubmenuId.replace(/[^0-9]/g, '') + '"]') : null;
+                if (currentEditButton) {
+                    currentEditButton.dataset.paginaMedia = JSON.stringify(media);
+                    var summaryCell=currentEditButton.closest('tr') ? currentEditButton.closest('tr').querySelector('.submenu-media-summary') : null;
+                    if(summaryCell){
+                        var visible=media.filter(function(item){return String(item.visible)!=='0';});
+                        var images=visible.filter(function(item){return item.tipo==='imagen';}).length;
+                        var videos=visible.filter(function(item){return item.tipo==='video'||item.tipo==='youtube';}).length;
+                        var parts=[]; if(currentEditButton.dataset.paginaImagenHero||currentEditButton.dataset.paginaHeroVideoUrl||currentEditButton.dataset.paginaHeroVideoArchivo){parts.push('Hero');}
+                        if(images){parts.push(images+' imagen'+(images===1?'':'es'));} if(videos){parts.push(videos+' video'+(videos===1?'':'s'));}
+                        summaryCell.textContent=parts.length?parts.join(' · '):'Sin multimedia';
+                    }
+                }
                 if (!media.length) {
                     pageFields.mediaActual.innerHTML = '<span class="text-muted small">Sin imágenes de galería.</span>';
                     return;
                 }
                 media.forEach(function (item) {
-                    var wrap = document.createElement('label');
-                    wrap.className = 'border rounded-3 p-2 d-flex align-items-center gap-2';
-                    wrap.style.maxWidth = '240px';
+                    var idMedia = String(item.id_media || '');
+                    var archivo = String(item.archivo || item.url || '');
+                    var shortFile = archivo.split(/[\\/]/).pop() || 'Imagen';
+                    var titulo = String(item.titulo || shortFile);
+                    var isVisible = String(item.visible || '1') !== '0';
+                    var wrap = document.createElement('div');
+                    wrap.className = 'submenu-gallery-card';
+                    wrap.setAttribute('data-id', idMedia);
+                    var imageHtml = archivo ? '<img src="' + archivo.replace(/"/g, '&quot;') + '" alt="">' : '<div class="submenu-media-preview mb-0">Sin imagen</div>';
                     wrap.innerHTML =
-                        '<input class="form-check-input m-0" type="checkbox" name="delete_media[]" value="' + String(item.id_media || '') + '">' +
-                        '<span class="small">Eliminar</span>' +
-                        '<span class="small text-muted text-truncate">' + String(item.titulo || item.archivo || 'Imagen') + '</span>';
+                        imageHtml +
+                        '<span class="submenu-gallery-drag" title="Arrastrar para ordenar"><i class="bi bi-grip-vertical"></i></span>' +
+                        '<div class="dropdown submenu-gallery-menu">' +
+                        '<button class="dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Acciones">' +
+                        '<i class="bi bi-three-dots-vertical"></i>' +
+                        '</button>' +
+                        '<div class="dropdown-menu dropdown-menu-end shadow-sm">' +
+                        '<button type="button" class="dropdown-item js-submenu-gallery-toggle"><i class="bi bi-eye me-2"></i>' + (isVisible ? 'Desactivar' : 'Activar') + '</button>' +
+                        '<button type="button" class="dropdown-item text-danger js-submenu-gallery-delete"><i class="bi bi-trash me-2"></i>Eliminar</button>' +
+                        '</div>' +
+                        '</div>' +
+                        '<span class="submenu-gallery-title" title="' + escapeHtml(archivo) + '">' + escapeHtml(titulo) + '</span>' +
+                        '<span class="submenu-gallery-state' + (isVisible ? '' : ' is-hidden') + '">' + (isVisible ? 'Activo' : 'Oculto') + '</span>' +
+                        '';
                     pageFields.mediaActual.appendChild(wrap);
                 });
+                initSubmenuGallerySortable();
             }
 
             if (btn) {
@@ -1980,7 +2046,6 @@ admin_render_layout_end([
                 idMenuSelect.value = btn.dataset.idMenu || '';
                 nombreInput.value = btn.dataset.nombre || '';
                 urlInput.value = btn.dataset.url || '';
-                iconoInput.value = btn.dataset.icono || '';
                 estadoCheck.checked = btn.dataset.estado === '1';
                 setField(pageFields.titulo, btn.dataset.paginaTitulo || '');
                 setField(pageFields.bajada, btn.dataset.paginaBajada || '');
@@ -1991,18 +2056,26 @@ admin_render_layout_end([
                 setField(pageFields.botonUrl, btn.dataset.paginaBotonUrl || '');
                 setField(pageFields.metaTitle, btn.dataset.paginaMetaTitle || '');
                 setField(pageFields.metaDescription, btn.dataset.paginaMetaDescription || '');
+                setHeroMode((btn.dataset.paginaHeroVideoUrl || btn.dataset.paginaHeroVideoArchivo) ? 'video' : 'imagen');
                 setCurrentText(pageFields.heroActual, 'Actual', btn.dataset.paginaImagenHero || '');
+                renderImageBox(pageFields.heroPreview, btn.dataset.paginaImagenHero || '', 'Sin imagen hero');
                 setCurrentText(pageFields.heroVideoActual, 'Actual', btn.dataset.paginaHeroVideoArchivo || '');
+                renderVideoBox(pageFields.heroVideoPreview, btn.dataset.paginaHeroVideoUrl || '', btn.dataset.paginaHeroVideoArchivo || '');
                 setCurrentText(pageFields.secundariaActual, 'Actual', btn.dataset.paginaImagenSecundaria || '');
+                renderImageBox(pageFields.secundariaPreview, btn.dataset.paginaImagenSecundaria || '', 'Sin imagen secundaria');
                 setCurrentText(pageFields.videoActual, 'Actual', btn.dataset.paginaVideoArchivo || '');
+                renderImageBox(pageFields.galeriaNuevaPreview, '', 'Sin imagen seleccionada');
                 renderMedia(btn.dataset.paginaMedia || '[]');
+                var deleteHeroImage = submenuEditor.querySelector('.js-delete-hero-image');
+                var deleteHeroVideo = submenuEditor.querySelector('.js-delete-hero-video');
+                if(deleteHeroImage){deleteHeroImage.style.display=(btn.dataset.paginaImagenHero||'')?'inline-flex':'none';}
+                if(deleteHeroVideo){deleteHeroVideo.style.display=(btn.dataset.paginaHeroVideoUrl||btn.dataset.paginaHeroVideoArchivo||'')?'inline-flex':'none';}
             } else {
                 titulo.textContent = 'Nuevo submenú';
                 idInput.value = '0';
                 idMenuSelect.value = defaultIdMenu ? String(defaultIdMenu) : '';
                 nombreInput.value = '';
                 urlInput.value = '';
-                iconoInput.value = '';
                 estadoCheck.checked = true;
                 setField(pageFields.titulo, '');
                 setField(pageFields.bajada, '');
@@ -2013,18 +2086,286 @@ admin_render_layout_end([
                 setField(pageFields.botonUrl, '');
                 setField(pageFields.metaTitle, '');
                 setField(pageFields.metaDescription, '');
+                setHeroMode('imagen');
                 setCurrentText(pageFields.heroActual, '', '');
+                renderImageBox(pageFields.heroPreview, '', 'Sin imagen hero');
                 setCurrentText(pageFields.heroVideoActual, '', '');
+                renderVideoBox(pageFields.heroVideoPreview, '', '');
                 setCurrentText(pageFields.secundariaActual, '', '');
+                renderImageBox(pageFields.secundariaPreview, '', 'Sin imagen secundaria');
                 setCurrentText(pageFields.videoActual, '', '');
+                renderImageBox(pageFields.galeriaNuevaPreview, '', 'Sin imagen seleccionada');
                 renderMedia('[]');
+                submenuEditor.querySelectorAll('.js-delete-hero-image,.js-delete-hero-video').forEach(function(label){label.style.display='none';});
             }
-            var firstTab = submenuEditor ? submenuEditor.querySelector('[data-bs-target="#submenuTabDatos"]') : null;
+            var targetTabId = preferredTabId || 'submenuTabDatos';
+            var targetTab = submenuEditor ? submenuEditor.querySelector('[data-bs-target="#' + targetTabId.replace(/[^A-Za-z0-9_-]/g, '') + '"]') : null;
+            var firstTab = targetTab || (submenuEditor ? submenuEditor.querySelector('[data-bs-target="#submenuTabDatos"]') : null);
+            if (activeTabInput) {
+                activeTabInput.value = firstTab ? (firstTab.getAttribute('data-bs-target') || '#submenuTabDatos').replace('#', '') : 'submenuTabDatos';
+            }
             if (firstTab && bootstrap.Tab) {
                 bootstrap.Tab.getOrCreateInstance(firstTab).show();
             }
+            if (window.submenuHistoriaConfigure) {
+                window.submenuHistoriaConfigure(idInput ? idInput.value : '0');
+            }
             modal.show();
         }
+
+        document.querySelectorAll('#modalSubmenu [data-bs-toggle="tab"]').forEach(function (tabButton) {
+            tabButton.addEventListener('shown.bs.tab', function (event) {
+                var activeTabInput = document.getElementById('modalSubmenuActiveTab');
+                if (activeTabInput) {
+                    activeTabInput.value = (event.target.getAttribute('data-bs-target') || '#submenuTabDatos').replace('#', '');
+                }
+            });
+        });
+
+        var submenuForm = document.getElementById('formModalSubmenu');
+        if (submenuForm) {
+            submenuForm.addEventListener('submit', function (event) {
+                event.preventDefault();
+                Object.keys(window.CKEDITOR && CKEDITOR.instances ? CKEDITOR.instances : {}).forEach(function (key) {
+                    CKEDITOR.instances[key].updateElement();
+                });
+                var submitButton = submenuForm.querySelector('button[type="submit"]');
+                if (!submitButton || submitButton.disabled) { return; }
+                var originalHtml = submitButton.innerHTML;
+                var body = document.querySelector('#modalSubmenu .submenu-editor-body');
+                var scrollTop = body ? body.scrollTop : 0;
+                submitButton.disabled = true;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Guardando...';
+                fetch(submenuForm.action || ('admin.php?panel=' + encodeURIComponent(activePanel)), {
+                    method: 'POST',
+                    body: new FormData(submenuForm),
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(function (response) {
+                    return response.json().catch(function () { throw new Error('El servidor devolvió una respuesta inválida.'); }).then(function (data) {
+                        if (!response.ok || !data.ok) { throw new Error(data.message || 'No se pudieron guardar los cambios.'); }
+                        return data;
+                    });
+                })
+                .then(function (data) {
+                    var item = data.submenu || {};
+                    var id = String(item.id_sub_menu || document.getElementById('modalSubmenuId').value || '');
+                    document.getElementById('modalSubmenuId').value = id;
+                    var editButton = document.querySelector('[onclick^="abrirModalSubmenu"][data-id="' + id.replace(/[^0-9]/g, '') + '"]');
+                    if (editButton) {
+                        var map = { nombre:'nombre', id_menu:'idMenu', url:'url', estado:'estado', pagina_titulo:'paginaTitulo', pagina_bajada:'paginaBajada', pagina_contenido:'paginaContenido', pagina_imagen_hero:'paginaImagenHero', pagina_hero_video_url:'paginaHeroVideoUrl', pagina_hero_video_archivo:'paginaHeroVideoArchivo', pagina_boton_texto:'paginaBotonTexto', pagina_boton_url:'paginaBotonUrl', pagina_meta_title:'paginaMetaTitle', pagina_meta_description:'paginaMetaDescription' };
+                        Object.keys(map).forEach(function (key) { editButton.dataset[map[key]] = item[key] == null ? '' : String(item[key]); });
+                        editButton.dataset.paginaMedia = JSON.stringify(item.pagina_media || []);
+                        var row = editButton.closest('tr');
+                        var nameCell = row ? row.querySelector('.sub-name') : null;
+                        if (nameCell) { nameCell.textContent = item.nombre || ''; }
+                        var stateToggle = row ? row.querySelector('.js-submenu-toggle') : null;
+                        if (stateToggle) {
+                            stateToggle.checked = String(item.estado) === '1';
+                            var stateLabel = stateToggle.closest('.form-check') ? stateToggle.closest('.form-check').querySelector('.form-check-label') : null;
+                            if (stateLabel) { stateLabel.textContent = stateToggle.checked ? 'Activo' : 'Inactivo'; }
+                        }
+                        var contentBadge = row ? row.querySelector('.submenu-content-badge') : null;
+                        if (contentBadge) {
+                            var external = /^https?:\/\//i.test(String(item.url || '')) && String(item.url || '').indexOf('pagina_submenu.php') === -1;
+                            var filled = [item.pagina_titulo,item.pagina_bajada,String(item.pagina_contenido || '').replace(/<[^>]*>/g,'').trim()].filter(function(value){return String(value || '').trim() !== '';}).length;
+                            var contentState = external ? 'externo' : (filled === 3 ? 'completo' : (filled === 0 ? 'vacio' : 'incompleto'));
+                            var labels = {externo:'Enlace externo',completo:'Completo',incompleto:'Incompleto',vacio:'Vacío'};
+                            contentBadge.className='submenu-content-badge is-' + contentState;
+                            contentBadge.textContent=labels[contentState];
+                        }
+                        var mediaSummaryCell = row ? row.querySelector('.submenu-media-summary') : null;
+                        if (mediaSummaryCell) {
+                            var visibleMedia=(item.pagina_media || []).filter(function(media){return String(media.visible) !== '0';});
+                            var images=visibleMedia.filter(function(media){return media.tipo === 'imagen';}).length;
+                            var videos=visibleMedia.filter(function(media){return media.tipo === 'video' || media.tipo === 'youtube';}).length;
+                            var parts=[]; if(item.pagina_imagen_hero || item.pagina_hero_video_url || item.pagina_hero_video_archivo){parts.push('Hero');}
+                            if(images){parts.push(images + ' imagen' + (images===1?'':'es'));} if(videos){parts.push(videos + ' video' + (videos===1?'':'s'));}
+                            mediaSummaryCell.textContent=parts.length?parts.join(' · '):'Sin multimedia';
+                        }
+                    }
+                    if (window.submenuRenderMedia) { window.submenuRenderMedia(JSON.stringify(item.pagina_media || [])); }
+                    submenuForm.querySelectorAll('input[type="file"]').forEach(function (input) { input.value = ''; });
+                    adminNotify({ title: 'Guardado', msg: data.message || 'Cambios guardados correctamente', type: 'info', autoClose: 2200 });
+                })
+                .catch(function (error) {
+                    adminNotify({ title: 'No se pudo guardar', msg: error.message, type: 'warning' });
+                })
+                .finally(function () {
+                    submitButton.disabled = false;
+                    submitButton.innerHTML = originalHtml;
+                    if (body) { body.scrollTop = scrollTop; }
+                });
+            });
+        }
+
+        if (window.CKEDITOR) {
+            document.querySelectorAll('textarea.js-submenu-editor').forEach(function (textarea) {
+                if (textarea.dataset.ckeditorReady === '1') {
+                    return;
+                }
+                textarea.dataset.ckeditorReady = '1';
+                CKEDITOR.replace(textarea.id, {
+                    height: 330,
+                    versionCheck: false,
+                    removePlugins: 'elementspath,image,flash,iframe,forms,smiley,specialchar,about',
+                    resize_enabled: false,
+                    toolbar: [
+                        { name: 'basicstyles', items: ['Bold', 'Italic', 'Underline', 'RemoveFormat'] },
+                        { name: 'paragraph', items: ['BulletedList', 'NumberedList', 'Blockquote'] },
+                        { name: 'links', items: ['Link', 'Unlink'] },
+                        { name: 'colors', items: ['TextColor'] },
+                        { name: 'undo', items: ['Undo', 'Redo'] }
+                    ]
+                });
+            });
+
+            document.querySelectorAll('#modalSubmenu form').forEach(function (form) {
+                form.addEventListener('submit', function () {
+                    Object.keys(CKEDITOR.instances).forEach(function (key) {
+                        CKEDITOR.instances[key].updateElement();
+                    });
+                });
+            });
+        }
+
+        document.querySelectorAll('#modalSubmenu input[name="pagina_hero_tipo"]').forEach(function (radio) {
+            radio.addEventListener('change', function () {
+                var submenuEditor = document.getElementById('modalSubmenu');
+                var selectedMode = radio.value === 'video' ? 'video' : 'imagen';
+                if (!submenuEditor) { return; }
+                submenuEditor.querySelectorAll('[data-hero-panel]').forEach(function (panel) {
+                    var isActive = panel.getAttribute('data-hero-panel') === selectedMode;
+                    panel.style.display = isActive ? '' : 'none';
+                    panel.querySelectorAll('input, textarea, select').forEach(function (field) {
+                        field.disabled = !isActive;
+                    });
+                });
+                if (selectedMode === 'video') {
+                    var heroPreview = document.getElementById('modalPaginaHeroPreview');
+                    if (heroPreview) { heroPreview.innerHTML = '<span>Sin imagen principal</span>'; }
+                    var heroActual = document.getElementById('modalPaginaHeroActual');
+                    if (heroActual) { heroActual.textContent = ''; }
+                    var heroImageInput = submenuEditor.querySelector('input[name="pagina_imagen_hero"]');
+                    if (heroImageInput) { heroImageInput.value = ''; }
+                } else {
+                    var heroVideoUrl = document.getElementById('modalPaginaHeroVideoUrl');
+                    if (heroVideoUrl) { heroVideoUrl.value = ''; }
+                    var heroVideoActual = document.getElementById('modalPaginaHeroVideoActual');
+                    if (heroVideoActual) { heroVideoActual.textContent = ''; }
+                    var heroVideoFile = submenuEditor.querySelector('input[name="pagina_hero_video_archivo"]');
+                    if (heroVideoFile) { heroVideoFile.value = ''; }
+                }
+            });
+        });
+
+        function submenuMediaRequest(action, values, fileInput) {
+            var idSubmenu = document.getElementById('modalSubmenuId').value || '0';
+            if (idSubmenu === '0') { return Promise.reject(new Error('Guarda primero el submenú antes de administrar su galería.')); }
+            var fd = new FormData();
+            fd.append('accion', action);
+            fd.append('id_sub_menu', idSubmenu);
+            Object.keys(values || {}).forEach(function(key){ fd.append(key, values[key]); });
+            if (fileInput && fileInput.files && fileInput.files[0]) { fd.append('pagina_galeria_imagen', fileInput.files[0]); }
+            return fetch('admin.php?panel=' + encodeURIComponent(activePanel), { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
+                .then(function(response){ return response.json().then(function(data){ if(!response.ok || !data.ok){ throw new Error(data.message || 'No se pudo actualizar la galería.'); } return data; }); });
+        }
+
+        function showSubmenuMediaError(error) {
+            adminNotify({ title:'Galería', msg:error.message || 'No se pudo actualizar la galería.', type:'warning' });
+        }
+
+        document.addEventListener('click', function(event){
+            var addButton = event.target.closest('.js-submenu-gallery-add');
+            if (!addButton) { return; }
+            var galleryCard = addButton.closest('.submenu-media-gallery');
+            var fileInput = galleryCard ? galleryCard.querySelector('input[name="pagina_galeria_imagen"]') : null;
+            var titleInput = galleryCard ? galleryCard.querySelector('input[name="pagina_galeria_titulo"]') : null;
+            if (!fileInput || !fileInput.files || !fileInput.files[0]) { showSubmenuMediaError(new Error('Selecciona una imagen para agregar.')); return; }
+            var original = addButton.innerHTML;
+            addButton.disabled = true;
+            addButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Agregando...';
+            submenuMediaRequest('add_submenu_media', { pagina_galeria_titulo:titleInput ? titleInput.value : '' }, fileInput)
+                .then(function(data){
+                    window.submenuCurrentMedia = window.submenuCurrentMedia || [];
+                    window.submenuCurrentMedia.push(data.media);
+                    if(window.submenuRenderMedia){ window.submenuRenderMedia(JSON.stringify(window.submenuCurrentMedia)); }
+                    fileInput.value=''; if(titleInput){titleInput.value='';}
+                    var preview = document.getElementById('modalPaginaGaleriaNuevaPreview');
+                    if(preview){preview.innerHTML='<span>Sin imagen seleccionada</span>';}
+                    adminNotify({ title:'Galería', msg:'Imagen agregada correctamente.', type:'info', autoClose:1800 });
+                }).catch(showSubmenuMediaError).finally(function(){ addButton.disabled=false; addButton.innerHTML=original; });
+        });
+
+        document.addEventListener('click', function (event) {
+            var deleteBtn = event.target.closest('.js-submenu-gallery-delete');
+            if (deleteBtn) {
+                var deleteCard = deleteBtn.closest('.submenu-gallery-card');
+                var idMedia = deleteCard ? deleteCard.getAttribute('data-id') : '';
+                var confirmDelete = window.Swal ? Swal.fire({ title:'Eliminar imagen', text:'¿Desea eliminar esta imagen de la galería?', icon:'warning', showCancelButton:true, confirmButtonText:'Eliminar', cancelButtonText:'Cancelar', confirmButtonColor:'#dc2626' }).then(function(r){ return r.isConfirmed; }) : Promise.resolve(window.confirm('¿Desea eliminar esta imagen de la galería?'));
+                confirmDelete.then(function (confirmed) {
+                    if (!confirmed) { return; }
+                    return submenuMediaRequest('delete_submenu_media', { id_media:idMedia }).then(function () {
+                        window.submenuCurrentMedia = (window.submenuCurrentMedia || []).filter(function(item){ return String(item.id_media) !== String(idMedia); });
+                        if (window.submenuRenderMedia) { window.submenuRenderMedia(JSON.stringify(window.submenuCurrentMedia)); }
+                        adminNotify({ title:'Galería', msg:'Imagen eliminada correctamente.', type:'info', autoClose:1800 });
+                    });
+                }).catch(showSubmenuMediaError);
+                return;
+            }
+            var toggleBtn = event.target.closest('.js-submenu-gallery-toggle');
+            if (toggleBtn) {
+                var toggleCard = toggleBtn.closest('.submenu-gallery-card');
+                var toggleId = toggleCard ? toggleCard.getAttribute('data-id') : '';
+                submenuMediaRequest('toggle_submenu_media', { id_media:toggleId }).then(function(data){
+                    (window.submenuCurrentMedia || []).forEach(function(item){ if(String(item.id_media) === String(toggleId)){ item.visible=data.visible; } });
+                    if (window.submenuRenderMedia) { window.submenuRenderMedia(JSON.stringify(window.submenuCurrentMedia || [])); }
+                }).catch(showSubmenuMediaError);
+            }
+        });
+
+        document.querySelectorAll('#modalSubmenu .js-submenu-image-preview').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var target = document.getElementById(input.getAttribute('data-preview-target') || '');
+                if (!target) { return; }
+                var file = input.files && input.files[0] ? input.files[0] : null;
+                if (!file) {
+                    target.innerHTML = '<span>Sin imagen seleccionada</span>';
+                    return;
+                }
+                if (file.type.indexOf('image/') !== 0) {
+                    input.value = '';
+                    target.innerHTML = '<span>Formato de imagen no válido</span>';
+                    adminNotify({ title: 'Archivo no válido', msg: 'Selecciona una imagen JPG, PNG, GIF o WebP.', type: 'warning' });
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    input.value = '';
+                    target.innerHTML = '<span>La imagen supera 10 MB</span>';
+                    adminNotify({ title: 'Archivo demasiado grande', msg: 'La imagen no puede superar 10 MB.', type: 'warning' });
+                    return;
+                }
+                var url = URL.createObjectURL(file);
+                target.innerHTML = '<img src="' + url + '" alt="">';
+                var img = target.querySelector('img');
+                if (img) {
+                    img.onload = function () { URL.revokeObjectURL(url); };
+                }
+            });
+        });
+
+        document.querySelectorAll('#modalSubmenu input[type="file"][accept*="video"]').forEach(function (input) {
+            input.addEventListener('change', function () {
+                var file = input.files && input.files[0] ? input.files[0] : null;
+                if (!file) { return; }
+                if (!/\.(mp4|webm|mov|m4v)$/i.test(file.name)) {
+                    input.value = '';
+                    adminNotify({ title: 'Video no válido', msg: 'Usa un archivo MP4, WebM, MOV o M4V.', type: 'warning' });
+                }
+            });
+        });
     </script>
 HTML,
 ]);
+
+

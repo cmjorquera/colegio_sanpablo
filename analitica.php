@@ -14,6 +14,13 @@ $db  = cms_get_connection();
 $site = cms_get_site_data($db);
 $estadoTabla = auditoriaTablaLista($db);
 
+try {
+    admin_requerir_permiso('analitica', 'ver');
+} catch (Throwable $exception) {
+    cms_set_flash('danger', $exception->getMessage());
+    cms_redirect('admin.php?panel=dashboard');
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function anl_parse_ua(string $ua): array

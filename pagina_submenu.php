@@ -33,6 +33,7 @@ $sectionItemsMap = [];
 $arrMenus = [];
 $arrSubs = [];
 $page = null;
+$historyItems = [];
 
 try {
     $db = cms_get_connection();
@@ -45,6 +46,7 @@ try {
 
     if ($idSubMenu > 0) {
         $page = cms_get_public_submenu_page($db, $idSubMenu);
+        if ($idSubMenu === 2) { $historyItems = cms_list_submenu_history_items($db, 2, true); }
     }
 } catch (Throwable $exception) {
     error_log('pagina_submenu.php: ' . $exception->getMessage());
@@ -58,19 +60,15 @@ $title = $page ? trim((string) ($page['pagina_titulo'] ?: $page['nombre'])) : 'P
 $menuPadre = $page ? trim((string) ($page['menu_padre'] ?? '')) : '';
 $bajada = $page ? trim((string) ($page['pagina_bajada'] ?? '')) : '';
 $contenido = $page ? trim((string) ($page['pagina_contenido'] ?? '')) : '';
+$contenidoHtml = cms_basic_content_html($contenido);
 $hero = $page ? trim((string) ($page['pagina_imagen_hero'] ?? '')) : '';
 $hero = $hero !== '' ? $hero : 'assets/images/frontis_01.jpg';
 $heroVideoArchivo = $page ? trim((string) ($page['pagina_hero_video_archivo'] ?? '')) : '';
 $heroVideoUrl = $page ? trim((string) ($page['pagina_hero_video_url'] ?? '')) : '';
 $heroVideoEmbed = sp_submenu_video_embed($heroVideoUrl);
-$secundaria = $page ? trim((string) ($page['pagina_imagen_secundaria'] ?? '')) : '';
-$videoArchivo = $page ? trim((string) ($page['pagina_video_archivo'] ?? '')) : '';
-$videoEmbed = $page ? sp_submenu_video_embed($page['pagina_video_url'] ?? '') : '';
-$gallery = array_values(array_filter($page['pagina_media'] ?? [], static fn($m) => ($m['tipo'] ?? '') === 'imagen' && !empty($m['archivo'])));
+$hasHeroVideo = $heroVideoEmbed !== '' || $heroVideoArchivo !== '';
+$gallery = array_values(array_filter($page['pagina_media'] ?? [], static fn($m) => ($m['tipo'] ?? '') === 'imagen' && !empty($m['archivo']) && (int) ($m['visible'] ?? 1) === 1));
 $carouselImages = [];
-if ($secundaria !== '') {
-    $carouselImages[] = ['src' => $secundaria, 'alt' => $title];
-}
 foreach ($gallery as $media) {
     $carouselImages[] = ['src' => (string) $media['archivo'], 'alt' => (string) ($media['titulo'] ?: $title)];
 }
@@ -90,13 +88,14 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
     <link rel="stylesheet" href="assets/css/all.min.css">
     <link rel="stylesheet" href="assets/css/style.css">
     <link rel="stylesheet" href="assets/css/pages/colegiosanpablo.css">
+    <?php if ($idSubMenu === 2 && $historyItems): ?><link rel="stylesheet" href="assets/css/submenu_historia_publica.css"><?php endif; ?>
     <style>
         .sp-subpage-hero {
             min-height: 460px;
             display: flex;
             align-items: end;
             position: relative;
-            background: linear-gradient(90deg, rgba(9, 28, 49, .82), rgba(9, 28, 49, .36)), url('<?= e($hero) ?>') center/cover no-repeat;
+            background: <?= $hasHeroVideo ? 'linear-gradient(90deg, rgba(9, 28, 49, .82), rgba(9, 28, 49, .36)), #06111d' : "linear-gradient(90deg, rgba(9, 28, 49, .82), rgba(9, 28, 49, .36)), url('" . e($hero) . "') center/cover no-repeat" ?>;
             color: #fff;
             overflow: hidden;
         }
@@ -188,15 +187,6 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
             height: 100%;
             object-fit: cover;
         }
-        .sp-subpage-video {
-            margin-top: 46px;
-            min-height: 320px;
-            border-radius: 8px;
-            overflow: hidden;
-            background: #111827;
-        }
-        .sp-subpage-video iframe,
-        .sp-subpage-video video { width: 100%; height: 100%; min-height: 320px; display: block; }
         .sp-subpage-empty-media {
             border: 1px dashed #d8e0ea;
             border-radius: 8px;
@@ -261,10 +251,8 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
                 <div class="row g-5 sp-subpage-layout">
                     <article class="col-lg-7">
                         <div class="sp-subpage-content">
-                            <?php if ($contenido !== ''): ?>
-                                <?php foreach (preg_split("/\R{2,}/", $contenido) as $paragraph): ?>
-                                    <p><?= nl2br(e($paragraph)) ?></p>
-                                <?php endforeach; ?>
+                            <?php if ($contenidoHtml !== ''): ?>
+                                <?= $contenidoHtml ?>
                             <?php else: ?>
                                 <p>Este contenido esta listo para ser administrado desde el panel del sitio.</p>
                             <?php endif; ?>
@@ -300,17 +288,9 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
                     </aside>
                 </div>
 
-                <?php if ($videoEmbed !== '' || $videoArchivo !== ''): ?>
-                    <div class="sp-subpage-video">
-                        <?php if ($videoEmbed !== ''): ?>
-                            <iframe src="<?= e($videoEmbed) ?>" title="<?= e($title) ?>" allowfullscreen loading="lazy"></iframe>
-                        <?php else: ?>
-                            <video src="<?= e($videoArchivo) ?>" controls></video>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
                 </div>
         </main>
+        <?php if ($idSubMenu === 2 && $historyItems) { include __DIR__ . '/componentes/submenu_historia_visual.php'; } ?>
     <?php endif; ?>
 
     <?php
@@ -321,5 +301,6 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
     ?>
     <script src="assets/js/jquery-3.7.1.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
+    <?php if ($idSubMenu === 2 && $historyItems): ?><script src="assets/js/submenu_historia_publica.js"></script><?php endif; ?>
 </body>
 </html>

@@ -1,0 +1,130 @@
+.admin-table-card {
+    background: #fff;
+    border: 1px solid var(--adm-border);
+    border-radius: 10px;
+    box-shadow: var(--adm-shadow-sm);
+    overflow: hidden;
+}
+
+.usr-card {
+    background: #fff;
+    border: 1px solid var(--adm-border);
+    border-radius: 10px;
+    box-shadow: var(--adm-shadow-sm);
+    overflow: hidden;
+}
+
+.usr-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--adm-border);
+}
+
+.usr-head h1 {
+    font-size: 1.18rem;
+    margin: 0;
+    font-weight: 800;
+}
+
+.usr-head p {
+    margin: 3px 0 0;
+    color: var(--adm-muted);
+}
+
+.usr-table-wrap {
+    padding: 0 20px 20px;
+}
+
+.usr-name {
+    font-weight: 800;
+    color: var(--adm-text);
+}
+
+.usr-muted {
+    color: var(--adm-muted);
+    font-size: .82rem;
+}
+
+.role-pill {
+    display: inline-flex;
+    align-items: center;
+    min-width: 132px;
+    border: 1px solid #cfe0f5;
+    border-radius: 999px;
+    padding: 5px 10px;
+    background: #eef6ff;
+    color: #175a9e;
+    font-size: .78rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.usr-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.usr-modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+
+.usr-modal-grid .full {
+    grid-column: 1 / -1;
+}
+
+.admin-table-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--adm-border);
+}
+
+.admin-table-head h1,
+.admin-table-head h2 {
+    margin: 0;
+    font-size: 1.18rem;
+    font-weight: 800;
+}
+
+.admin-table-head p {
+    margin: 3px 0 0;
+    color: var(--adm-muted);
+    font-size: .86rem;
+}
+
+.admin-table-body {
+    padding: 0 20px 20px;
+}
+
+@media (max-width: 768px) {
+    .admin-table-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .admin-table-body {
+        padding: 0 12px 16px;
+    }
+
+    .usr-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .usr-table-wrap {
+        padding: 0 12px 16px;
+    }
+
+    .usr-modal-grid {
+        grid-template-columns: 1fr;
+    }
+}

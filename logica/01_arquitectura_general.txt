@@ -1,0 +1,92 @@
+ARQUITECTURA GENERAL DEL CMS - COLEGIO SAN PABLO
+================================================
+
+Este proyecto funciona como un CMS simple basado en contenedores publicos y un panel administrador.
+La base real documentada aqui es logica/qaseduc_colegio_spablo.sql.
+
+ARCHIVOS PRINCIPALES
+--------------------
+
+index.php
+Es la pagina publica principal del sitio. Carga includes/cms_helpers.php, obtiene los datos del sitio con cms_get_site_data(), filtra los registros visibles de la tabla seccion y renderiza cada contenedor con cms_get_component_path().
+
+admin.php
+Es el panel administrador actual. Requiere sesion admin activa y redirige a index.php si no existe. Administra contenedores, menus publicos, submenus y configuracion institucional. Usa includes/admin_layout.php para el layout lateral.
+
+editar_contenedor.php
+Edita un contenedor especifico por id_seccion. Segun el tipo o nombre del contenedor, permite editar datos generales, configuraciones en seccion_config, items en seccion_item, noticias o eventos.
+
+preview_contenedor.php
+Permite previsualizar un contenedor. Puede renderizar dentro del layout admin o en modo embed. Igual que index.php, resuelve el componente con cms_get_component_path().
+
+componentes/
+Es la carpeta activa de renderizadores publicos del CMS. Cada archivo PHP representa un componente visual. La regla base es:
+
+seccion.nombre_interno -> componentes/{nombre_interno}.php
+
+Excepcion real actual: el contenedor logico header_principal se resuelve por fallback hacia componentes/header.php desde cms_get_component_path().
+
+includes/
+Contiene helpers, layout y funciones comunes.
+
+- includes/cms_helpers.php: conexion, carga de datos del sitio, helpers CMS, menus, submenus, eventos, subida de archivos, configuracion e items.
+- includes/admin_layout.php: layout base del panel administrador, incluyendo el menu lateral construido desde admin_menu y admin_submenu.
+- includes/funciones_auditoria.php: registro y consulta de auditoria.
+
+uploads/
+Contiene archivos subidos por el CMS: imagenes de secciones, noticias, eventos, submenus, comunicados y multimedia.
+
+assets/
+Contiene CSS, JavaScript, imagenes e iconos del frontend y del panel.
+
+logica/
+Contiene documentacion tecnica, SQL de referencia y diagramas. No participa en el render publico del sitio.
+
+POLITICA DE ARCHIVOS
+---------------------
+
+assets/ contiene recursos propios del sistema. uploads/ contiene archivos fisicos
+subidos por usuarios desde el panel administrador, organizados por modulo
+(secciones/{nombre_interno}/, noticias/, eventos/, institucion/, comunicados/,
+submenus/{id}/). La base de datos solo guarda texto, URLs externas (YouTube,
+Spotify, etc.) o la ruta relativa de un archivo local; nunca un binario ni una
+ruta absoluta del servidor. Las subidas nuevas pasan por
+includes/upload_helpers.php (cms_guardar_archivo). El detalle completo, incluida
+la compatibilidad con rutas legacy en assets/images/, esta documentado en
+logica/07_politica_archivos_multimedia.txt.
+
+CARPETAS LEGACY
+---------------
+
+contenedores/
+Existe en el proyecto, pero el codigo actual no la usa para renderizar el sitio publico. El render real pasa por componentes/ y cms_get_component_path().
+
+contenedores_oldd/
+No aparece como carpeta del workspace actual. Si aparece en otro respaldo, debe tratarse como referencia antigua o plantilla legacy salvo que el codigo la empiece a requerir explicitamente.
+
+NOMBRES CANONICOS ACTUALES
+--------------------------
+
+Usar estos archivos como nombres actuales:
+
+- index.php
+- admin.php
+- preview_contenedor.php
+- editar_contenedor.php
+- componentes/
+
+No documentar index_1.php, admin_1.php ni preview_contenedor_1.php como archivos activos. Las referencias fallback a index_1.php detectadas en admin_usuarios.php, admin_comunicados.php y cambiar_clave.php fueron corregidas a index.php.
+
+
+CONEXION MYSQL POR ENTORNO
+-------------------------
+class/conexion.php es la clase comun de conexion y el unico punto de entrada
+para el sistema. Conserva la clase Conexion y su metodo getConexion().
+class/conexion_local.php retorna un array PHP con host, db, user, pass y charset;
+contiene las credenciales especificas del entorno y no se versiona en Git.
+QA y produccion poseen su propio archivo local. Los despliegues Git no deben
+sobrescribir las credenciales del servidor.
+En Plesk, con el sitio publicado desde /httpdocs, crear manualmente el archivo
+/httpdocs/class/conexion_local.php usando las credenciales del respaldo de la
+conexion actual de produccion. Prepararlo antes de activar el codigo nuevo.
+Si falta el archivo local, la clase informa un error controlado sin credenciales.

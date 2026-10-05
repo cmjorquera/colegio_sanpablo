@@ -10,6 +10,7 @@ if (empty($_SESSION['admin_logged'])) {
 }
 
 require_once __DIR__ . '/../includes/cms_helpers.php';
+require_once __DIR__ . '/../includes/admin_permissions.php';
 
 try {
     if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -17,6 +18,7 @@ try {
         echo json_encode(['ok' => false, 'message' => 'Metodo no permitido.']);
         exit;
     }
+    admin_requerir_permiso('contenedores', 'editar');
 
     $raw = file_get_contents('php://input');
     $payload = json_decode($raw ?: '', true);

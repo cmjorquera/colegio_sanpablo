@@ -1,0 +1,87 @@
+LOGICA DEL MENU PUBLICO
+=======================
+
+QUE ES
+------
+
+El menu publico es el menu superior visible para los visitantes del sitio.
+
+No es el menu lateral del administrador.
+
+TABLAS
+------
+
+menus
+Define las opciones principales del menu publico.
+
+Campos relevantes:
+
+- id_menu
+- nombre
+- url
+- icono
+- orden
+- estado
+
+sub_menus
+Define opciones hijas o desplegables de menus.
+
+Campos relevantes:
+
+- id_sub_menu
+- id_menu
+- nombre
+- url
+- icono
+- orden
+- estado
+
+sub_menu_paginas
+Existe en la base actual y guarda contenido editorial para paginas internas asociadas a submenus.
+
+sub_menu_pagina_media
+Existe en la base actual y guarda imagenes o multimedia de esas paginas internas.
+
+ARCHIVOS INVOLUCRADOS
+---------------------
+
+index.php
+Pagina publica principal. Carga el contenedor header_principal como parte de la lista de secciones visibles.
+
+componentes/header.php
+Componente real actual que renderiza el menu publico superior. Usa $arrMenus y $arrSubs.
+
+includes/cms_helpers.php
+cms_get_site_data() carga menus activos y submenus activos. cms_get_component_path('header_principal') resuelve hacia componentes/header.php.
+
+pagina_submenu.php
+Pagina publica para submenus internos. Carga header y footer, lee el submenu por id y muestra contenido desde sub_menu_paginas y sub_menu_pagina_media cuando existe.
+
+FLUJO VISITANTE
+---------------
+
+1. El visitante abre index.php.
+2. index.php carga datos del sitio.
+3. index.php renderiza el contenedor header_principal.
+4. cms_get_component_path('header_principal') devuelve componentes/header.php.
+5. componentes/header.php recorre menus y sub_menus.
+6. El visitante ve el menu superior.
+7. Si hace clic en un submenu interno, abre pagina_submenu.php?id=ID.
+
+REGLAS IMPORTANTES
+------------------
+
+- menus = menu principal publico.
+- sub_menus = opciones desplegables publicas.
+- No confundir con admin_menu.
+- No confundir con admin_submenu.
+- El menu publico se renderiza en el header del sitio.
+- Si un submenu no tiene URL externa, el helper puede generar pagina_submenu.php?id=ID.
+- Las paginas de submenu usan sub_menu_paginas y sub_menu_pagina_media cuando existen.
+
+DIFERENCIA CON CONTENEDORES
+---------------------------
+
+El menu publico no es un contenedor independiente llamado menu_principal. En la base actual, el header_principal es el contenedor visual que muestra el menu usando menus y sub_menus.
+
+El helper cms_remove_legacy_menu_principal_section() elimina el contenedor legacy menu_principal si aparece.

@@ -1,0 +1,138 @@
+LOGICA DE NOTICIAS
+==================
+
+MODULO VISUAL
+-------------
+
+noticias_home es el contenedor visual de noticias en el home.
+
+Existe como registro en seccion:
+
+- nombre_interno = noticias_home
+- tipo_seccion = news
+- variante = cards_4
+
+Archivo publico:
+
+componentes/noticias_home.php
+
+FUENTE DE DATOS REAL
+--------------------
+
+En esta base actual no existe una tabla noticia separada para el home. Las noticias publicadas en el bloque noticias_home salen de seccion_item.
+
+La categoria se resuelve con:
+
+- seccion_item.id_categoria
+- categoria_noticia.id_categoria
+
+Si id_categoria no existe o no esta definido, el componente usa seccion_item.etiqueta como categoria visual.
+
+TABLAS
+------
+
+seccion
+Define el contenedor noticias_home.
+
+seccion_config
+Configura el bloque:
+
+- titulo_bloque
+- subtitulo_bloque
+- texto_boton
+- url_boton
+- cantidad_items
+- noticia_galeria_ID_ITEM para galerias de detalle en JSON
+
+seccion_item
+Guarda cada noticia:
+
+- id_item
+- id_seccion
+- id_categoria
+- etiqueta
+- titulo
+- descripcion
+- imagen
+- video_youtube (enlace YouTube del video relacionado)
+- url (reutilizada para la ruta del video local subido cuando el video relacionado es un archivo en vez de un enlace YouTube; nunca se usan ambos a la vez)
+- boton_1_texto
+- boton_1_url
+- fecha_publicacion
+- visible
+- orden
+
+categoria_noticia
+Catalogo de categorias de noticias:
+
+- id_categoria
+- nombre
+- color
+
+ARCHIVOS INVOLUCRADOS
+---------------------
+
+componentes/noticias_home.php
+Renderiza noticias visibles desde $sectionItemsMap['noticias_home']. Enlaza cada card a noticia_detalle.php?id=ID_ITEM.
+
+noticia_detalle.php
+Busca una noticia en seccion_item unida con seccion, obligando s.nombre_interno = 'noticias_home' y si.visible = 'si'. Usa categoria_noticia si existe. Lee galerias con cms_get_news_gallery_config().
+
+noticias.php
+Bitacora publica de noticias. Agrupa por anio (COALESCE(fecha_publicacion, fecha_creacion)) y muestra pestanas solo para los ultimos 4 anios con noticias visibles de noticias_home. Incluye grid por anio, buscador simple por titulo/descripcion (cliente, JS) y estado vacio. Cada tarjeta enlaza a noticia_detalle.php?id=ID_ITEM. Reutiliza header_principal y footer_principal.
+
+todas_noticias.php
+Redireccion 301 permanente hacia noticias.php. Se mantiene solo por compatibilidad con enlaces antiguos.
+
+editar_contenedor.php
+Permite administrar items del contenedor tipo news. Al guardar noticias, cms_save_item() puede guardar galeria adicional en seccion_config con clave noticia_galeria_ID. La accion AJAX subir_galeria_noticia sube y agrega imagenes a esa galeria sin requerir guardar el resto de la noticia (solo disponible cuando la noticia ya tiene id_item).
+
+includes/cms_helpers.php
+Contiene helpers:
+
+- cms_get_news_gallery_config()
+- cms_save_news_gallery_config()
+- cms_decode_news_gallery()
+- cms_save_news_gallery_payload()
+
+FLUJO PUBLICO
+-------------
+
+1. index.php renderiza noticias_home si el contenedor esta visible.
+2. componentes/noticias_home.php lee configuracion de seccion_config.
+3. Lee items visibles desde $sectionItemsMap['noticias_home'].
+4. Cada card apunta a noticia_detalle.php?id=ID_ITEM.
+5. noticia_detalle.php vuelve a validar que el item pertenezca a noticias_home y visible = si.
+
+POLITICA DE ARCHIVOS DE NOTICIAS
+-----------------------------------
+
+- titulo, descripcion (HTML basico) -> texto en seccion_item (base de datos).
+- video_youtube -> URL guardada tal cual en seccion_item.video_youtube (base de
+  datos); el video nunca se descarga ni se copia al servidor.
+- imagen de portada subida -> archivo fisico en uploads/noticias/; la ruta
+  relativa (por ejemplo "uploads/noticias/nombre-20260706093847-577a26.jpeg")
+  queda en seccion_item.imagen.
+- imagenes adicionales de la galeria de detalle -> tambien archivo fisico en
+  uploads/noticias/; el listado de la galeria (rutas + orden) se guarda como
+  JSON en seccion_config con clave noticia_galeria_{id_item}
+  (cms_get_news_gallery_config() / cms_save_news_gallery_config()).
+- La subida real pasa por cms_upload_image()/cms_upload_image_payload() de
+  includes/cms_helpers.php, que delegan en cms_guardar_archivo() de
+  includes/upload_helpers.php.
+- Existen imagenes antiguas de noticias referenciadas como assets/images/*.jpg
+  en datos reales; son legacy y no se deben romper ni migrar automaticamente.
+
+Detalle completo y comun a todo el CMS en
+logica/07_politica_archivos_multimedia.txt.
+
+REGLAS IMPORTANTES
+------------------
+
+- Noticias del home = seccion_item del contenedor noticias_home.
+- categoria_noticia solo clasifica, no contiene la noticia.
+- noticia_detalle.php usa id_item como identificador publico.
+- noticias_home siempre muestra un maximo de 4 noticias (home y componente publico).
+- El boton "Ver todas las noticias" siempre apunta a noticias.php; url_boton y cantidad_items siguen en seccion_config pero ya no se editan desde editar_contenedor.php (se fuerzan a noticias.php y 4 al guardar).
+- noticias.php es la bitacora publica con pestanas por anio; ya esta implementada (ver seccion ARCHIVOS INVOLUCRADOS).
+- No documentar una tabla noticia si no existe en qaseduc_colegio_spablo.sql.

@@ -1,0 +1,261 @@
+POLITICA GLOBAL DE ARCHIVOS MULTIMEDIA
+=======================================
+
+Este documento fija la politica unica de archivos fisicos para todo el CMS del
+Colegio San Pablo. Describe la estructura REAL de uploads/ tal como existe hoy en
+el codigo (includes/cms_helpers.php, includes/upload_helpers.php,
+admin_comunicados.php), no una estructura nueva a migrar. No se movio ni se
+renombro ningun archivo ni carpeta para escribir este documento.
+
+1. POLITICA GENERAL
+--------------------
+
+- assets/ contiene recursos propios del sistema (tema comprado, CSS, JS, iconos,
+  imagenes de plantilla). No recibe archivos subidos por usuarios desde el panel.
+- uploads/ contiene archivos fisicos subidos por usuarios desde el panel
+  administrador.
+- Los textos, descripciones, contenido HTML, URLs de YouTube, Spotify u otros
+  servicios externos se guardan siempre en la base de datos como texto/URL, nunca
+  como archivo local.
+- Los archivos fisicos subidos por el usuario se guardan en uploads/ y la base de
+  datos guarda solamente su ruta relativa (por ejemplo
+  "uploads/secciones/hero_principal/portada-20260706153045-a8f37c.jpg").
+- No se guardan binarios en columnas de MySQL.
+- No se copian videos de YouTube, Spotify u otros servicios externos al servidor;
+  esos servicios solo aportan una URL que se guarda en la base de datos.
+
+2. DIFERENCIA ENTRE ASSETS Y UPLOADS
+-------------------------------------
+
+assets/
+- Recursos del sistema: CSS (assets/css), JS (assets/js), SASS, webfonts, iconos
+  de redes sociales e imagenes de la plantilla original (assets/images/*).
+- No se escriben archivos nuevos aqui desde el panel administrador.
+- Existen referencias legacy vivas en la base de datos a assets/images/*.jpg
+  (por ejemplo seccion_item.imagen = 'assets/images/portada_1.jpg' y varias filas
+  de seccion_config). Son datos reales de produccion y no se deben romper.
+
+uploads/
+- Todo archivo fisico subido por un administrador desde el panel vive aqui.
+- Las subidas nuevas siempre pasan por includes/upload_helpers.php
+  (cms_guardar_archivo) o por admin_com_upload_file() en admin_comunicados.php.
+
+3. ESTRUCTURA REAL DE CARPETAS
+--------------------------------
+
+uploads/
+|
++-- secciones/{nombre_interno}/
+|     Imagenes (y en algunos casos video/adjunto) de un contenedor cuya fuente
+|     son seccion_item o sub_menu_paginas. La carpeta se nombra igual que
+|     seccion.nombre_interno. Ejemplos reales: hero_principal/, galeria_home/,
+|     faq_home/. No tiene subcarpetas por tipo (imagenes/videos/adjuntos
+|     conviven en la misma carpeta); ver seccion 8 sobre por que no se dividio.
+|
++-- noticias/
+|     Imagenes de portada de noticias (seccion_item del contenedor
+|     noticias_home, tipo_seccion = 'news'). Caso especial: no usa
+|     secciones/noticias_home/, usa noticias/ directamente.
+|
++-- eventos/
+|     Imagen principal de un evento (tabla eventos).
+|   +-- adjuntos/
+|         Archivo adjunto de un evento (eventos.archivo_adjunto): PDF, Office o
+|         imagen.
+|   +-- media/{id_evento}/
+|         Imagenes y videos de evento_media asociados a ese evento especifico.
+|
++-- institucion/
+|     Logo header, logo footer y favicon (tabla institucion).
+|
++-- comunicados/
+|     Archivo adjunto de un comunicado (tabla comunicado.archivo): PDF o imagen.
+|     Gestionado por admin_com_upload_file() en admin_comunicados.php.
+|
++-- submenus/{id_sub_menu}/
+      Imagen/video hero y galeria de una pagina de submenu
+      (sub_menu_paginas, sub_menu_pagina_media).
+
+No crear carpetas para contenedores que no existan como registro en la tabla
+seccion. cms_crear_directorio_contenedor() en includes/upload_helpers.php recibe
+el nombre_interno ya resuelto por quien llama; no inventa contenedores nuevos.
+
+4. ARCHIVO FISICO VS DATO EN BASE DE DATOS
+--------------------------------------------
+
+Se guardan SOLO en base de datos:
+- Titulo, subtitulo, descripcion, contenido HTML/enriquecido, alt text.
+- URL de YouTube, Vimeo, Spotify, Google Maps o cualquier enlace externo.
+- Metadatos: orden, estado, visible, fechas.
+
+Se guardan como archivo fisico en uploads/ (y su ruta relativa en la BD):
+- JPG, JPEG, PNG, WEBP, GIF, SVG, ICO (imagenes).
+- MP4, WEBM, MOV, M4V (video subido, cuando el contenedor lo permite).
+- PDF, DOC, DOCX, XLS, XLSX y las imagenes de adjunto (eventos, comunicados).
+
+La base de datos guarda solo la ruta relativa, por ejemplo:
+
+  uploads/secciones/noticias_home/... -> NO, las noticias usan uploads/noticias/
+  uploads/noticias/alumna-2026...jpg
+
+Nunca se guarda ruta absoluta del servidor ni dominio completo para un archivo
+local.
+
+5. NOTICIAS
+------------
+
+Fuente real: seccion_item del contenedor noticias_home (no existe tabla noticia
+separada; ver logica/06_logica_noticias.txt).
+
+- titulo, descripcion (HTML basico) -> seccion_item (base de datos).
+- imagen de portada subida -> uploads/noticias/, ruta guardada en
+  seccion_item.imagen.
+- galeria adicional de la noticia -> JSON en seccion_config con clave
+  noticia_galeria_{id_item}; cada imagen de esa galeria tambien vive en
+  uploads/noticias/.
+- video_youtube -> URL guardada en seccion_item.video_youtube (base de datos,
+  nunca se descarga el video).
+- No existe hoy adjunto fisico propio de noticias fuera de la imagen.
+
+6. EVENTOS Y CALENDARIO
+-------------------------
+
+Ver tambien logica/05_logica_eventos.txt, seccion "POLITICA DE ARCHIVOS DEL
+MODULO EVENTOS" (se agrego alli el detalle especifico del modulo).
+
+- eventos: actividades institucionales reales. eventos.imagen (portada) vive en
+  uploads/eventos/. eventos.archivo_adjunto vive en uploads/eventos/adjuntos/.
+- evento_media: multimedia adicional de un evento especifico. evento_media.archivo
+  vive en uploads/eventos/media/{id_evento}/. evento_media.url guarda enlaces
+  externos (tipo = 'youtube') sin descargar nada.
+- calendario: dias, feriados y marcas institucionales; no maneja archivos.
+- dia_semana: catalogo de lunes a domingo; no maneja archivos.
+- seccion_item puede existir como fallback legacy asociado a
+  calendario_eventos_home, pero no es la fuente actual de eventos reales.
+
+7. GALERIA
+-----------
+
+galeria_home guarda sus imagenes en uploads/secciones/galeria_home/. La base de
+datos guarda la ruta relativa en seccion_item.imagen.
+
+No se suben imagenes nuevas de galeria a assets/images/. Las imagenes antiguas
+que ya existen ahi (referenciadas desde seccion_item.imagen o seccion_config)
+quedan intactas como rutas legacy; no se eliminan ni se migran.
+
+8. VIDEOS SUBIDOS Y SERVICIOS EXTERNOS (YOUTUBE/SPOTIFY)
+-----------------------------------------------------------
+
+- Un contenedor con video (por ejemplo video_destacado_home) permite indistintamente
+  una URL de YouTube o un archivo de video subido. Si el usuario ingresa URL de
+  YouTube, esa URL se guarda tal cual en la base de datos y NO se sube ningun
+  archivo. Si el usuario sube un archivo, este va a
+  uploads/secciones/{nombre_interno}/ y la ruta relativa queda en la BD.
+- Spotify funciona igual que YouTube: solo se guarda la URL en seccion_config o
+  seccion_item; nunca se descarga audio al servidor.
+- Nota de diseno: hoy las carpetas de secciones/ no separan imagenes/videos/
+  adjuntos en subcarpetas por tipo; todo el material de un mismo contenedor
+  convive en una sola carpeta plana. Se decidio NO introducir esa subdivision en
+  este cambio para no tocar codigo de mas puntos de los necesarios; queda como
+  mejora futura opcional (ver seccion 14), aplicable solo a subidas nuevas.
+
+9. SEGURIDAD
+-------------
+
+Implementado en includes/upload_helpers.php (usado por includes/cms_helpers.php)
+y reforzado en admin_comunicados.php:
+
+- Extension permitida por whitelist segun categoria (imagenes, videos, adjuntos).
+- Verificacion del tipo MIME real del archivo (finfo/mime_content_type), no solo
+  la extension declarada.
+- Lista negra de extensiones peligrosas (php, php3-7, phtml, phar, cgi, pl, sh,
+  bat, cmd, exe, asp, aspx, jsp, py, rb, dll, htaccess, etc.), revisada tambien
+  contra trucos de doble extension como "foto.php.jpg"
+  (cms_validar_nombre_archivo()).
+- Tamano maximo configurable por categoria: imagenes 8 MB, videos 150 MB,
+  adjuntos 20 MB (constantes CMS_UPLOAD_MAX_IMAGEN_BYTES,
+  CMS_UPLOAD_MAX_VIDEO_BYTES, CMS_UPLOAD_MAX_ADJUNTO_BYTES).
+- Nombre de archivo generado por el sistema (cms_generar_nombre_seguro()): nunca
+  se usa el nombre original como nombre fisico definitivo. Formato:
+  base-YmdHis-hex6.ext.
+- cms_es_ruta_local_upload() distingue una ruta local de uploads/ de una URL
+  externa, para no confundir un enlace de YouTube con un archivo.
+- cms_eliminar_archivo_seguro() solo borra si la ruta resuelta cae realmente
+  dentro de uploads/ (evita path traversal), pero hoy ningun flujo automatico la
+  invoca (ver seccion 10).
+
+10. NO BORRAR ARCHIVOS AUTOMATICAMENTE SIN CONTROL
+-----------------------------------------------------
+
+- Al reemplazar una imagen de seccion_item, sub_menu_pagina_media o eventos, el
+  sistema NO borra el archivo anterior; guarda la nueva ruta y el archivo viejo
+  queda huerfano en disco para limpieza manual o futura (ver seccion 14,
+  biblioteca de medios).
+- Excepcion aceptada: admin_comunicados.php SI borra el adjunto anterior al
+  reemplazar uno nuevo (admin_com_delete_file()), porque el adjunto es propiedad
+  exclusiva de ese comunicado (relacion 1 a 1, sin reutilizacion posible). Se
+  documenta como excepcion intencional, no como incumplimiento de la regla.
+- No se implementa borrado agresivo ni limpieza automatica de huerfanos en este
+  cambio.
+
+11. COMPATIBILIDAD CON RUTAS ANTIGUAS
+-----------------------------------------
+
+Se revisaron referencias reales a rutas de archivo antes de escribir este
+documento:
+
+- assets/images/*.jpg: usado hoy en datos reales (seccion_item.imagen,
+  seccion_config.valor). Se mantiene sin cambios; no se migra automaticamente.
+- uploads/secciones/, uploads/noticias/, uploads/eventos/, uploads/institucion/,
+  uploads/comunicados/, uploads/submenus/: estructura vigente, documentada tal
+  cual en este archivo.
+- Hallazgo a corregir en un cambio aparte (fuera de alcance de esta politica):
+  sub_menu_pagina_media tiene 2 filas con separador Windows en la ruta
+  ("uploads\submenus\4\..." en vez de "uploads/submenus/4/..."). El codigo actual
+  siempre genera rutas con "/"; esas 2 filas son datos historicos y deberian
+  normalizarse en una correccion de datos puntual y revisada, no de forma
+  automatica.
+
+12. POLITICA DE ACTUALIZACION EN CPANEL
+--------------------------------------------
+
+Al actualizar codigo en produccion se puede reemplazar sin riesgo:
+- Archivos PHP raiz (admin.php, editar_contenedor.php, etc.).
+- componentes/, includes/, ajax/, api/.
+- assets/css/, assets/js/.
+
+NUNCA reemplazar ni eliminar uploads/ durante un despliegue: contiene archivos
+de usuarios reales (fotos, adjuntos, comunicados) que no existen en el
+repositorio de codigo.
+
+Antes de un despliegue importante:
+1. Respaldo de la base de datos.
+2. Respaldo completo de uploads/.
+
+Codigo y archivos de usuario tienen ciclos de vida distintos: el codigo se
+versiona y se reemplaza; uploads/ se acumula y solo crece.
+
+13. PROCEDIMIENTO DE RESPALDO
+--------------------------------
+
+1. Exportar la base de datos (mysqldump o herramienta equivalente de cPanel).
+2. Comprimir uploads/ completo (zip o tar) con fecha en el nombre del respaldo.
+3. Guardar ambos respaldos fuera del servidor de produccion antes de aplicar
+   cambios de codigo o de estructura.
+4. Verificar que el respaldo de uploads/ incluya todas las subcarpetas de la
+   seccion 3, no solo una muestra.
+
+14. MEJORAS FUTURAS
+----------------------
+
+- Biblioteca de medios (admin_media.php, no implementada en este cambio):
+  listar archivos existentes por contenedor, buscar por nombre, reutilizar una
+  imagen ya subida, detectar archivos sin referencia (huerfanos), copiar la ruta
+  relativa, ver fecha de carga y usuario que subio el archivo. No se crea una
+  tabla "media" generica sin revisar antes evento_media y sub_menu_pagina_media
+  para no duplicar responsabilidades.
+  - Normalizar a subcarpetas imagenes/videos/adjuntos dentro de
+  uploads/secciones/{nombre_interno}/ para subidas nuevas, manteniendo
+  compatibilidad total con las rutas planas existentes.
+- Corregir el hallazgo de rutas con backslash en sub_menu_pagina_media (seccion
+  11) mediante una migracion de datos puntual y revisada, no automatica.

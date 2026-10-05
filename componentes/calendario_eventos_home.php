@@ -196,8 +196,28 @@ $eventCategoryClass = static function (?string $category): string {
     font-size: 12px;
     font-weight: 700;
 }
-#fc-calendario-home .fc-feriado-bg {
-    opacity: .3;
+#fc-calendario-home .fc-feriado-event {
+    background: color-mix(in srgb, var(--feriado-color, #C6005A) 14%, #fff) !important;
+    border: 1px solid color-mix(in srgb, var(--feriado-color, #C6005A) 55%, #fff) !important;
+    color: var(--feriado-color, #C6005A) !important;
+    font-weight: 700;
+}
+#fc-calendario-home .fc-feriado-event .fc-event-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+#fc-calendario-home .fc-feriado-badge {
+    display: inline-block;
+    flex: 0 0 auto;
+    font-size: 8px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    background: var(--feriado-color, #C6005A);
+    color: #fff;
+    border-radius: 4px;
+    padding: 1px 4px;
 }
 #fc-calendario-home .fc-scrollgrid {
     border-radius: 0;
@@ -248,11 +268,6 @@ $eventCategoryClass = static function (?string $category): string {
                 meridiem: false
             },
             eventClick: function (info) {
-                var props = info.event.extendedProps || {};
-                if (props.type === 'feriado') {
-                    info.jsEvent.preventDefault();
-                    return;
-                }
                 if (info.event.url) {
                     info.jsEvent.preventDefault();
                     window.location.href = info.event.url;
@@ -261,6 +276,16 @@ $eventCategoryClass = static function (?string $category): string {
             eventDidMount: function (info) {
                 var props = info.event.extendedProps || {};
                 if (props.type === 'feriado') {
+                    info.el.style.setProperty('--feriado-color', props.color || '#C6005A');
+                    info.el.style.cursor = 'pointer';
+                    info.el.setAttribute('title', info.event.title + ' · Feriado');
+                    var titleEl = info.el.querySelector('.fc-event-title');
+                    if (titleEl && !titleEl.querySelector('.fc-feriado-badge')) {
+                        var badge = document.createElement('span');
+                        badge.className = 'fc-feriado-badge';
+                        badge.textContent = 'Feriado';
+                        titleEl.insertBefore(badge, titleEl.firstChild);
+                    }
                     return;
                 }
                 var parts = [info.event.title];

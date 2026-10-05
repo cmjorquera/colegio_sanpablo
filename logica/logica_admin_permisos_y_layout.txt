@@ -1,0 +1,169 @@
+LOGICA ADMINISTRATIVA: PERMISOS Y LAYOUT
+
+Tablas usadas
+- admin_menu: define los modulos principales del sidebar administrativo. Se usa clave, grupo, label, href, icono, orden, visible y estado.
+- admin_submenu: define los hijos desplegables de cada admin_menu. Se usa id_admin_menu, clave, label, href, icono, orden, visible y estado.
+- perfiles: define perfiles administrativos activos.
+- usuario_perfil: asigna uno o mas perfiles reales a cada usuario.
+- perfil_permiso_admin: guarda permisos por perfil, tipo_menu ('menu' o 'submenu'), id_menu y columnas puede_ver, puede_crear, puede_editar, puede_eliminar.
+- usuario: se mantiene por compatibilidad con rol legacy, login, institucion y datos basicos.
+
+Como se arma el sidebar
+- includes/admin_layout.php llama admin_nav_items().
+- admin_nav_items() consulta admin_menu activos y visibles.
+- Luego consulta admin_submenu activos y visibles, asociandolos a su id_admin_menu.
+- Los menus se agrupan por admin_menu.grupo.
+- El orden de grupos queda fijo como: PRINCIPAL, GESTION DEL SITIO, SEGURIDAD, ANALITICA, SISTEMA.
+- Cada menu/submenu se filtra por permiso puede_ver del perfil real del usuario.
+- La opcion activa se detecta por active_panel, script actual y parametro panel.
+- Algunas rutas historicas se normalizan sin cambiar la base: calendario -> admin_calendario.php, permisos -> admin_permisos.php, auditoria -> auditoria_log.php, usuarios -> admin_usuarios.php y comunicados -> admin_comunicados.php.
+- Los botones inferiores Ver sitio, Cerrar sesion y Colapsar se conservan en el layout.
+
+Como funcionan permisos por perfil
+- includes/admin_permissions.php centraliza la resolucion.
+- admin_obtener_perfiles_usuario() lee usuario_perfil + perfiles.
+- admin_tiene_permiso() busca primero en admin_menu; si la clave no existe como menu, intenta resolverla como admin_submenu. Esto permite que paginas antiguas sigan llamando admin_tiene_permiso('contenedores', ...), aunque contenedores sea submenu.
+- admin_tiene_permiso_submenu() fuerza busqueda directa en admin_submenu.
+- Super Administrador tiene acceso total por id_usuario = 1, rol legacy super_admin/super_administrador o perfil con nombre Super Administrador.
+- Si no existe perfil_permiso_admin se mantiene compatibilidad permisiva.
+
+Acceso a pagina vs acciones internas
+- puede_ver controla visibilidad en el sidebar y acceso directo por URL.
+- Si el usuario no tiene puede_ver, la pagina redirige al dashboard con el mensaje: "No tienes permiso para acceder a este módulo".
+- puede_crear controla botones Nuevo/Crear y POST de creacion.
+- puede_editar controla botones Editar, formularios de edicion, switches de estado, switches de visible/publicado y POST de edicion.
+- puede_eliminar controla botones Eliminar/Inactivar y POST de eliminacion.
+- admin_comunicados.php exige puede_editar para el switch Visible; si el usuario solo puede ver, el switch queda deshabilitado y el POST tambien se bloquea.
+
+Archivos modificados
+- includes/admin_permissions.php: mensajes, perfil visible real, fallback menu/submenu, orden de matriz y prevencion de menu Permisos duplicado.
+- includes/admin_layout.php: sidebar dinamico, rutas normalizadas, carga de assets finales y perfil real en topbar.
+- admin.php: claves reales de permisos para contenedores, menus publicos, submenus publicos y datos institucionales.
+- admin_usuarios.php: columna Rol muestra perfiles.nombre_perfil desde usuario_perfil + perfiles.
+- analitica.php: bloqueo por permiso puede_ver.
+- auditoria_log.php: bloqueo por permiso puede_ver.
+- assets/admin/css/admin.css: CSS base final del panel administrativo.
+- assets/admin/js/admin.js: JS base final de sidebar, permisos denegados y helpers de permisos.
+
+CSS/JS final usado
+- CSS principal del layout: assets/admin/css/admin.css
+- JS principal del layout: assets/admin/js/admin.js
+- Los CSS especificos por modulo siguen cargandose desde cada pagina cuando son necesarios, por ejemplo admin_dashboard.css, admin_comunicados.css, admin_calendario.css, admin_contenedores.css y admin_eventos.css.
+
+CSS/JS antiguos pendientes de limpieza
+- assets/css/admin.css
+- assets/css/admin_sidebar.css
+- assets/css/admin_tables.css
+- assets/css/admin_permissions.css
+- assets/js/admin.js
+- assets/js/admin_sidebar.js
+- assets/js/admin_permissions.js
+
+No se eliminaron archivos fisicos antiguos. Quedan como respaldo temporal mientras se valida visualmente cada modulo y se migra, si corresponde, todo estilo especifico al arbol assets/admin.
+
+Edicion del contenedor Topbar superior
+- La pantalla editar_contenedor.php oculta textos tecnicos cuando el contenedor es nombre_interno = topbar y tipo_seccion = topbar.
+- En el encabezado solo se muestra el titulo administrativo "Topbar superior"; no se muestra la clave interna ni el tipo tecnico.
+- En la pestana General no se muestra el switch de visibilidad general del contenedor. Esa visibilidad se administra desde el listado principal "Contenedores del sitio".
+- El formulario General conserva Observacion, Direccion, Telefono, Correo, Texto del boton "Ingresar" y los switches de visualizacion interna: Direccion, Telefono, Correo, Redes y Boton ingresar.
+- No se muestran al administrador nombres de tablas ni columnas como institucion.direccion, institucion.telefono o institucion.email.
+- En la pestana Items se mantiene la gestion de redes sociales, pero se elimino el mensaje tecnico sobre seccion_item y etiqueta red_social.
+- La accion para crear redes se muestra como "Agregar red social".
+- Se agrego la pestana visual "Diseno" como preparacion para futuras variantes del topbar.
+- La pestana Diseno solo muestra opciones informativas en estado actual/proximamente. No crea tablas, no agrega columnas, no guarda variantes y no modifica el render publico del topbar.
+- Los permisos existentes se respetan: sin puede_editar, los campos, switches y botones de guardado del topbar quedan deshabilitados.
+
+Ajustes visuales y listado de contenedores
+- Se reemplazaron degradados fuertes de tabs y botones principales por un estilo sobrio basado en el color oscuro administrativo (#0f172a / #1e293b).
+- En editar_contenedor.php las pestanas activas General, Items, Diseno y Vista previa usan fondo oscuro, texto blanco, borde suave y sin degradados llamativos.
+- El listado principal de Contenedores del sitio en admin.php ahora pagina 5 registros por pagina mediante DataTables.
+- La paginacion muestra el texto "Mostrando X a Y de Z contenedores" y respeta la busqueda/filtro activo.
+- Se reemplazo la columna Tipo por Estado.
+- La columna Estado muestra badges tipo pill para seccion.estado: Activo, Inactivo o Borrador.
+- La columna Visible sigue controlando seccion.visible mediante el switch existente.
+- Los permisos de edicion controlan switches y acciones: si puede_editar es 0, el switch Visible queda deshabilitado y el backend tambien bloquea el POST.
+- El switch Visible del listado de contenedores controla exclusivamente seccion.visible con valores 'si' y 'no'. No modifica seccion.estado.
+- Estado y Visible son conceptos separados: estado define ciclo administrativo (activo/inactivo/borrador/eliminado) y visible define si el bloque renderiza en el sitio.
+- El render publico de index.php solo incluye contenedores con estado = 'activo' y visible = 'si'.
+
+Edicion del contenedor Header principal
+- Se limpio la pantalla de edicion de Header principal en editar_contenedor.php para mostrar una interfaz mas simple y orientada al administrador.
+- En el encabezado del contenedor se ocultaron los textos tecnicos nombre_interno y tipo_seccion cuando el contenedor es header_principal.
+- El formulario General mantiene Observacion, Texto del boton y URL del boton; el boton de accion ahora se muestra como "Guardar".
+- Se agrego la pestana informativa "Opciones" para preparar futuras variantes visuales, comportamiento responsive y opciones avanzadas del menu.
+- La pestana Opciones solo muestra alternativas en estado activo/proximamente. No crea tablas, no agrega columnas, no guarda variantes y no modifica el render publico del header.
+- En General se agregaron avisos para indicar que los menus y submenus se administran desde el modulo Menus, y que el logo se administra desde Configuracion institucional.
+- Los permisos existentes se respetan: sin puede_editar, los inputs quedan de solo lectura y el boton Guardar queda deshabilitado.
+
+Edicion del contenedor Carrusel principal
+- Se limpio la pantalla de edicion de Carrusel principal en editar_contenedor.php.
+- En el encabezado del contenedor se ocultaron los textos tecnicos nombre_interno y tipo_seccion cuando el contenedor es hero_principal.
+- En la pestana General se elimino la visibilidad general del contenedor porque se administra desde el listado principal de Contenedores del sitio.
+- Las configuraciones tecnicas de seccion_config se reemplazaron por controles amigables: Alineacion del texto, Mostrar flechas, Mostrar indicadores y Overlay.
+- Las claves internas alineacion_texto, mostrar_flechas, mostrar_indicadores y overlay se siguen guardando en seccion_config sin crear tablas ni columnas nuevas.
+- La pestana Items ahora tiene vista Listado y vista Tarjetas.
+- La vista Tarjetas mantiene la experiencia visual existente de cards.
+- La vista Listado permite ordenar diapositivas arrastrando filas y guarda el orden en seccion_item.orden mediante la accion existente reorder_items.
+- Se agrego la pestana Diseno como preparacion para futuras variantes visuales del carrusel.
+- La pestana Diseno solo muestra opciones informativas en estado actual/proximamente. No crea tablas, no agrega columnas, no guarda variantes y no modifica el render publico del carrusel.
+- Los permisos existentes se respetan: sin puede_editar se deshabilitan switches, ordenamiento, inputs y guardado; sin puede_crear se bloquea Agregar item; sin puede_eliminar se bloquea Eliminar.
+- Correccion posterior: el ordenamiento del carrusel en vistas Listado y Tarjetas usa un unico inicializador Sortable despues de cargar SortableJS, lee id_seccion y puede_editar desde atributos data del HTML y reutiliza la accion existente reorder_items para actualizar seccion_item.orden.
+
+Modal de items del Carrusel principal
+- El modal de creacion/edicion de slides del carrusel ahora diferencia explicitamente entre Tipo de slide: Imagen o Video YouTube.
+- Un slide no puede guardar imagen y video YouTube al mismo tiempo. La validacion se aplica en el navegador y tambien en PHP antes de llamar a cms_save_item().
+- Si el tipo es Imagen, el campo Video YouTube se oculta, se limpia antes de guardar y el slide exige una imagen nueva o una imagen existente.
+- Si el tipo es Video YouTube, el campo Imagen se oculta, la imagen anterior se limpia usando clear_imagen y se exige una URL valida de YouTube.
+- La visibilidad del item ya no se edita dentro del modal. Se administra desde las vistas Listado/Tarjetas mediante el switch Visible; el modal conserva un campo oculto para no cambiar accidentalmente el valor actual.
+- El modal usa backdrop estatico y keyboard false, por lo que no se cierra al hacer clic fuera ni con Escape. Solo se cierra con X o Cerrar.
+- Se reorganizo el modal en dos columnas: datos del slide a la izquierda y recurso/vista previa a la derecha.
+- Se agrego vista previa del recurso: miniatura de imagen actual/seleccionada o identificacion del video YouTube detectado.
+- No se crearon tablas ni columnas nuevas y no se modifico el render publico del carrusel.
+
+Limpieza de contenedores genericos
+- Se ocultaron textos tecnicos en la edicion de contenedores: el encabezado ya no muestra nombre_interno ni tipo_seccion bajo el titulo visible.
+- En la pestana General de contenedores genericos ya no se muestra Visible ni Orden del contenedor. Visible y orden se administran desde el listado principal de Contenedores del sitio.
+- La pestana General usa campos amigables para el administrador. En Noticias home se muestran Titulo del bloque, Texto del boton y Observacion.
+- Las claves tecnicas de configuracion se mantienen en la base de datos, pero no se muestran como Clave/Valor editable al usuario. Las claves no editables se envian como campos ocultos para no perder datos existentes como configuraciones legacy o galerias.
+- Se elimino de la interfaz generica el boton Agregar configuracion para los contenedores controlados.
+- El boton principal de guardado se muestra como Guardar.
+- Los contenedores con pestana Diseno muestran una card informativa con opciones en estado Activo/Proximamente. No se crearon tablas nuevas ni se guarda una variante visual nueva.
+- En Noticias home, Items tiene selector de vista Listado y Tarjetas. Listado queda como vista principal y Tarjetas como vista visual opcional.
+- Las vistas Listado y Tarjetas de Noticias home permiten ordenar items con drag and drop y reutilizan la accion existente reorder_items para actualizar seccion_item.orden.
+- La visibilidad de items se mantiene dentro de Items mediante switches/badges; esto es distinto de la visibilidad general del contenedor.
+- Los permisos existentes se respetan: puede_editar controla switches, ordenamiento y edicion; puede_crear controla Agregar item; puede_eliminar controla Eliminar.
+
+Noticias home: 4 noticias fijas y galeria del detalle instantanea
+- Noticias home siempre muestra un maximo de 4 noticias visibles/publicadas, tanto en el home como en el bloque publico.
+- El boton "Ver todas las noticias" siempre apunta a noticias.php. No depende de la clave url_boton.
+- En la pestana General de Noticias home ya no se muestran URL del boton ni Cantidad de noticias. Las claves url_boton y cantidad_items siguen existiendo en seccion_config (se fuerzan a noticias.php y 4 al guardar) pero no son editables desde la interfaz.
+- todas_noticias.php quedo como redireccion 301 permanente hacia noticias.php.
+- noticias.php es la bitacora publica de noticias: pestanas por los ultimos 4 anios con noticias publicadas, grid por anio, buscador simple por titulo/texto y estado vacio si no hay noticias.
+- En la administracion de una noticia existente, la Galeria del detalle ahora sube y muestra las imagenes de inmediato via AJAX (accion subir_galeria_noticia en editar_contenedor.php), sin necesidad de guardar toda la noticia. El orden, titulo, visibilidad y eliminacion de imagenes se siguen guardando junto con el resto de la noticia.
+- Si la noticia todavia no existe (sin id_item), el campo Agregar imagenes se reemplaza por un aviso pidiendo guardar la noticia primero.
+- Los permisos existentes se respetan: subir_galeria_noticia exige permiso contenedores/editar igual que el resto de la edicion de items.
+
+Correccion: noticias.php y unificacion del modal de noticias (2026-07-07)
+--------------------------------------------------------------------------
+
+- noticias.php ahora carga $arrMenus y $arrSubs desde cms_get_site_data() antes de incluir componentes/header.php, igual que index.php. Ya no genera warnings de variable indefinida ni de foreach sobre null.
+- El contenedor noticias_home ya no usa una fila de edicion inline dentro de la tabla Items. Agregar item y Editar abren el mismo modal itemModal (clase news-item-modal), igual que el resto de contenedores. El modal se prellena con los datos de la noticia cuando corresponde.
+- El modal de noticias ya no muestra el switch Visible. La visibilidad se sigue administrando solo desde el switch de la tabla/tarjetas de Items; el modal envia un input oculto con el valor actual para no resetearla al guardar.
+- La primera fila del modal de noticias queda en 3 columnas: Categoria, Titulo y Etiqueta visual (1 columna en movil).
+- El video relacionado de una noticia admite dos tipos excluyentes: Enlace YouTube (columna video_youtube) o Archivo de video (columna url, reutilizada igual que en video_destacado_home ya que url no se usaba para nada mas en noticias). Un JS de tipo de recurso oculta/deshabilita el campo inactivo y limpia su valor; ademas cms_save_item() vuelve a forzar la exclusividad en el servidor segun el campo video_tipo.
+- noticia_detalle.php muestra un reproductor <video> nativo en el bloque "Video relacionado" cuando la noticia tiene un video local (url) y no tiene enlace de YouTube.
+- El modal de noticias no se cierra al hacer clic afuera ni con Escape (data-bs-backdrop="static", data-bs-keyboard="false"), igual que el modal del carrusel principal.
+- El boton de guardado del modal de noticias dice "Guardar" (no "Guardar item").
+- La galeria del detalle dentro del modal se actualiza al instante (subir_galeria_noticia) cuando la noticia ya existe; si la noticia es nueva se muestra un aviso para guardarla primero, sin mostrar el campo de subida.
+- Los campos del modal de noticias respetan permisos: sin puede_editar/puede_crear quedan en solo lectura o deshabilitados, y el boton Guardar tambien queda deshabilitado.
+
+Correccion: se restaura el editor tipo acordeon para noticias_home (2026-07-07)
+--------------------------------------------------------------------------------
+
+- Se revirtio la unificacion con el modal itemModal para noticias_home: el modal vuelve a comportarse como antes (solo carrusel usa backdrop estatico; el resto de tipos genericos usa el modal generico sin cambios de noticias).
+- Editar y Agregar noticia vuelven a abrir un editor expandible (acordeon) asociado a la fila, igual que la logica original, pero con las mejoras ya construidas: Categoria/Titulo/Etiqueta visual en 3 columnas, descripcion de 3 filas, toggle de video (YouTube o archivo, columna url reutilizada), imagen principal y galeria del detalle con subida instantanea (AJAX).
+- El editor ya no muestra Visible; se preserva via input oculto y el switch del listado sigue siendo la unica forma de cambiarlo.
+- "Agregar noticia" abre un panel de creacion en la primera fila de la tabla (acordeon vacio, id_item=0); al guardar reabre el acordeon de edicion sobre el item recien creado, para poder agregar galeria de inmediato.
+- Nueva funcion admin_render_news_item_editor() en editar_contenedor.php centraliza el HTML del editor para reutilizarlo tanto en creacion como en edicion.
+- El parametro GET edit_item controla que fila tiene el acordeon abierto (?edit_item=ID#news-edit-ID); new_item=1 abre el panel de creacion (#news-new-item). Ambos alternan (toggle) al volver a hacer clic.
+- Se mantiene el drag and drop del listado; la fila de edicion usa data-id="{id}-editor" para viajar junto a su fila real al reordenar (igual que la logica original).

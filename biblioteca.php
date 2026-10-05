@@ -104,7 +104,7 @@ $libraryTitle = $library['title'] ?? 'Biblioteca';
                 <?php endif; ?>
                 <div class="sp-library-sections">
                     <?php foreach ($library['sections'] as $entry): ?>
-                        <?php $entryHasMedia = $entry['images'] || $entry['videos']; ?>
+                        <?php $entryHasMedia = $entry['images'] || $entry['videos'] || $entry['gallery']; ?>
                         <section class="sp-library-section<?= $entryHasMedia ? ' sp-library-section--media' : '' ?>" id="<?= e($entry['anchor']) ?>" data-library-section aria-labelledby="<?= e($entry['anchor']) ?>-titulo">
                             <div class="sp-library-section__text">
                                 <span class="sp-library-section__label"><?= e($entry['label']) ?></span>
@@ -133,6 +133,12 @@ $libraryTitle = $library['title'] ?? 'Biblioteca';
                                             <?php if ($video['description'] !== ''): ?><figcaption><?= e($video['description']) ?></figcaption><?php endif; ?>
                                         </figure>
                                     <?php endforeach; ?>
+                                    <?php
+                                    $libraryGalleryImages = $entry['gallery'];
+                                    $libraryGalleryId = $entry['anchor'] . '-galeria';
+                                    $libraryGalleryLabel = 'Galería de ' . $entry['label'];
+                                    include __DIR__ . '/componentes/biblioteca_galeria.php';
+                                    ?>
                                 </div>
                             <?php endif; ?>
                         </section>
@@ -140,11 +146,12 @@ $libraryTitle = $library['title'] ?? 'Biblioteca';
                     <?php if ($library['gallery']): ?>
                         <section class="sp-library-gallery" aria-labelledby="biblioteca-galeria-titulo">
                             <h2 id="biblioteca-galeria-titulo">Galería de la Biblioteca</h2>
-                            <div class="sp-library-gallery__grid">
-                                <?php foreach ($library['gallery'] as $image): ?>
-                                    <figure><a href="<?= e($image['src']) ?>" target="_blank" rel="noopener"><img src="<?= e($image['src']) ?>" alt="<?= e($image['title']) ?>" loading="lazy"></a><figcaption><?= e($image['title']) ?><?php if ($image['description'] !== ''): ?><span><?= e($image['description']) ?></span><?php endif; ?></figcaption></figure>
-                                <?php endforeach; ?>
-                            </div>
+                            <?php
+                            $libraryGalleryImages = $library['gallery'];
+                            $libraryGalleryId = 'biblioteca-galeria-general';
+                            $libraryGalleryLabel = 'Galería de la Biblioteca';
+                            include __DIR__ . '/componentes/biblioteca_galeria.php';
+                            ?>
                         </section>
                     <?php endif; ?>
                 </div>

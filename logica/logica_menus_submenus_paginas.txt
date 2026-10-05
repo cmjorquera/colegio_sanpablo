@@ -351,3 +351,63 @@ ademas de 9 comprobaciones PHP de validacion y generacion de variables.
 No se ejecuto SQL ni se cambio configuracion institucional real. PHP lint y
 git diff --check correctos. Sin cambios a biblioteca.js, helpers de datos,
 rutas, consultas ni credenciales. Los fixtures se eliminan al finalizar.
+
+
+BIBLIOTECA: GALERIAS PUBLICAS EN CARRUSEL (2026-10-05)
+
+Correccion de render publico. El adaptador anterior reunia imagen principal,
+secundaria heredada y pagina_media en images; la plantilla recorria todas en
+figures consecutivos. Eso apilaba la galeria y confundia el principal con ella.
+Ahora images conserva solo pagina_imagen_hero y videos conserva sus lectores
+existentes. gallery de cada seccion contiene las imagenes visibles de
+pagina_media; pagina_imagen_secundaria sigue siendo compatible como imagen de
+galeria heredada, sin migrar registros. El principal nunca se agrega de oficio.
+Origen: cms_get_public_submenu_page()/cms_list_submenu_page_media() existentes,
+en modo lectura, desde sub_menu_pagina_media, en su orden editorial. No hay
+consultas nuevas, SQL ejecutado ni modificaciones a administracion/cargas.
+
+componentes/biblioteca_galeria.php se reutiliza para cada submenu y la galeria
+general. Cero imagenes: no emite contenedor ni espacio. Una: imagen sin
+Carousel, flechas ni indicadores. Dos o mas: Bootstrap 5 Carousel ya instalado,
+sin nuevas dependencias, sin avance automatico; anterior/siguiente,
+indicadores, teclado y swipe. IDs: anchor del submenu + -galeria; para el
+general, biblioteca-galeria-general. Instancias y controles independientes.
+assets/js/biblioteca.js inicializa el swipe al cargar y actualiza el estado
+accesible y el foco de los enlaces de cada diapositiva. Conserva el indice,
+anchors, offcanvas y seguimiento de secciones existentes.
+
+Galeria de la Biblioteca CONSERVA la regla previa: agrega automaticamente las
+galerias visibles de los submenus (y secundarias heredadas), deduplica por URL
+dentro del agregado y aparece solo cuando hay al menos dos imagenes distintas.
+Por ello una misma imagen se ve en su submenu y tambien en la galeria general:
+es una duplicacion conceptual explicita de la implementacion anterior. Se
+conserva para no cambiar silenciosamente la regla funcional; suprimir el
+agregado o sustituirlo requiere una decision posterior. Ahora el agregado se
+muestra en UN carrusel, sin una lista vertical de imagenes.
+
+Titulos: se muestra solo titulo editorial no vacio, junto a la descripcion
+si existe. El uploader actual rellena un titulo vacio con el nombre fisico:
+cms_biblioteca_gallery_title() omite esos valores cuando coinciden con basename
+o su nombre sin extension. No modifica el dato guardado. Un titulo realmente
+vacio no se reemplaza por el nombre del submenu ni deja una leyenda vacia;
+el alt usa el titulo de seccion como respaldo accesible.
+
+CSS exclusivo de Biblioteca: viewport de altura estable por breakpoint,
+object-fit:contain para mostrar la imagen completa sin deformarla, bordes de
+10px, controles de 44px y colores desde las variables institucionales actuales.
+Las leyendas se superponen discretamente sin cambiar la altura entre slides.
+Los indicadores pueden envolver si hay muchas imagenes, sin overflow. Se
+conservan el marco ancho, header/footer, hero, rutas y paleta existente.
+
+Validacion: 20 comprobaciones PHP del adaptador y 163 de Chrome sin extensiones,
+con el controlador real renderizado sobre fixtures temporales, sin conexion a
+BD. Se reproducen Presentacion principal+4, Funcion principal+2 y Objetivos
+principal+2, ademas de cero/una imagen, titulos vacios/editoriales/derivados de
+archivo, imagen inactiva, legado secundario, video principal y deduplicacion.
+Anchos: 1920,1600,1366,1024,768,390 y 320px. Sin overflow, recursos locales
+fallidos ni errores JS. Verificados anterior/siguiente, indicadores, independencia
+de los cuatro carruseles, altura constante entre las distintas proporciones,
+swipe real emulado a 390/320px, anchors/foco y cierre del offcanvas sin backdrop.
+No se verifican los registros reales de QA, un guardado administrativo ni Apache:
+los fixtures no ejecutan SQL y se eliminan al finalizar. PHP lint, node --check
+y git diff --check correctos. Sin commit ni push.

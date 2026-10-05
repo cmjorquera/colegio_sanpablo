@@ -1,5 +1,17 @@
 (function () {
     function initializeLibrary() {
+        if (window.bootstrap && window.bootstrap.Carousel) {
+            document.querySelectorAll('[data-library-carousel]').forEach(function (gallery) {
+                window.bootstrap.Carousel.getOrCreateInstance(gallery, { interval: false, ride: false, touch: true });
+                gallery.addEventListener('slid.bs.carousel', function (event) {
+                    gallery.querySelectorAll('.carousel-item a').forEach(function (link) {
+                        link.tabIndex = link.closest('.carousel-item').classList.contains('active') ? 0 : -1;
+                    });
+                    gallery.querySelector('[data-library-gallery-status]').textContent =
+                        'Imagen ' + (event.to + 1) + ' de ' + gallery.querySelectorAll('.carousel-item').length;
+                });
+            });
+        }
         var sections = Array.from(document.querySelectorAll('[data-library-section]'));
         var links = Array.from(document.querySelectorAll('[data-library-link]'));
         if (!sections.length) return;

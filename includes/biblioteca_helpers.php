@@ -42,6 +42,14 @@ function cms_biblioteca_load_pages(mysqli $db, array $menu, array $submenus): ar
     return $pages;
 }
 
+/** The uploader historically substitutes the physical filename for an empty title. */
+function cms_biblioteca_gallery_title(array $media): string
+{
+    $title = trim((string) ($media['titulo'] ?? ''));
+    $filename = basename(rawurldecode((string) (parse_url((string) ($media['archivo'] ?? ''), PHP_URL_PATH) ?? '')));
+    return in_array($title, [$filename, pathinfo($filename, PATHINFO_FILENAME)], true) ? '' : $title;
+}
+
 function cms_biblioteca_view(array $menu, array $pages): array
 {
     $sections = [];
@@ -51,14 +59,13 @@ function cms_biblioteca_view(array $menu, array $pages): array
     foreach ($pages as $page) {
         $title = trim((string) ($page['pagina_titulo'] ?? '')) ?: (string) $page['nombre'];
         $images = [];
+        $sectionGallery = [];
         $videos = [];
-        foreach (['pagina_imagen_hero', 'pagina_imagen_secundaria'] as $field) {
-            $image = cms_public_image(cms_biblioteca_current_url($page[$field] ?? ''), '');
-            if ($image !== '') {
-                $images[$image] = ['src' => $image, 'title' => $title, 'description' => ''];
-                if ($field === 'pagina_imagen_hero' && $hero === '') {
-                    $hero = $image;
-                }
+        $image = cms_public_image(cms_biblioteca_current_url($page['pagina_imagen_hero'] ?? ''), '');
+        if ($image !== '') {
+            $images[$image] = ['src' => $image, 'title' => $title, 'description' => ''];
+            if ($hero === '') {
+                $hero = $image;
             }
         }
         foreach (['pagina_hero_video', 'pagina_video'] as $prefix) {
@@ -78,8 +85,9 @@ function cms_biblioteca_view(array $menu, array $pages): array
             if (($media['tipo'] ?? '') === 'imagen') {
                 $image = cms_public_image(cms_biblioteca_current_url($media['archivo'] ?? ''), '');
                 if ($image !== '') {
-                    $entry = ['src' => $image, 'title' => $mediaTitle, 'description' => $description];
-                    $images[$image] = $entry;
+                    $caption = cms_biblioteca_gallery_title($media);
+                    $entry = ['src' => $image, 'title' => $caption, 'alt' => $caption !== '' ? $caption : $title, 'description' => $description];
+                    $sectionGallery[$image] = $entry;
                     $gallery[$image] = $entry;
                 }
             } elseif (in_array($media['tipo'] ?? '', ['video', 'youtube'], true)) {
@@ -94,7 +102,8 @@ function cms_biblioteca_view(array $menu, array $pages): array
         // Legacy secondary images are displayed without migrating or creating records.
         $secondary = cms_public_image(cms_biblioteca_current_url($page['pagina_imagen_secundaria'] ?? ''), '');
         if ($secondary !== '') {
-            $gallery[$secondary] = $images[$secondary];
+            $sectionGallery[$secondary] = $sectionGallery[$secondary] ?? ['src' => $secondary, 'title' => '', 'alt' => $title, 'description' => ''];
+            $gallery[$secondary] = $sectionGallery[$secondary];
         }
         $bajada = trim((string) ($page['pagina_bajada'] ?? ''));
         if ($subtitle === '' && $bajada !== '') {
@@ -109,6 +118,7 @@ function cms_biblioteca_view(array $menu, array $pages): array
             'button_text' => trim((string) ($page['pagina_boton_texto'] ?? '')),
             'button_url' => cms_biblioteca_current_url($page['pagina_boton_url'] ?? ''),
             'images' => array_values($images),
+            'gallery' => array_values($sectionGallery),
             'videos' => array_values($videos),
         ];
     }

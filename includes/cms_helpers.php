@@ -994,20 +994,29 @@ function cms_add_submenu_gallery_image(mysqli $db, int $idSubMenu, array $post):
 
 function cms_delete_submenu_gallery_media(mysqli $db, int $idSubMenu, int $idMedia): void
 {
-    $stmt = $db->prepare('SELECT archivo FROM sub_menu_pagina_media WHERE id_media = ? AND id_sub_menu = ? LIMIT 1');
-    $stmt->bind_param('ii', $idMedia, $idSubMenu);
-    $stmt->execute();
-    $row = $stmt->get_result()->fetch_assoc();
-    $stmt->close();
-    if (!$row) { throw new RuntimeException('La imagen ya no existe.'); }
-    $stmt = $db->prepare('DELETE FROM sub_menu_pagina_media WHERE id_media = ? AND id_sub_menu = ?');
-    $stmt->bind_param('ii', $idMedia, $idSubMenu);
-    if (!$stmt->execute() || $stmt->affected_rows !== 1) {
+    if ($idSubMenu <= 0 || $idMedia <= 0) { throw new RuntimeException('Identificadores de galería inválidos.'); }
+    $db->begin_transaction();
+    try {
+        $stmt = $db->prepare('SELECT archivo FROM sub_menu_pagina_media WHERE id_media = ? AND id_sub_menu = ? LIMIT 1 FOR UPDATE');
+        $stmt->bind_param('ii', $idMedia, $idSubMenu);
+        $stmt->execute();
+        $row = $stmt->get_result()->fetch_assoc();
         $stmt->close();
-        throw new RuntimeException('No se pudo eliminar la imagen de la base de datos.');
+        if (!$row) { throw new RuntimeException('La imagen ya no existe.'); }
+        $stmt = $db->prepare('DELETE FROM sub_menu_pagina_media WHERE id_media = ? AND id_sub_menu = ?');
+        $stmt->bind_param('ii', $idMedia, $idSubMenu);
+        if (!$stmt->execute() || $stmt->affected_rows !== 1) {
+            $stmt->close();
+            throw new RuntimeException('No se pudo eliminar la imagen de la base de datos.');
+        }
+        $stmt->close();
+        $referenced = cms_submenu_file_is_referenced($db, (string) ($row['archivo'] ?? ''));
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollback();
+        throw $error;
     }
-    $stmt->close();
-    if (!cms_submenu_file_is_referenced($db, (string) ($row['archivo'] ?? ''))) {
+    if (!$referenced) {
         cms_eliminar_archivo_seguro($row['archivo'] ?? null);
     }
 }
@@ -1024,7 +1033,7 @@ function cms_submenu_file_is_referenced(mysqli $db, string $path): bool
         if (!cms_table_exists($db, $table)) { continue; }
         $where = implode(' OR ', array_map(static fn(string $column): string => '`' . $column . '` = ?', $columns));
         $stmt = $db->prepare('SELECT 1 FROM `' . $table . '` WHERE ' . $where . ' LIMIT 1');
-        if (!$stmt) { continue; }
+        if (!$stmt) { return true; }
         $types = str_repeat('s', count($columns));
         $values = array_fill(0, count($columns), $path);
         $stmt->bind_param($types, ...$values);
@@ -1038,9 +1047,13 @@ function cms_submenu_file_is_referenced(mysqli $db, string $path): bool
 
 function cms_toggle_submenu_gallery_media(mysqli $db, int $idSubMenu, int $idMedia): int
 {
+    if ($idSubMenu <= 0 || $idMedia <= 0) { throw new RuntimeException('Identificadores de galería inválidos.'); }
     $stmt = $db->prepare('UPDATE sub_menu_pagina_media SET visible = IF(visible=1,0,1) WHERE id_media=? AND id_sub_menu=?');
     $stmt->bind_param('ii', $idMedia, $idSubMenu);
-    $stmt->execute();
+    if (!$stmt->execute() || $stmt->affected_rows !== 1) {
+        $stmt->close();
+        throw new RuntimeException('No se pudo actualizar la imagen de esta galería.');
+    }
     $stmt->close();
     $stmt = $db->prepare('SELECT visible FROM sub_menu_pagina_media WHERE id_media=? AND id_sub_menu=? LIMIT 1');
     $stmt->bind_param('ii', $idMedia, $idSubMenu);
@@ -1154,23 +1167,40 @@ function cms_migrate_submenu_secondary_image_to_gallery(mysqli $db, int $idSubMe
 
 function cms_reorder_submenu_page_media(mysqli $db, int $idSubMenu, array $ids): void
 {
-    cms_ensure_submenu_page_tables($db);
-    $orden = 1;
-    $stmt = $db->prepare('UPDATE sub_menu_pagina_media SET orden = ? WHERE id_media = ? AND id_sub_menu = ?');
-    if (!$stmt) {
-        throw new RuntimeException('No se pudo preparar el orden de la galería.');
+    if ($idSubMenu <= 0) {
+        throw new RuntimeException('El orden de la galería no es válido.');
     }
-
-    foreach ($ids as $idMedia) {
-        $idMedia = (int) $idMedia;
-        if ($idMedia <= 0) {
-            continue;
+    foreach ($ids as $id) {
+        if (filter_var($id, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) === false) {
+            throw new RuntimeException('Identificador multimedia inválido.');
         }
-        $stmt->bind_param('iii', $orden, $idMedia, $idSubMenu);
-        $stmt->execute();
-        $orden++;
     }
-    $stmt->close();
+    $ids = array_map('intval', $ids);
+    if (count($ids) !== count(array_unique($ids))) { throw new RuntimeException('Hay imágenes repetidas en el orden solicitado.'); }
+    $db->begin_transaction();
+    try {
+        $current = $db->prepare('SELECT id_media FROM sub_menu_pagina_media WHERE id_sub_menu = ? ORDER BY orden ASC, id_media ASC FOR UPDATE');
+        $current->bind_param('i', $idSubMenu);
+        $current->execute();
+        $existing = array_map('intval', array_column($current->get_result()->fetch_all(MYSQLI_ASSOC), 'id_media'));
+        $current->close();
+        $expected = $existing; $received = $ids;
+        sort($expected); sort($received);
+        if ($expected !== $received) {
+            throw new RuntimeException('La galería cambió o contiene imágenes de otro submenú. Cierra y vuelve a abrir el editor.');
+        }
+        $stmt = $db->prepare('UPDATE sub_menu_pagina_media SET orden = ? WHERE id_media = ? AND id_sub_menu = ?');
+        foreach ($ids as $index => $idMedia) {
+            $orden = $index + 1;
+            $stmt->bind_param('iii', $orden, $idMedia, $idSubMenu);
+            if (!$stmt->execute()) { throw new RuntimeException('No se pudo guardar el orden de la galería.'); }
+        }
+        $stmt->close();
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollback();
+        throw $error;
+    }
 }
 
 function cms_get_public_submenu_page(mysqli $db, int $idSubMenu, bool $readOnly = false): ?array

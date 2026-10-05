@@ -11,6 +11,13 @@ try {
 }
 
 if (!$sesionAdminValida) {
+    if (strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
+        && in_array($_POST['accion'] ?? '', ['add_submenu_media', 'delete_submenu_media', 'toggle_submenu_media', 'reorder_submenu_media'], true)) {
+        http_response_code(401);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(['ok' => false, 'message' => 'La sesión administrativa venció. Vuelve a ingresar.']);
+        exit;
+    }
     require __DIR__ . '/includes/admin_login.php';
     exit;
 }
@@ -53,6 +60,13 @@ $activePermissionKey = $panelPermissionMap[$panel] ?? 'contenedores';
 try {
     admin_requerir_permiso($activePermissionKey, 'ver');
 } catch (Throwable $e) {
+    if (strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
+        && in_array($_POST['accion'] ?? '', ['add_submenu_media', 'delete_submenu_media', 'toggle_submenu_media', 'reorder_submenu_media'], true)) {
+        http_response_code(403);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(['ok' => false, 'message' => 'No tienes permiso para administrar esta galería.']);
+        exit;
+    }
     cms_set_flash('danger', $e->getMessage());
     cms_redirect('admin.php?panel=dashboard');
 }
@@ -81,6 +95,16 @@ try {
         if (isset($permissionChecks[$action])) {
             [$permissionKey, $permissionAction] = $permissionChecks[$action];
             admin_requerir_permiso($permissionKey, $permissionAction);
+        }
+        if (in_array($action, ['add_submenu_media', 'delete_submenu_media', 'toggle_submenu_media', 'reorder_submenu_media'], true)) {
+            $idSubMenuMedia = filter_var($_POST['id_sub_menu'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($idSubMenuMedia === false) { throw new RuntimeException('Identificador de submenú inválido.'); }
+            $mediaParent = $db->prepare('SELECT id_sub_menu FROM sub_menus WHERE id_sub_menu = ? LIMIT 1');
+            $mediaParent->bind_param('i', $idSubMenuMedia);
+            $mediaParent->execute();
+            $mediaParentExists = (bool) $mediaParent->get_result()->fetch_assoc();
+            $mediaParent->close();
+            if (!$mediaParentExists) { throw new RuntimeException('El submenú ya no existe.'); }
         }
 
         if ($action === 'toggle_seccion' && $sectionId > 0) {
@@ -202,14 +226,14 @@ try {
 
         if ($action === 'reorder_submenu_media') {
             $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
-            $ids = array_map('intval', (array) ($_POST['items'] ?? []));
+            $ids = (array) ($_POST['items'] ?? []);
             if ($idSubMenuMedia <= 0) {
                 throw new RuntimeException('No se pudo identificar el submenú.');
             }
             cms_reorder_submenu_page_media($db, $idSubMenuMedia, $ids);
             if ($isAjax) {
                 header('Content-Type: application/json; charset=UTF-8');
-                echo json_encode(['ok' => true]);
+                echo json_encode(['ok' => true, 'media' => cms_list_submenu_page_media($db, $idSubMenuMedia, true)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
                 exit;
             }
             cms_redirect('admin.php?panel=submenus');
@@ -219,25 +243,27 @@ try {
             $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
             $media = cms_add_submenu_gallery_image($db, $idSubMenuMedia, $_POST);
             header('Content-Type: application/json; charset=UTF-8');
-            echo json_encode(['ok' => true, 'media' => $media], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            echo json_encode(['ok' => true, 'added_media' => $media, 'media' => cms_list_submenu_page_media($db, $idSubMenuMedia, true)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
         }
 
         if ($action === 'delete_submenu_media') {
             $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
-            $idMedia = (int) ($_POST['id_media'] ?? 0);
+            $idMedia = filter_var($_POST['id_media'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($idMedia === false) { throw new RuntimeException('Identificador multimedia inválido.'); }
             cms_delete_submenu_gallery_media($db, $idSubMenuMedia, $idMedia);
             header('Content-Type: application/json; charset=UTF-8');
-            echo json_encode(['ok' => true, 'id_media' => $idMedia], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => true, 'id_media' => $idMedia, 'media' => cms_list_submenu_page_media($db, $idSubMenuMedia, true)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
         }
 
         if ($action === 'toggle_submenu_media') {
             $idSubMenuMedia = (int) ($_POST['id_sub_menu'] ?? 0);
-            $idMedia = (int) ($_POST['id_media'] ?? 0);
+            $idMedia = filter_var($_POST['id_media'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($idMedia === false) { throw new RuntimeException('Identificador multimedia inválido.'); }
             $visible = cms_toggle_submenu_gallery_media($db, $idSubMenuMedia, $idMedia);
             header('Content-Type: application/json; charset=UTF-8');
-            echo json_encode(['ok' => true, 'id_media' => $idMedia, 'visible' => $visible], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['ok' => true, 'id_media' => $idMedia, 'visible' => $visible, 'media' => cms_list_submenu_page_media($db, $idSubMenuMedia, true)], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
             exit;
         }
 
@@ -250,9 +276,11 @@ try {
     if ($_SERVER['REQUEST_METHOD'] === 'POST' && strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest') {
         header('Content-Type: application/json; charset=UTF-8');
         http_response_code(500);
+        $mediaOperation = in_array($_POST['accion'] ?? '', ['add_submenu_media', 'delete_submenu_media', 'toggle_submenu_media', 'reorder_submenu_media'], true);
         echo json_encode([
             'ok' => false,
-            'message' => $e->getMessage(),
+            'message' => $mediaOperation && ($e instanceof mysqli_sql_exception || !($e instanceof RuntimeException))
+                ? 'No se pudo actualizar la galería. Vuelve a intentarlo.' : $e->getMessage(),
         ]);
         exit;
     }
@@ -1420,7 +1448,9 @@ admin_render_layout_start([
 
 <?php
 admin_render_layout_end([
-    'extra_scripts' => <<<'HTML'
+    'extra_scripts' => (in_array($panel, ['menus', 'submenus'], true)
+        ? '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script><script src="assets/js/submenu_gallery_admin.js"></script>'
+        : '') . <<<'HTML'
     <script>
         $(function () {
             var urlParams = new URLSearchParams(window.location.search);
@@ -1834,6 +1864,7 @@ admin_render_layout_end([
         }
 
         function abrirModalSubmenu(btn, defaultIdMenu, preferredTabId) {
+            if (window.submenuGalleryAdmin.isBusy()) { return; }
             var submenuEditor = document.getElementById('modalSubmenu');
             var modal = bootstrap.Offcanvas.getOrCreateInstance(submenuEditor);
             var titulo = document.getElementById('modalSubmenuLabel');
@@ -1958,46 +1989,13 @@ admin_render_layout_end([
             }
 
             function initSubmenuGallerySortable() {
-                if (!pageFields.mediaActual || typeof Sortable === 'undefined') { return; }
-                if (pageFields.mediaActual._sortableInstance) {
-                    pageFields.mediaActual._sortableInstance.destroy();
-                }
-                pageFields.mediaActual._sortableInstance = Sortable.create(pageFields.mediaActual, {
-                    animation: 180,
-                    draggable: '.submenu-gallery-card',
-                    filter: 'input,button,.dropdown-menu,.submenu-gallery-card-tools',
-                    preventOnFilter: false,
-                    ghostClass: 'sortable-ghost',
-                    chosenClass: 'sortable-chosen',
-                    onEnd: function () {
-                        var idSubmenu = idInput ? idInput.value : '0';
-                        if (!idSubmenu || idSubmenu === '0') { return; }
-                        var ids = Array.from(pageFields.mediaActual.querySelectorAll('.submenu-gallery-card'))
-                            .map(function (card) { return card.getAttribute('data-id'); })
-                            .filter(Boolean);
-                        var fd = new FormData();
-                        fd.append('accion', 'reorder_submenu_media');
-                        fd.append('id_sub_menu', idSubmenu);
-                        ids.forEach(function (id) { fd.append('items[]', id); });
-                        fetch('admin.php?panel=' + encodeURIComponent(activePanel), {
-                            method: 'POST',
-                            body: fd,
-                            headers: { 'X-Requested-With': 'XMLHttpRequest' }
-                        })
-                        .then(function (r) { return r.json(); })
-                        .then(function (data) {
-                            if (data.ok) {
-                                adminNotify({ title: 'Orden guardado', msg: 'El orden de la galería fue actualizado.', type: 'info', autoClose: 1800 });
-                            }
-                        })
-                        .catch(function () {});
-                    }
-                });
+                window.submenuGalleryAdmin.initialize(pageFields.mediaActual);
             }
 
             function renderMedia(raw) {
                 if (!pageFields.mediaActual) { return; }
                 window.submenuRenderMedia = renderMedia;
+                window.submenuGalleryAdmin.dispose(pageFields.mediaActual);
                 if (pageFields.mediaActual._sortableInstance) {
                     pageFields.mediaActual._sortableInstance.destroy();
                     pageFields.mediaActual._sortableInstance = null;
@@ -2029,7 +2027,7 @@ admin_render_layout_end([
                     var archivo = String(item.archivo || item.url || '');
                     var shortFile = archivo.split(/[\\/]/).pop() || 'Imagen';
                     var titulo = String(item.titulo || shortFile);
-                    var isVisible = String(item.visible || '1') !== '0';
+                    var isVisible = String(item.visible == null ? '1' : item.visible) !== '0';
                     var wrap = document.createElement('div');
                     wrap.className = 'submenu-gallery-card';
                     wrap.setAttribute('data-id', idMedia);
@@ -2043,7 +2041,7 @@ admin_render_layout_end([
                         '</button>' +
                         '<div class="dropdown-menu dropdown-menu-end shadow-sm">' +
                         '<button type="button" class="dropdown-item js-submenu-gallery-toggle"><i class="bi bi-eye me-2"></i>' + (isVisible ? 'Desactivar' : 'Activar') + '</button>' +
-                        '<button type="button" class="dropdown-item text-danger js-submenu-gallery-delete"><i class="bi bi-trash me-2"></i>Eliminar</button>' +
+                        '<button type="button" class="dropdown-item text-danger js-submenu-gallery-delete"><i class="bi bi-trash me-2"></i>Eliminar imagen</button>' +
                         '</div>' +
                         '</div>' +
                         '<span class="submenu-gallery-title" title="' + escapeHtml(archivo) + '">' + escapeHtml(titulo) + '</span>' +
@@ -2140,6 +2138,7 @@ admin_render_layout_end([
         if (submenuForm) {
             submenuForm.addEventListener('submit', function (event) {
                 event.preventDefault();
+                if (window.submenuGalleryAdmin.isBusy()) { return; }
                 Object.keys(window.CKEDITOR && CKEDITOR.instances ? CKEDITOR.instances : {}).forEach(function (key) {
                     CKEDITOR.instances[key].updateElement();
                 });
@@ -2271,71 +2270,6 @@ admin_render_layout_end([
                     if (heroVideoFile) { heroVideoFile.value = ''; }
                 }
             });
-        });
-
-        function submenuMediaRequest(action, values, fileInput) {
-            var idSubmenu = document.getElementById('modalSubmenuId').value || '0';
-            if (idSubmenu === '0') { return Promise.reject(new Error('Guarda primero el submenú antes de administrar su galería.')); }
-            var fd = new FormData();
-            fd.append('accion', action);
-            fd.append('id_sub_menu', idSubmenu);
-            Object.keys(values || {}).forEach(function(key){ fd.append(key, values[key]); });
-            if (fileInput && fileInput.files && fileInput.files[0]) { fd.append('pagina_galeria_imagen', fileInput.files[0]); }
-            return fetch('admin.php?panel=' + encodeURIComponent(activePanel), { method:'POST', body:fd, headers:{'X-Requested-With':'XMLHttpRequest'} })
-                .then(function(response){ return response.json().then(function(data){ if(!response.ok || !data.ok){ throw new Error(data.message || 'No se pudo actualizar la galería.'); } return data; }); });
-        }
-
-        function showSubmenuMediaError(error) {
-            adminNotify({ title:'Galería', msg:error.message || 'No se pudo actualizar la galería.', type:'warning' });
-        }
-
-        document.addEventListener('click', function(event){
-            var addButton = event.target.closest('.js-submenu-gallery-add');
-            if (!addButton) { return; }
-            var galleryCard = addButton.closest('.submenu-media-gallery');
-            var fileInput = galleryCard ? galleryCard.querySelector('input[name="pagina_galeria_imagen"]') : null;
-            var titleInput = galleryCard ? galleryCard.querySelector('input[name="pagina_galeria_titulo"]') : null;
-            if (!fileInput || !fileInput.files || !fileInput.files[0]) { showSubmenuMediaError(new Error('Selecciona una imagen para agregar.')); return; }
-            var original = addButton.innerHTML;
-            addButton.disabled = true;
-            addButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Agregando...';
-            submenuMediaRequest('add_submenu_media', { pagina_galeria_titulo:titleInput ? titleInput.value : '' }, fileInput)
-                .then(function(data){
-                    window.submenuCurrentMedia = window.submenuCurrentMedia || [];
-                    window.submenuCurrentMedia.push(data.media);
-                    if(window.submenuRenderMedia){ window.submenuRenderMedia(JSON.stringify(window.submenuCurrentMedia)); }
-                    fileInput.value=''; if(titleInput){titleInput.value='';}
-                    var preview = document.getElementById('modalPaginaGaleriaNuevaPreview');
-                    if(preview){preview.innerHTML='<span>Sin imagen seleccionada</span>';}
-                    adminNotify({ title:'Galería', msg:'Imagen agregada correctamente.', type:'info', autoClose:1800 });
-                }).catch(showSubmenuMediaError).finally(function(){ addButton.disabled=false; addButton.innerHTML=original; });
-        });
-
-        document.addEventListener('click', function (event) {
-            var deleteBtn = event.target.closest('.js-submenu-gallery-delete');
-            if (deleteBtn) {
-                var deleteCard = deleteBtn.closest('.submenu-gallery-card');
-                var idMedia = deleteCard ? deleteCard.getAttribute('data-id') : '';
-                var confirmDelete = window.Swal ? Swal.fire({ title:'Eliminar imagen', text:'¿Desea eliminar esta imagen de la galería?', icon:'warning', showCancelButton:true, confirmButtonText:'Eliminar', cancelButtonText:'Cancelar', confirmButtonColor:'#dc2626' }).then(function(r){ return r.isConfirmed; }) : Promise.resolve(window.confirm('¿Desea eliminar esta imagen de la galería?'));
-                confirmDelete.then(function (confirmed) {
-                    if (!confirmed) { return; }
-                    return submenuMediaRequest('delete_submenu_media', { id_media:idMedia }).then(function () {
-                        window.submenuCurrentMedia = (window.submenuCurrentMedia || []).filter(function(item){ return String(item.id_media) !== String(idMedia); });
-                        if (window.submenuRenderMedia) { window.submenuRenderMedia(JSON.stringify(window.submenuCurrentMedia)); }
-                        adminNotify({ title:'Galería', msg:'Imagen eliminada correctamente.', type:'info', autoClose:1800 });
-                    });
-                }).catch(showSubmenuMediaError);
-                return;
-            }
-            var toggleBtn = event.target.closest('.js-submenu-gallery-toggle');
-            if (toggleBtn) {
-                var toggleCard = toggleBtn.closest('.submenu-gallery-card');
-                var toggleId = toggleCard ? toggleCard.getAttribute('data-id') : '';
-                submenuMediaRequest('toggle_submenu_media', { id_media:toggleId }).then(function(data){
-                    (window.submenuCurrentMedia || []).forEach(function(item){ if(String(item.id_media) === String(toggleId)){ item.visible=data.visible; } });
-                    if (window.submenuRenderMedia) { window.submenuRenderMedia(JSON.stringify(window.submenuCurrentMedia || [])); }
-                }).catch(showSubmenuMediaError);
-            }
         });
 
         document.querySelectorAll('#modalSubmenu .js-submenu-image-preview').forEach(function (input) {

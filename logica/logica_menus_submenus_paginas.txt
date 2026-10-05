@@ -411,3 +411,89 @@ swipe real emulado a 390/320px, anchors/foco y cierre del offcanvas sin backdrop
 No se verifican los registros reales de QA, un guardado administrativo ni Apache:
 los fixtures no ejecutan SQL y se eliminan al finalizar. PHP lint, node --check
 y git diff --check correctos. Sin commit ni push.
+
+
+REPARACION DE ACCIONES Y ORDEN DE GALERIA ADMINISTRATIVA (2026-10-05)
+
+Causas encontradas: activePanel estaba declarado dentro del callback de jQuery
+ready, pero reordenar/eliminar/activar y agregar lo usaban desde funciones
+externas a ese ambito. Las peticiones podian abortar con ReferenceError antes
+de enviar AJAX. Sortable no configuraba handle y filtraba botones, sin limitar
+el gesto al asa. El dropdown se recortaba por overflow:hidden de las tarjetas
+y overflow:auto de la galeria. Ademas se invocaba Swal sin cargar SweetAlert2:
+la confirmacion dependia del fallback nativo. El reorder ignoraba errores y
+no actualizaba el array/dataset usado al reabrir, por lo que podia reaparecer
+el orden anterior aunque la BD ya se hubiera actualizado. visible=0 numerico
+se trataba como 1 por el uso de || '1'.
+
+assets/js/submenu_gallery_admin.js concentra las acciones existentes. Se carga
+solo en paneles menus/submenus, junto con SweetAlert2. El panel se obtiene de
+la URL en cada peticion; no depende de variables locales de otro callback.
+Usa Sortable ya instalado con handle .submenu-gallery-drag, fallback controlado,
+filtro de botones/menu y un clone por encima del offcanvas. renderMedia() sigue
+siendo el renderizador unico, actualiza el dataset del boton editar y el resumen.
+Antes de reemplazar nodos, libera dropdowns y destruye la instancia Sortable;
+despues la crea una sola vez. Los eventos delegados se registran una sola vez
+al cargar el script, no por apertura ni por tarjeta. Con cero tarjetas no hay
+instancia. Las imagenes nuevas se pueden arrastrar sin recargar.
+
+El menu Bootstrap conserva sus acciones activar/desactivar y Eliminar imagen.
+Al abrir se traslada temporalmente a la raiz del offcanvas, fuera de los
+contenedores que lo recortaban, con posicion Popper fixed; al cerrar retorna
+a su tarjeta. Sus botones conservan el id_media real, tambien fuera de ella.
+Se cierra por clic exterior/Escape y soporta flechas de teclado. No inicia drag.
+SweetAlert2 se monta dentro del editor para convivir con su focus trap.
+
+Se reutiliza POST admin.php?panel=menus o panel=submenus:
+- add_submenu_media: cms_add_submenu_gallery_image(), upload validado bajo
+  uploads/submenus/ID; orden inicial MAX(orden)+1, al final de la galeria.
+- delete_submenu_media: cms_delete_submenu_gallery_media(), por id_media real
+  e id_sub_menu. Confirmacion SweetAlert2, cancelacion sin peticion y exito.
+- toggle_submenu_media: cms_toggle_submenu_gallery_media(), misma pertenencia.
+- reorder_submenu_media: cms_reorder_submenu_page_media(), items[] de IDs reales.
+No hay endpoints nuevos ni cambios de esquema. sub_menu_pagina_media.orden ya
+existe en la estructura documentada. El orden solicitado debe contener todos
+los IDs de ESA galeria, sin duplicados ni IDs ajenos. Transaccion y lectura
+FOR UPDATE; persistencia normalizada 1..N, rollback ante error. No asegura
+ni modifica tablas durante el reorder. Los endpoints validan sub_menu existente,
+sesion y permisos submenus_publicos/editar; consultan mediante parametros.
+La sesion vencida devuelve JSON 401 y falta de acceso al panel JSON 403, sin
+devolver el formulario de login donde el cliente esperaba JSON.
+
+Todas las operaciones devuelven media con la lista actual ordenada del servidor,
+usando el lector existente en modo lectura. El cliente NO reconstruye resultados
+supuestos de una peticion: renderiza esa respuesta. Bloqueo compartido mientras
+hay confirmacion/peticion, botones y Sortable deshabilitados; evita doble envio,
+cambiar de submenu, cerrar el editor o guardar durante una operacion multimedia.
+Cancelar restaura el estado. Los errores JSON, de red o sesion se muestran en
+SweetAlert2. Un reorder rechazado restaura el snapshot previo, sin fingir exito.
+
+Politica fisica conservada: elimina el registro seleccionado; solo intenta
+eliminar su archivo cuando no queda referenciado por sub_menu_paginas (incluido
+principal/video), otra galeria o historia. Ante imposibilidad de preparar la
+consulta de referencias conserva el archivo. La ruta viene del registro de BD,
+nunca del cliente. cms_eliminar_archivo_seguro() valida uploads, realpath y
+pertenencia a su raiz antes de unlink; no borra rutas externas ni el principal.
+
+Biblioteca no cambia: cms_list_submenu_page_media() ya hace ORDER BY orden ASC,
+id_media ASC; el adaptador preserva esa secuencia y filtra medios inactivos.
+El carrusel publico respeta el orden administrativo sin consultas paralelas.
+
+Validacion sin SQL sobre BD real: 17 comprobaciones PHP con mysqli simulado,
+ejecutando los helpers reales, y 32 comprobaciones Chrome sin extensiones.
+Arrastre por coordenadas: ABCD->DABC; reapertura tres veces; cancelar eliminar
+B sin peticion; eliminar B->DAC; reabrir; agregar E->DACE; arrastrar la imagen
+recien agregada; rechazar otro reorder y restaurar; activar/ocultar; recarga y
+persistencia del fixture; carrusel publico DACE. Otras galerias intactas. Menu
+comprobado por hit testing fuera del clipping, cierre exterior, cero errores JS
+y cero respuestas HTTP fallidas inesperadas. Revisado overflow a 768/390px.
+Tambien se comprobaron teclado/Escape, doble clic sin doble peticion y
+eliminacion rechazada sin retirar la tarjeta. El borrado del registro y la
+comprobacion de referencias usan transaccion; el archivo fisico se elimina
+despues del commit, para no borrar un archivo si falla la operacion de BD.
+Backend: normalizacion 1..N, IDs ajenos/repetidos/incompletos, rollback, archivo
+exclusivo eliminado, archivo compartido conservado y rutas fuera de uploads
+rechazadas. El agregado usa respuesta simulada porque un upload HTTP real no
+puede verificarse en PHP CLI. No se verificaron escrituras reales de QA ni
+autenticacion contra una sesion real; no se ejecuto SQL, migracion, commit ni
+push. Fixtures y copias de dependencias temporales se eliminan al finalizar.

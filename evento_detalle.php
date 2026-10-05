@@ -171,6 +171,7 @@ $secondaryColor = $institution['color_secundario'] ?? '#E9A629';
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -408,37 +409,11 @@ $secondaryColor = $institution['color_secundario'] ?? '#E9A629';
 <body class="event-detail-page">
     <div class="sp-colorband"></div>
 
-    <header class="sp-header">
-        <div class="container-fluid">
-            <div class="d-flex align-items-center justify-content-between">
-                <div class="sp-logo py-2">
-                    <a href="index.php">
-                        <img src="<?= e($institution['logo_header'] ?? 'assets/images/logo/logo.svg') ?>" alt="Colegio San Pablo" onerror="this.src='assets/images/logo/logo.svg'">
-                    </a>
-                </div>
-                <nav class="sp-nav">
-                    <ul>
-                        <?php foreach (($site['menus'] ?? []) as $i => $menu): ?>
-                            <?php
-                            $idMenu = (int) $menu['id_menu'];
-                            $hasSubs = !empty($site['subs'][$idMenu]);
-                            ?>
-                            <li<?= $i === 0 ? ' class="active"' : '' ?>>
-                                <a href="<?= e($menu['url'] ?: '#') ?>"><?= e($menu['nombre']) ?><?= $hasSubs ? ' ▾' : '' ?></a>
-                                <?php if ($hasSubs): ?>
-                                    <ul class="dropdown">
-                                        <?php foreach ($site['subs'][$idMenu] as $sub): ?>
-                                            <li><a href="<?= e($sub['url'] ?: '#') ?>"><?= e($sub['nombre']) ?></a></li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                <?php endif; ?>
-                            </li>
-                        <?php endforeach; ?>
-                    </ul>
-                </nav>
-            </div>
-        </div>
-    </header>
+    <?php
+    $arrMenus = $site['menus'] ?? [];
+    $arrSubs = $site['subs'] ?? [];
+    include __DIR__ . '/componentes/header.php';
+    ?>
 
     <section class="event-hero" style="background-image:url('<?= e($event['image']) ?>');">
         <div class="event-hero__content">
@@ -465,7 +440,7 @@ $secondaryColor = $institution['color_secundario'] ?? '#E9A629';
                 <div>
                     <h2>Evento no disponible</h2>
                     <p class="text-muted mb-4">El evento solicitado no existe o no se encuentra publicado.</p>
-                    <a href="index.php#calendario-eventos-home" class="event-back-btn" style="max-width:260px;"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
+                    <a href="/calendario#calendario-eventos-home" class="event-back-btn" style="max-width:260px;"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
                 </div>
             </div>
         <?php else: ?>
@@ -556,7 +531,7 @@ $secondaryColor = $institution['color_secundario'] ?? '#E9A629';
                         <?php if ($event['attachment'] !== ''): ?>
                             <a href="<?= e($event['attachment']) ?>" class="event-file-btn" target="_blank" rel="noopener"><i class="fa-regular fa-file-lines"></i>Ver archivo adjunto</a>
                         <?php endif; ?>
-                        <a href="index.php#calendario-eventos-home" class="event-back-btn"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
+                        <a href="/calendario#calendario-eventos-home" class="event-back-btn"><i class="fa-light fa-arrow-left-long"></i>Volver a eventos</a>
                     </aside>
                 </div>
             </div>

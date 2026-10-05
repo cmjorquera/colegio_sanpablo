@@ -66,7 +66,7 @@ FLUJO VISITANTE
 4. cms_get_component_path('header_principal') devuelve componentes/header.php.
 5. componentes/header.php recorre menus y sub_menus.
 6. El visitante ve el menu superior.
-7. Si hace clic en un submenu interno, abre pagina_submenu.php?id=ID.
+7. Si hace clic en un submenu interno, abre /pagina/ID (resuelta internamente a pagina_submenu.php?id=ID).
 
 REGLAS IMPORTANTES
 ------------------
@@ -76,7 +76,7 @@ REGLAS IMPORTANTES
 - No confundir con admin_menu.
 - No confundir con admin_submenu.
 - El menu publico se renderiza en el header del sitio.
-- Si un submenu no tiene URL externa, el helper puede generar pagina_submenu.php?id=ID.
+- Si un submenu no tiene URL externa, el helper puede generar /pagina/ID (resuelta internamente a pagina_submenu.php?id=ID).
 - Las paginas de submenu usan sub_menu_paginas y sub_menu_pagina_media cuando existen.
 
 DIFERENCIA CON CONTENEDORES
@@ -85,3 +85,69 @@ DIFERENCIA CON CONTENEDORES
 El menu publico no es un contenedor independiente llamado menu_principal. En la base actual, el header_principal es el contenedor visual que muestra el menu usando menus y sub_menus.
 
 El helper cms_remove_legacy_menu_principal_section() elimina el contenedor legacy menu_principal si aparece.
+
+
+URLS AMIGABLES Y HEADER RESPONSIVE
+---------------------------------
+El sitio se publica en la raiz del dominio (Plesk: /httpdocs). Se mantienen los
+archivos PHP y las tablas actuales; no se renombran archivos ni se actualiza SQL.
+.htaccess conserva DirectoryIndex index.php, desactiva MultiViews y utiliza
+mod_rewrite de Apache 2.4. El hosting debe permitir estas directivas en .htaccess.
+Antes de reescribir, las condiciones -f/-d dejan pasar archivos y directorios
+fisicos. No hay un fallback generico hacia index.php: rutas desconocidas quedan
+sin reescribir. assets, uploads, api, ajax, includes, PHPMailer, archivos PHP
+internos y descargables conservan sus rutas. uploads/.htaccess sigue intacto.
+
+Relacion URL publica -> archivo existente:
+/                         -> index.php
+/admin                    -> admin.php
+/noticias                 -> noticias.php
+/noticia/ID               -> noticia_detalle.php?id=ID
+/comunicados              -> comunicados.php (conserva page, categoria y q)
+/calendario               -> index.php, con desplazamiento al bloque existente
+                            calendario-eventos-home; no existe calendario.php
+/evento/ID                -> evento_detalle.php?id_evento=ID
+/evento/item/ID            -> evento_detalle.php?id_item=ID (compatibilidad legacy)
+/pagina/ID                -> pagina_submenu.php?id=ID
+/feriado/ID               -> feriado_detalle.php?id_calendario=ID
+/feriado/fecha/AAAA-MM-DD  -> feriado_detalle.php?fecha=AAAA-MM-DD
+
+Las reglas usan END para evitar nuevas pasadas de reescritura; QSA en detalles
+conserva parametros adicionales. /admin/ se normaliza a /admin con respuesta 308.
+Los PHP antiguos siguen accesibles: no hay redireccion global que afecte POST,
+fetch o AJAX. todas_noticias.php conserva su redireccion 301, ahora a /noticias.
+
+includes/public_routes.php define cms_public_url(), cargado por cms_helpers.php.
+Convierte solo navegacion conocida, conserva filtros y fragmentos, no modifica
+URLs externas ni endpoints. cms_submenu_public_url() usa /pagina/ID como fallback.
+Header, footer, enlaces de noticias/eventos, botones publicos y el JSON del
+calendario generan navegacion amigable. El endpoint calendario_eventos_json.php
+conserva su nombre; solo cambian las URLs publicas que devuelve.
+Las vistas publicas y el login usan base href="/" para que recursos relativos,
+imagenes configuradas, uploads, formularios y fetch resuelvan desde la raiz,
+tambien bajo /noticia/ID o /pagina/ID. Los enlaces a bloques del inicio son
+referencias al inicio; las rutas internas del panel no se migran.
+
+Header: componentes/header.php conserva logo, colores, tipografia, dropdowns y
+el offcanvas Bootstrap existente. sp-header-row/sp-header-actions usan flex sin
+wrap; debajo de 1600 px se ocultan menu horizontal y boton de escritorio y se
+muestra hamburguesa. La medicion del menu actual arrojo unos 1540 px necesarios;
+1600 px deja margen. Ya no se usan las clases d-xl del anterior limite de 1200.
+El menu movil usa los mismos arrMenus/arrSubs, sin perder elementos o submenus.
+Evento y feriado reutilizan este mismo header en lugar de copias sin hamburguesa.
+
+includes/public_floating_actions.php centraliza el grupo existente de cantina y
+comunicados y agrega Inscripciones arriba, solamente en modo hamburguesa. El
+grupo se renderiza una sola vez, desde el header o como fallback desde index.php.
+Inscripciones usa el mismo texto y url_boton_principal de institucion que el
+boton de escritorio; no se inventa ni se guarda otro destino.
+Los botones usan diametro 58 px (54 px bajo 768), separacion 14 px (12 px en
+movil), mismo margen, sombra y expansion suave al hover/foco. Inscripciones usa
+un icono de formulario y su texto aparece al expandirse. El control hamburguesa
+tiene area tactil minima de 44 px. Todo el CSS del header/grupo flotante esta en
+assets/css/pages/colegiosanpablo.css; se extrajo el CSS previo de index.php.
+La identidad dinamica se transmite mediante variables CSS, sin bloques style
+nuevos. El modal publico no recupera ningun acceso ADMINISTRADOR.
+
+No se modifican class/conexion.php, class/conexion_local.php, credenciales,
+PHPMailer o config/mail.php. La configuracion local sigue fuera de Git.

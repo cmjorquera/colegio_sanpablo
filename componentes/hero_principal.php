@@ -84,8 +84,8 @@ if (!function_exists('hero_youtube_video_id')) {
                                 <p class="text-white mb-4"><?= e($item['descripcion']) ?></p>
                             <?php endif; ?>
                             <div class="slide-botones">
-                                <?php if (!empty($item['boton_1_texto'])): ?><a href="<?= e($item['boton_1_url'] ?: '#') ?>" class="slide-btn-primary"><?= e($item['boton_1_texto']) ?></a><?php endif; ?>
-                                <?php if (!empty($item['boton_2_texto'])): ?><a href="<?= e($item['boton_2_url'] ?: '#') ?>" class="slide-btn-outline"><?= e($item['boton_2_texto']) ?></a><?php endif; ?>
+                                <?php if (!empty($item['boton_1_texto'])): ?><a href="<?= e(cms_public_url($item['boton_1_url'] ?: '#')) ?>" class="slide-btn-primary"><?= e($item['boton_1_texto']) ?></a><?php endif; ?>
+                                <?php if (!empty($item['boton_2_texto'])): ?><a href="<?= e(cms_public_url($item['boton_2_url'] ?: '#')) ?>" class="slide-btn-outline"><?= e($item['boton_2_texto']) ?></a><?php endif; ?>
                             </div>
                         </div>
                     </div>

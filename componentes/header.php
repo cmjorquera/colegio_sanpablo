@@ -6,14 +6,14 @@ $logoHeader = $institution['logo_header'] ?? 'assets/images/logo/logo.svg';
 $nombreInstitucion = $institution['nombre'] ?? 'Sin colegio ';
 $dominio = $institution['dominio'] ?? '';
 $textoBoton = $institution['texto_boton_principal'] ?? 'Matrícula';
-$urlBoton = $institution['url_boton_principal'] ?? '#';
+$urlBoton = cms_public_url($institution['url_boton_principal'] ?? '#');
 ?>
 <header class="sp-header" id="header-principal">
     <div class="container-fluid">
-        <div class="d-flex align-items-center justify-content-between gap-4 flex-wrap">
+        <div class="sp-header-row">
             <div class="d-flex align-items-center gap-3">
                 <div class="sp-logo py-2">
-                    <a href="#">
+                    <a href="/">
                         <img src="<?= e($logoHeader) ?>" alt="<?= e($nombreInstitucion) ?>" onerror="this.src='assets/images/logo/logo.svg'">
                     </a>
                 </div>
@@ -23,8 +23,8 @@ $urlBoton = $institution['url_boton_principal'] ?? '#';
                 </div> -->
             </div>
 
-            <div class="d-flex align-items-center gap-4 ms-auto">
-                <nav class="sp-nav d-none d-xl-block">
+            <div class="sp-header-actions">
+                <nav class="sp-nav">
                     <ul>
                         <?php foreach ($arrMenus as $i => $menu):
                             $idMenu = (int) $menu['id_menu'];
@@ -32,13 +32,13 @@ $urlBoton = $institution['url_boton_principal'] ?? '#';
                             $active = $i === 0 ? ' class="active"' : '';
                         ?>
                             <li<?= $active ?>>
-                                <a href="<?= e($menu['url'] ?: '#') ?>">
+                                <a href="<?= e(cms_public_url($menu['url'] ?: '#')) ?>">
                                     <?= e($menu['nombre']) ?><?= $hasSubs ? ' <span aria-hidden="true">&#9662;</span>' : '' ?>
                                 </a>
                                 <?php if ($hasSubs): ?>
                                     <ul class="dropdown">
                                         <?php foreach ($arrSubs[$idMenu] as $sub): ?>
-                                            <li><a href="<?= e($sub['url'] ?: '#') ?>"><?= e($sub['nombre']) ?></a></li>
+                                            <li><a href="<?= e(cms_public_url($sub['url'] ?: '#')) ?>"><?= e($sub['nombre']) ?></a></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php endif; ?>
@@ -47,9 +47,9 @@ $urlBoton = $institution['url_boton_principal'] ?? '#';
                     </ul>
                 </nav>
 
-                <a href="<?= e($urlBoton) ?>" class="sp-btn-matricula d-none d-xl-inline-flex"><?= e($textoBoton) ?></a>
+                <a href="<?= e($urlBoton) ?>" class="sp-btn-matricula sp-header-desktop-cta"><?= e($textoBoton) ?></a>
 
-                <a href="#" class="sp-btn-matricula d-inline-flex d-xl-none" data-bs-toggle="offcanvas" data-bs-target="#spHeaderMobileNav" aria-controls="spHeaderMobileNav">
+                <a href="#" class="sp-btn-matricula sp-header-toggle" data-bs-toggle="offcanvas" data-bs-target="#spHeaderMobileNav" aria-controls="spHeaderMobileNav" aria-label="Abrir menú principal">
                     <i class="fas fa-bars"></i>
                 </a>
             </div>
@@ -69,14 +69,14 @@ $urlBoton = $institution['url_boton_principal'] ?? '#';
                 $hasSubs = !empty($arrSubs[$idMenu]);
             ?>
                 <div class="border rounded-4 p-3">
-                    <a href="<?= e($menu['url'] ?: '#') ?>" class="d-flex align-items-center justify-content-between text-decoration-none text-dark fw-semibold">
+                    <a href="<?= e(cms_public_url($menu['url'] ?: '#')) ?>" class="d-flex align-items-center justify-content-between text-decoration-none text-dark fw-semibold">
                         <span><?= e($menu['nombre']) ?></span>
                         <?php if ($hasSubs): ?><i class="fas fa-chevron-right small text-muted"></i><?php endif; ?>
                     </a>
                     <?php if ($hasSubs): ?>
                         <div class="mt-2 d-flex flex-column gap-2">
                             <?php foreach ($arrSubs[$idMenu] as $sub): ?>
-                                <a href="<?= e($sub['url'] ?: '#') ?>" class="text-decoration-none text-muted small"><?= e($sub['nombre']) ?></a>
+                                <a href="<?= e(cms_public_url($sub['url'] ?: '#')) ?>" class="text-decoration-none text-muted small"><?= e($sub['nombre']) ?></a>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
@@ -86,3 +86,4 @@ $urlBoton = $institution['url_boton_principal'] ?? '#';
         </div>
     </div>
 </div>
+<?php include __DIR__ . '/../includes/public_floating_actions.php'; ?>

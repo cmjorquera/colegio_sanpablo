@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../class/conexion.php';
 require_once __DIR__ . '/upload_helpers.php';
+require_once __DIR__ . '/public_routes.php';
 
 function cms_e(?string $value): string
 {
@@ -932,10 +933,10 @@ function cms_submenu_public_url(array $submenu): string
 {
     $url = trim((string) ($submenu['url'] ?? ''));
     if ($url !== '' && $url !== '#') {
-        return $url;
+        return cms_public_url($url);
     }
 
-    return 'pagina_submenu.php?id=' . (int) ($submenu['id_sub_menu'] ?? 0);
+    return '/pagina/' . (int) ($submenu['id_sub_menu'] ?? 0);
 }
 
 function cms_list_submenu_page_media(mysqli $db, int $idSubMenu): array

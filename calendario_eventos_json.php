@@ -80,7 +80,7 @@ try {
             'start' => $hora !== '' ? $startDate . 'T' . $hora . ':00' : $startDate,
             'end'   => $endDate,
             'color' => $color,
-            'url'   => 'evento_detalle.php?id_evento=' . (int) $evt['id_evento'],
+            'url'   => '/evento/' . (int) $evt['id_evento'],
             'extendedProps' => [
                 'type'      => 'evento',
                 'categoria' => $evt['categoria'] ?? '',
@@ -102,7 +102,7 @@ try {
                 'title'      => (string) $day['nombre_feriado'],
                 'start'      => $date,
                 'allDay'     => true,
-                'url'        => 'feriado_detalle.php?id_calendario=' . $idCalendario,
+                'url'        => '/feriado/' . $idCalendario,
                 'classNames' => ['fc-feriado-event'],
                 'extendedProps' => [
                     'type'  => 'feriado',

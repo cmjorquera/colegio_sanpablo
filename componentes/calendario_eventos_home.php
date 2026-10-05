@@ -63,7 +63,7 @@ $eventCategoryClass = static function (?string $category): string {
                         $eventDate     = !empty($event['fecha_inicio']) ? new DateTime($event['fecha_inicio']) : null;
                         $categoryClass = $eventCategoryClass($event['categoria'] ?? 'institucional');
                         ?>
-                        <a class="calendario-event-card <?= e($categoryClass) ?>" href="evento_detalle.php?id_evento=<?= (int) ($event['id_evento'] ?? 0) ?>">
+                        <a class="calendario-event-card <?= e($categoryClass) ?>" href="/evento/<?= (int) ($event['id_evento'] ?? 0) ?>">
                             <span class="event-date-box">
                                 <strong><?= $eventDate ? e($eventDate->format('d')) : '' ?></strong>
                                 <small><?= $eventDate ? e(strtoupper($eventDate->format('M'))) : '' ?></small>

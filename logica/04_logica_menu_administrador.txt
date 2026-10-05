@@ -277,3 +277,48 @@ REGLAS IMPORTANTES
 - El campo clave se usa para marcar opciones activas y validar permisos.
 - El campo grupo ordena visualmente el sidebar por secciones como PRINCIPAL, GESTION, SISTEMA o ANALITICA.
 - La validacion importante siempre es backend; la interfaz solo oculta, deshabilita o avisa.
+
+
+ACCESO ADMINISTRATIVO SEPARADO DEL SITIO PUBLICO
+----------------------------------------------
+El modal "Mi Colegio San Pablo" conserva solo Area Alumnos, Area Padres,
+Area Funcionario y Area Docentes. No ofrece enlaces a la administracion.
+El administrador escribe /admin directamente; .htaccess resuelve internamente admin.php. Esta ruta ya contiene el
+panel: sin sesion valida muestra includes/admin_login.php; con sesion valida
+redirige a admin.php?panel=contenedores si no se indico un panel. No se renombra
+el panel ni se cambian sus rutas internas o permisos por modulo.
+
+El formulario envia usuario y clave por POST a login_check.php, el procesador
+existente. Consulta preparada sobre usuario: usuario = ? OR email = ?, valida
+estado activo y conserva password_verify() para hashes, mas compatibilidad
+legacy con MD5 o hash_equals(). No se cambian hashes ni cuentas.
+El login responde JSON; credenciales incorrectas y acceso denegado muestran
+mensajes controlados en la misma pantalla. Al ingresar redirige a admin.php,
+que abre el panel existente en admin.php?panel=contenedores.
+
+includes/admin_permissions.php centraliza admin_cuenta_tiene_acceso(): admite
+el usuario id 1, los roles administrativos legacy (super_admin,
+super_administrador, admin_institucion, administrador, editor, solo_lectura)
+y usuarios con un perfil administrativo activo en perfiles/usuario_perfil.
+Editor y Solo Lectura mantienen sus permisos existentes. Una cuenta sin rol
+ni perfil administrativo no obtiene una sesion administrativa. Esta misma
+comprobacion se usa al entrar a admin.php y antes de resolver permisos.
+Se regenera el id de sesion al autenticar correctamente.
+
+La sesion utiliza admin_logged, admin_id, id_usuario, id_institucion,
+admin_usuario, admin_email, admin_nombre y admin_rol. Las paginas administrativas
+conservan sus comprobaciones de admin_logged y las acciones/modulos mantienen
+admin_requerir_permiso() y la matriz de permisos existente. No se agrega otro
+sistema de usuarios o autenticacion.
+
+La vista usa el nombre, logo_header y colores de institucion mediante lectura,
+sin llamar a cms_get_site_data() ni sincronizar secciones desde el login.
+Reutiliza el logo de assets/images/logo/logo.svg como fallback existente.
+CSS aislado: assets/admin/css/admin-login.css.
+JS del formulario y mostrar/ocultar clave: assets/admin/js/admin-login.js.
+Se retiro de componentes/topbar.php el HTML y JS exclusivo del antiguo login;
+se retiraron sus estilos exclusivos de assets/css/pages/colegiosanpablo.css.
+
+class/conexion.php pertenece al repositorio y carga class/conexion_local.php.
+El archivo local contiene configuracion privada por entorno, esta ignorado
+por Git y no debe versionarse ni sobrescribirse durante despliegues.

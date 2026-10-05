@@ -11,7 +11,7 @@ index.php
 Es la pagina publica principal del sitio. Carga includes/cms_helpers.php, obtiene los datos del sitio con cms_get_site_data(), filtra los registros visibles de la tabla seccion y renderiza cada contenedor con cms_get_component_path().
 
 admin.php
-Es el panel administrador actual. Requiere sesion admin activa y redirige a index.php si no existe. Administra contenedores, menus publicos, submenus y configuracion institucional. Usa includes/admin_layout.php para el layout lateral.
+Es la entrada administrativa y el panel actual. Sin sesion administrativa valida muestra el login independiente del modal publico; con sesion valida abre el panel. Reutiliza login_check.php. El flujo se documenta en 04_logica_menu_administrador.txt. Administra contenedores, menus publicos, submenus y configuracion institucional. Usa includes/admin_layout.php para el layout lateral.
 
 editar_contenedor.php
 Edita un contenedor especifico por id_seccion. Segun el tipo o nombre del contenedor, permite editar datos generales, configuraciones en seccion_config, items en seccion_item, noticias o eventos.

@@ -28,6 +28,29 @@ function admin_normalizar_permiso_nombre(string $value): string
     return trim($value, '_');
 }
 
+function admin_cuenta_tiene_acceso(array $user): bool
+{
+    $idUsuario = (int) ($user['id_usuario'] ?? 0);
+    if ($idUsuario <= 0) {
+        return false;
+    }
+    if ($idUsuario === 1) {
+        return true;
+    }
+
+    $rolesAdmin = ['super_admin', 'super_administrador', 'admin_institucion', 'administrador', 'editor', 'solo_lectura'];
+    if (in_array(admin_normalizar_permiso_nombre((string) ($user['rol'] ?? '')), $rolesAdmin, true)) {
+        return true;
+    }
+    foreach (admin_obtener_perfiles_usuario($idUsuario) as $profile) {
+        // perfiles contiene los perfiles administrativos activos del CMS.
+        if ((int) ($profile['id_perfil'] ?? 0) > 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
 function admin_obtener_perfiles_usuario(int $idUsuario): array
 {
     static $cache = [];
@@ -148,6 +171,9 @@ function admin_permiso_por_clave(string $tipoMenu, string $clave, string $accion
 {
     $user = admin_usuario_actual();
     $idUsuario = (int) $user['id_usuario'];
+    if (empty($_SESSION['admin_logged']) || !admin_cuenta_tiene_acceso($user)) {
+        return false;
+    }
     if ($clave === 'dashboard' && $accion === 'ver') {
         return $idUsuario > 0;
     }

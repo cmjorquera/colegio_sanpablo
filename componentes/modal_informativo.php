@@ -100,7 +100,7 @@ if (!function_exists('sp_modal_rich_text')) {
 
             <?php if ($modalButtonText !== ''): ?>
                 <a
-                    href="<?= e($modalButtonUrl !== '' ? $modalButtonUrl : '#') ?>"
+                    href="<?= e(cms_public_url($modalButtonUrl !== '' ? $modalButtonUrl : '#')) ?>"
                     class="sp-info-modal__button"
                     data-sp-modal-primary
                     style="--sp-modal-button: <?= e($modalButtonColor) ?>;"

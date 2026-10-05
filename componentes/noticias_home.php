@@ -5,7 +5,7 @@ $tituloBloque = cfg($sectionConfigsMap, 'noticias_home', 'titulo_bloque', 'Últi
 $subtitulo    = cfg($sectionConfigsMap, 'noticias_home', 'subtitulo_bloque', 'Novedades');
 $textoBoton   = cfg($sectionConfigsMap, 'noticias_home', 'texto_boton', 'Ver todas las noticias');
 // El botón "Ver todas las noticias" siempre apunta a la bitácora pública, sin depender de config editable.
-$urlBoton     = 'noticias.php';
+$urlBoton     = '/noticias';
 
 // Color institucional para los botones de navegación
 $noticiasPrimary = '#2060B0';
@@ -46,7 +46,7 @@ if (!empty($institution['color_terciario']) && preg_match('/^#(?:[0-9a-fA-F]{3})
                         if (!empty($item['id_categoria']) && isset($categoriesById[(int) $item['id_categoria']])) {
                             $categoria = $categoriesById[(int) $item['id_categoria']]['nombre'];
                         }
-                        $cardUrl = 'noticia_detalle.php?id=' . (int) ($item['id_item'] ?? 0);
+                        $cardUrl = '/noticia/' . (int) ($item['id_item'] ?? 0);
                         $buttonText = trim((string) ($item['boton_1_texto'] ?? ''));
                         if ($buttonText === '') {
                             $buttonText = 'Leer más';

@@ -1,1 +1,24 @@
 DirectoryIndex index.php
+Options -MultiViews
+
+RewriteEngine On
+
+# Los archivos fisicos, directorios y endpoints conservan su resolucion actual.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [END]
+
+# Entrada administrativa; las rutas internas del panel permanecen intactas.
+RewriteRule ^admin/$ /admin [R=308,END]
+RewriteRule ^admin$ admin.php [END]
+
+# Navegacion publica: solo rutas de paginas que ya existen.
+RewriteRule ^noticias/?$ noticias.php [END]
+RewriteRule ^comunicados/?$ comunicados.php [END]
+RewriteRule ^calendario/?$ index.php [END]
+RewriteRule ^noticia/([0-9]+)/?$ noticia_detalle.php?id=$1 [END,QSA]
+RewriteRule ^evento/([0-9]+)/?$ evento_detalle.php?id_evento=$1 [END,QSA]
+RewriteRule ^evento/item/([0-9]+)/?$ evento_detalle.php?id_item=$1 [END,QSA]
+RewriteRule ^pagina/([0-9]+)/?$ pagina_submenu.php?id=$1 [END,QSA]
+RewriteRule ^feriado/([0-9]+)/?$ feriado_detalle.php?id_calendario=$1 [END,QSA]
+RewriteRule ^feriado/fecha/([0-9]{4}-[0-9]{2}-[0-9]{2})/?$ feriado_detalle.php?fecha=$1 [END,QSA]

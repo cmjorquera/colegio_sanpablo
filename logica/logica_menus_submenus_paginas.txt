@@ -38,7 +38,7 @@ control de permisos y registran auditoría desde admin.php.
 FLUJO PÚBLICO
 
 Los helpers cargan menus y sub_menus activos. cms_submenu_public_url() conserva una URL definida
-y, si falta, genera pagina_submenu.php?id=ID. pagina_submenu.php obtiene el id, llama
+y, si falta, genera /pagina/ID (internamente pagina_submenu.php?id=ID). pagina_submenu.php obtiene el id, llama
 cms_get_public_submenu_page(), une menú padre, submenú y sub_menu_paginas, carga la galería con
 cms_list_submenu_page_media() y muestra hero, título, bajada, HTML, botón cuando texto y URL
 existen, multimedia y navegación hermana. Un id inexistente devuelve 404. Si existe el submenú

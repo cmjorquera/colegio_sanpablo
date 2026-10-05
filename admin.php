@@ -1,8 +1,22 @@
 <?php
 session_start();
 
-if (empty($_SESSION['admin_logged'])) {
-    header('Location: index.php');
+require_once __DIR__ . '/includes/admin_permissions.php';
+
+$sesionAdminValida = false;
+try {
+    $sesionAdminValida = !empty($_SESSION['admin_logged']) && admin_cuenta_tiene_acceso(admin_usuario_actual());
+} catch (Throwable $exception) {
+    error_log('admin.php: no fue posible validar la sesion administrativa.');
+}
+
+if (!$sesionAdminValida) {
+    require __DIR__ . '/includes/admin_login.php';
+    exit;
+}
+
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['panel'])) {
+    header('Location: admin.php?panel=contenedores');
     exit;
 }
 

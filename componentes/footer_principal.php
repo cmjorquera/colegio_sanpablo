@@ -26,7 +26,7 @@ $normalizeLabel = static function (?string $value): string {
 };
 
 $normalizeUrl = static function (?string $url): string {
-    $url = trim((string) $url);
+    $url = cms_public_url($url);
     if ($url === '' || $url === '#') {
         return '#';
     }

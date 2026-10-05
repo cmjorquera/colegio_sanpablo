@@ -59,6 +59,13 @@ body {
     z-index: 999;
 }
 .sp-header .container-fluid { padding: 0 40px; }
+.sp-header-row { display: flex; flex-wrap: nowrap; align-items: center; justify-content: space-between; gap: 24px; }
+.sp-header-row > div:first-child { flex-shrink: 0; }
+.sp-header-actions { display: flex; flex-wrap: nowrap; align-items: center; gap: 24px; margin-left: auto; }
+.sp-header-actions .sp-nav, .sp-header-desktop-cta { flex-shrink: 0; }
+.sp-header-desktop-cta { display: inline-flex; white-space: nowrap; }
+.sp-header-toggle { display: none; min-width: 44px; min-height: 44px; align-items: center; justify-content: center; }
+.sp-floating-comunicados.sp-floating-inscripciones { display: none; }
 .sp-logo img { height: 70px; }
 .sp-nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 4px; }
 .sp-nav ul li a {
@@ -99,6 +106,13 @@ body {
     margin-left: 8px;
 }
 .sp-btn-matricula:hover { background: var(--sp-naranja) !important; color: #fff !important; }
+
+/* El menu actual requiere unos 1540 px; se reserva margen antes de ese limite. */
+@media (max-width: 1599.98px) {
+    .sp-header-actions .sp-nav, .sp-header-desktop-cta { display: none; }
+    .sp-header-toggle { display: inline-flex; }
+    .sp-floating-comunicados.sp-floating-inscripciones { display: inline-flex; }
+}
 
 /* ---- HERO / SLIDER ---- */
 .sp-hero {
@@ -923,11 +937,6 @@ body {
     white-space: nowrap;
 }
 
-/* Boton admin - acento rojo/ambar */
-.sp-area-admin > i:first-child { color: var(--sp-rojo); }
-.sp-area-admin:hover { border-color: var(--sp-rojo); }
-.sp-area-admin:hover .sp-area-arrow { color: var(--sp-rojo); }
-
 /* =============================================
    MODAL AREA - footer compartido
 ============================================= */
@@ -945,96 +954,6 @@ body {
 .sp-area-footer strong { color: rgba(255,255,255,.8); }
 .sp-area-lema  { font-style: italic; font-size: 12px !important; color: rgba(255,255,255,.38) !important; }
 .sp-area-copy  { font-size: 11px !important; color: rgba(255,255,255,.2) !important; margin-top: 6px !important; }
-
-/* =============================================
-   MODAL ADMIN LOGIN - FORMULARIO
-============================================= */
-.sp-login-form {
-    padding: 8px 22px 26px;
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-}
-
-/* Alerta */
-.sp-login-alert {
-    padding: 11px 14px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-.sp-login-alert.error  { background: rgba(217,69,53,.15); color: #ff7b6b; border: 1px solid rgba(217,69,53,.3); }
-.sp-login-alert.success{ background: rgba(46,185,126,.15); color: #5de8a8; border: 1px solid rgba(46,185,126,.3); }
-
-/* Campos */
-.sp-field { display: flex; flex-direction: column; gap: 6px; }
-.sp-field label {
-    font-size: 12px;
-    font-weight: 600;
-    color: #888;
-    text-transform: uppercase;
-    letter-spacing: .5px;
-}
-.sp-field label i { color: var(--sp-amber); margin-right: 5px; }
-.sp-field input {
-    background: #272b3f;
-    border: 1px solid rgba(255,255,255,.12);
-    border-radius: 8px;
-    color: #e0e0e0;
-    padding: 11px 14px;
-    font-size: 14px;
-    outline: none;
-    transition: border-color .2s;
-    width: 100%;
-}
-.sp-field input::placeholder { color: #555; }
-.sp-field input:focus { border-color: var(--sp-amber); }
-.sp-field input.is-invalid { border-color: var(--sp-rojo); }
-
-/* Wrapper contrasena + ojo */
-.sp-pass-wrap { position: relative; }
-.sp-pass-wrap input { padding-right: 42px; }
-.sp-toggle-pass {
-    position: absolute;
-    right: 12px; top: 50%;
-    transform: translateY(-50%);
-    background: none; border: none;
-    color: #555; cursor: pointer;
-    font-size: 14px;
-    padding: 0;
-    transition: color .2s;
-}
-.sp-toggle-pass:hover { color: var(--sp-amber); }
-
-/* Boton ingresar */
-.sp-btn-login {
-    background: var(--sp-rojo);
-    color: #fff;
-    border: none;
-    border-radius: 50px;
-    padding: 13px;
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    width: 100%;
-    transition: background .2s, transform .15s;
-    margin-top: 4px;
-}
-.sp-btn-login:hover  { background: #b8293c; transform: translateY(-1px); }
-.sp-btn-login:active { transform: translateY(0); }
-.sp-btn-login:disabled { opacity: .65; cursor: not-allowed; transform: none; }
-
-/* Link volver */
-.sp-volver-link {
-    font-size: 13px;
-    color: #666;
-    text-decoration: none;
-    transition: color .2s;
-}
-.sp-volver-link:hover { color: var(--sp-amber); }
 
 /* =============================================
    CARRUSEL HERO
@@ -1273,7 +1192,6 @@ body {
 
 /* ---- MOBILE ---- */
 @media (max-width: 991px) {
-    .sp-nav { display: none; }
     .carousel-item { height: 420px; }
     .slide-content { padding: 0 30px; }
     .slide-texto h2 { font-size: 36px; }
@@ -1287,4 +1205,129 @@ body {
     .slide-botones { flex-direction: column; }
     .gallery-grid { grid-template-columns: 1fr; }
     .gallery-grid .g-item.large { height: 220px; }
+}
+
+/* Tema dinamico del inicio y grupo flotante compartido. */
+.sp-public-home .sp-colorband,
+.sp-public-home .sp-footer-colorband,
+.sp-public-home .footer-color-bar {
+    background: linear-gradient(to right,
+        var(--sp-db-primary) 0%,
+        var(--sp-db-primary) 25%,
+        var(--sp-db-secondary) 25%,
+        var(--sp-db-secondary) 50%,
+        var(--sp-db-tertiary) 50%,
+        var(--sp-db-tertiary) 75%,
+        var(--sp-db-quaternary) 75%,
+        var(--sp-db-quaternary) 100%
+    );
+}
+.sp-public-home .sp-btn-matricula {
+    background: var(--sp-db-primary) !important;
+}
+.sp-public-home .sp-btn-matricula:hover {
+    background: var(--sp-db-primary) !important;
+    filter: brightness(.94);
+}
+.sp-floating-comunicados {
+    position: fixed;
+    right: max(18px, env(safe-area-inset-right));
+    bottom: max(22px, env(safe-area-inset-bottom));
+    z-index: 1045;
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    width: 58px;
+    min-width: 58px;
+    height: 58px;
+    padding: 0 17px;
+    border-radius: 999px;
+    color: #fff;
+    background: var(--sp-floating-color, var(--sp-db-primary, var(--sp-amber)));
+    box-shadow: 0 14px 34px color-mix(in srgb, var(--sp-floating-color, var(--sp-db-primary, var(--sp-amber))) 32%, transparent);
+    font-family: "Poppins", sans-serif;
+    font-weight: 800;
+    line-height: 1;
+    text-decoration: none;
+    transition: width .22s ease, transform .2s ease, box-shadow .2s ease, padding .2s ease;
+}
+.sp-floating-cantina {
+    bottom: calc(max(22px, env(safe-area-inset-bottom)) + 72px);
+}
+.sp-floating-inscripciones {
+    bottom: calc(max(22px, env(safe-area-inset-bottom)) + 144px);
+}
+.sp-floating-comunicados:hover,
+.sp-floating-comunicados:focus {
+    color: #fff;
+    width: 228px;
+    transform: translateY(-2px);
+    box-shadow: 0 18px 42px color-mix(in srgb, var(--sp-floating-color, var(--sp-db-primary, var(--sp-amber))) 38%, transparent);
+    text-decoration: none;
+}
+.sp-floating-comunicados__icon {
+    width: 24px;
+    height: 24px;
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 24px;
+    font-size: 1rem;
+}
+.sp-floating-comunicados__label {
+    white-space: nowrap;
+    overflow: hidden;
+    max-width: 0;
+    opacity: 0;
+    transition: max-width .22s ease, opacity .18s ease, margin .18s ease;
+}
+.sp-floating-comunicados:hover .sp-floating-comunicados__label,
+.sp-floating-comunicados:focus .sp-floating-comunicados__label,
+.sp-floating-comunicados:focus-visible .sp-floating-comunicados__label {
+    max-width: 150px;
+    opacity: 1;
+    margin-left: 2px;
+}
+@media (max-width: 767px) {
+    .sp-floating-comunicados {
+        right: max(14px, env(safe-area-inset-right));
+        bottom: max(16px, env(safe-area-inset-bottom));
+        width: 54px;
+        min-width: 54px;
+        height: 54px;
+        padding: 0 15px;
+        justify-content: center;
+    }
+    .sp-floating-cantina {
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 66px);
+    }
+    .sp-floating-inscripciones {
+        bottom: calc(max(16px, env(safe-area-inset-bottom)) + 132px);
+    }
+    .sp-floating-comunicados__label {
+        max-width: 0;
+        opacity: 0;
+        margin-left: 0;
+    }
+    .sp-floating-comunicados:hover,
+    .sp-floating-comunicados:focus,
+    .sp-floating-comunicados:focus-visible {
+        width: 196px;
+        padding-left: 18px;
+        padding-right: 18px;
+        justify-content: flex-end;
+    }
+    .sp-floating-comunicados:hover .sp-floating-comunicados__label,
+    .sp-floating-comunicados:focus .sp-floating-comunicados__label,
+    .sp-floating-comunicados:focus-visible .sp-floating-comunicados__label {
+        max-width: 140px;
+        opacity: 1;
+        margin-left: 2px;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .sp-floating-comunicados,
+    .sp-floating-comunicados__label {
+        transition: none;
+    }
 }

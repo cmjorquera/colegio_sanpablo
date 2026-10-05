@@ -54,6 +54,7 @@ $colorSecundario = $institution['color_secundario'] ?? '#E8A030';
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Noticias · <?= e($institution['nombre'] ?? 'Colegio San Pablo') ?></title>
@@ -154,7 +155,7 @@ $colorSecundario = $institution['color_secundario'] ?? '#E8A030';
     <div class="nt-hero">
         <div class="container">
             <div class="nt-breadcrumb">
-                <a href="index.php">Inicio</a> / Noticias
+                <a href="/">Inicio</a> / Noticias
             </div>
             <h1>Noticias del Colegio</h1>
             <p>Revisa las actividades, logros y novedades de nuestra comunidad educativa.</p>
@@ -194,7 +195,7 @@ $colorSecundario = $institution['color_secundario'] ?? '#E8A030';
                                 }
                                 $searchText = mb_strtolower(($newsItem['titulo'] ?? '') . ' ' . ($newsItem['descripcion'] ?? ''), 'UTF-8');
                                 ?>
-                                <a class="nt-card" href="noticia_detalle.php?id=<?= (int) ($newsItem['id_item'] ?? 0) ?>" data-nt-search="<?= e($searchText) ?>">
+                                <a class="nt-card" href="/noticia/<?= (int) ($newsItem['id_item'] ?? 0) ?>" data-nt-search="<?= e($searchText) ?>">
                                     <div class="nt-card-img">
                                         <img src="<?= e($newsItem['imagen'] ?: 'assets/images/frontis_01.jpg') ?>" alt="<?= e($newsItem['titulo'] ?? '') ?>" loading="lazy">
                                     </div>

@@ -112,7 +112,7 @@ if ($bodyText === '' && trim(strip_tags($description)) !== trim(strip_tags($intr
 }
 $introHtml = cms_basic_content_html($introText);
 $bodyHtml = cms_basic_content_html($bodyText);
-$publicUrl = 'noticia_detalle.php?id=' . $newsId;
+$publicUrl = '/noticia/' . $newsId;
 $encodedShareTitle = rawurlencode($pageTitle);
 $encodedShareUrl = rawurlencode($publicUrl);
 
@@ -120,12 +120,13 @@ $buttonText = trim((string) ($newsItem['boton_1_texto'] ?? ''));
 if ($buttonText === '') {
     $buttonText = 'Leer más';
 }
-$buttonUrl = trim((string) ($newsItem['boton_1_url'] ?? ''));
+$buttonUrl = cms_public_url($newsItem['boton_1_url'] ?? '');
 $isExternalButton = preg_match('/^https?:\/\//i', $buttonUrl) === 1;
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -209,8 +210,8 @@ $isExternalButton = preg_match('/^https?:\/\//i', $buttonUrl) === 1;
     <main class="sp-news-detail">
         <div class="container sp-news-detail-shell">
             <nav class="sp-news-breadcrumb" aria-label="Breadcrumb">
-                <a href="index.php">Inicio</a>
-                <span><i class="fas fa-chevron-right"></i> <a href="index.php#noticias">Noticias</a></span>
+                <a href="/">Inicio</a>
+                <span><i class="fas fa-chevron-right"></i> <a href="/noticias">Noticias</a></span>
                 <span><i class="fas fa-chevron-right"></i> <?= e($pageTitle) ?></span>
             </nav>
 
@@ -221,7 +222,7 @@ $isExternalButton = preg_match('/^https?:\/\//i', $buttonUrl) === 1;
                     <h1 class="sp-news-detail-title">Noticia no disponible</h1>
                     <p class="sp-news-detail-content">La noticia solicitada no existe o no se encuentra visible.</p>
                     <div class="sp-news-detail-actions">
-                        <a class="btn-ver-mas" href="index.php#noticias">Volver a noticias</a>
+                        <a class="btn-ver-mas" href="/noticias">Volver a noticias</a>
                     </div>
                 <?php else: ?>
                     <span class="sp-news-detail-tag mb-3">Noticias</span>
@@ -271,7 +272,7 @@ $isExternalButton = preg_match('/^https?:\/\//i', $buttonUrl) === 1;
                     <?php endif; ?>
 
                     <div class="sp-news-detail-actions">
-                        <a class="btn-ver-mas" href="index.php#noticias">Volver a noticias</a>
+                        <a class="btn-ver-mas" href="/noticias">Volver a noticias</a>
                         <?php if ($buttonUrl !== ''): ?>
                             <a class="btn-ver-mas" href="<?= e($buttonUrl) ?>" <?= $isExternalButton ? 'target="_blank" rel="noopener noreferrer"' : '' ?>><?= e($buttonText) ?></a>
                         <?php endif; ?>
@@ -296,7 +297,7 @@ $isExternalButton = preg_match('/^https?:\/\//i', $buttonUrl) === 1;
                                 <h3>Noticias relacionadas</h3>
                                 <div class="sp-news-related-list">
                                     <?php foreach ($relatedNews as $related): ?>
-                                        <a class="sp-news-related-item" href="noticia_detalle.php?id=<?= (int) $related['id_item'] ?>">
+                                        <a class="sp-news-related-item" href="/noticia/<?= (int) $related['id_item'] ?>">
                                             <img src="<?= e($related['imagen'] ?: 'assets/images/frontis_01.jpg') ?>" alt="<?= e($related['titulo'] ?? 'Noticia relacionada') ?>">
                                             <strong><?= e($related['titulo'] ?? '') ?></strong>
                                         </a>

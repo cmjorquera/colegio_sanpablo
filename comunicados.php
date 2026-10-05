@@ -155,6 +155,7 @@ if ($search !== '') { $queryBase['q'] = $search; }
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -225,7 +226,7 @@ if ($search !== '') { $queryBase['q'] = $search; }
             <div class="com-toolbar">
                 <div class="com-cats" aria-label="Filtros por categoría">
                     <?php $allQuery = $search !== '' ? '?q=' . rawurlencode($search) : ''; ?>
-                    <a class="com-cat <?= $categoryFilter === 0 ? 'active' : '' ?>" href="comunicados.php<?= e($allQuery) ?>">Todas</a>
+                    <a class="com-cat <?= $categoryFilter === 0 ? 'active' : '' ?>" href="/comunicados<?= e($allQuery) ?>">Todas</a>
                     <?php foreach ($categories as $category): ?>
                         <?php
                         if (mb_strtolower((string) $category['nombre']) === 'todas') { continue; }
@@ -233,13 +234,13 @@ if ($search !== '') { $queryBase['q'] = $search; }
                         if ($search !== '') { $catQuery['q'] = $search; }
                         ?>
                         <a class="com-cat <?= $categoryFilter === (int) $category['id_categoria_comunicado'] ? 'active' : '' ?>"
-                           href="comunicados.php?<?= e(http_build_query($catQuery)) ?>"
+                           href="/comunicados?<?= e(http_build_query($catQuery)) ?>"
                            style="<?= $categoryFilter === (int) $category['id_categoria_comunicado'] ? '' : '--cat-color:' . e($category['color'] ?? $primary) ?>">
                             <?= e($category['nombre']) ?>
                         </a>
                     <?php endforeach; ?>
                 </div>
-                <form class="com-search" method="get" action="comunicados.php">
+                <form class="com-search" method="get" action="/comunicados">
                     <?php if ($categoryFilter > 0): ?><input type="hidden" name="categoria" value="<?= (int) $categoryFilter ?>"><?php endif; ?>
                     <input type="search" name="q" value="<?= e($search) ?>" placeholder="Buscar comunicado">
                     <button type="submit"><i class="fas fa-search me-1"></i>Buscar</button>
@@ -273,7 +274,7 @@ if ($search !== '') { $queryBase['q'] = $search; }
                     <nav class="com-pagination" aria-label="Paginación de comunicados">
                         <?php for ($i = 1; $i <= $totalPages; $i++): ?>
                             <?php $pageQuery = $queryBase + ['page' => $i]; ?>
-                            <a class="com-page <?= $i === $page ? 'active' : '' ?>" href="comunicados.php?<?= e(http_build_query($pageQuery)) ?>"><?= $i ?></a>
+                            <a class="com-page <?= $i === $page ? 'active' : '' ?>" href="/comunicados?<?= e(http_build_query($pageQuery)) ?>"><?= $i ?></a>
                         <?php endfor; ?>
                     </nav>
                 <?php endif; ?>

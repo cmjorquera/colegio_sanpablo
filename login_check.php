@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/class/conexion.php';
 require_once __DIR__ . '/includes/funciones_auditoria.php';
+require_once __DIR__ . '/includes/admin_permissions.php';
 
 $usuario = trim((string) ($_POST['usuario'] ?? ''));
 $clave = trim((string) ($_POST['clave'] ?? ''));
@@ -88,6 +89,12 @@ try {
         exit;
     }
 
+    if (!admin_cuenta_tiene_acceso($user)) {
+        echo json_encode(['ok' => false, 'msg' => 'Tu cuenta no tiene acceso al panel administrativo.']);
+        exit;
+    }
+
+    session_regenerate_id(true);
     $_SESSION['admin_logged'] = true;
     $_SESSION['admin_id'] = (int) $user['id_usuario'];
     $_SESSION['id_usuario'] = (int) $user['id_usuario'];

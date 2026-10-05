@@ -78,6 +78,7 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
 <!DOCTYPE html>
 <html lang="es">
 <head>
+    <base href="/">
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -222,7 +223,7 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
             <div>
                 <h1>Pagina no encontrada</h1>
                 <p class="text-muted">El contenido solicitado no esta disponible.</p>
-                <a class="sp-btn-matricula d-inline-flex mt-3" href="index.php">Volver al inicio</a>
+                <a class="sp-btn-matricula d-inline-flex mt-3" href="/">Volver al inicio</a>
             </div>
         </main>
     <?php else: ?>
@@ -241,7 +242,7 @@ $metaDescription = $page ? trim((string) ($page['pagina_meta_description'] ?: $b
                 <h1><?= e($title) ?></h1>
                 <?php if ($bajada !== ''): ?><p><?= e($bajada) ?></p><?php endif; ?>
                 <?php if (!empty($page['pagina_boton_texto']) && !empty($page['pagina_boton_url'])): ?>
-                    <a class="sp-btn-matricula d-inline-flex mt-3" href="<?= e($page['pagina_boton_url']) ?>"><?= e($page['pagina_boton_texto']) ?></a>
+                    <a class="sp-btn-matricula d-inline-flex mt-3" href="<?= e(cms_public_url($page['pagina_boton_url'])) ?>"><?= e($page['pagina_boton_texto']) ?></a>
                 <?php endif; ?>
             </div>
         </section>

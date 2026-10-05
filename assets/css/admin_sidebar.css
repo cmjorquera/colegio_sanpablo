@@ -1,0 +1,112 @@
+.admin-sidebar {
+    background: linear-gradient(180deg, #0b1220 0%, #101826 58%, #0b1220 100%);
+    border-right: 1px solid rgba(255,255,255,.08);
+    box-shadow: 8px 0 24px rgba(15, 23, 42, .10);
+}
+
+.sidebar-brand {
+    min-height: 72px;
+    padding-top: 16px !important;
+    padding-bottom: 14px !important;
+    background: rgba(255,255,255,.025);
+}
+
+.sidebar-brand-icon {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 9px !important;
+    background: #26384f !important;
+    box-shadow: none;
+}
+
+.sidebar-brand-name {
+    max-width: 172px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sidebar-nav {
+    padding: 10px 10px 0 !important;
+}
+
+.nav-group-label {
+    color: rgba(255,255,255,.36);
+    padding-top: 10px !important;
+    padding-bottom: 5px !important;
+}
+
+.nav-item,
+.sidebar-collapse-btn {
+    min-height: 36px;
+}
+
+.nav-item {
+    color: rgba(226,232,240,.68);
+    padding: 8px 10px !important;
+    margin-bottom: 1px !important;
+    font-size: .82rem !important;
+}
+
+.nav-item:hover,
+.sidebar-collapse-btn:hover {
+    background: rgba(255,255,255,.085);
+    color: #fff;
+}
+
+.nav-item.active {
+    background: rgba(255,255,255,.10) !important;
+    box-shadow: inset 3px 0 0 var(--adm-primary);
+}
+
+.nav-item.active .nav-item-icon,
+.nav-subitem.active .nav-subitem-icon {
+    color: var(--adm-primary);
+}
+
+.nav-subitems {
+    border-left-color: rgba(255,255,255,.12);
+}
+
+.nav-subitem {
+    color: rgba(226,232,240,.58);
+    padding: 7px 9px !important;
+    font-size: .78rem !important;
+}
+
+.nav-subitem:hover {
+    color: #fff;
+}
+
+.nav-subitem.active {
+    background: rgba(255,255,255,.08);
+}
+
+.sidebar-bottom {
+    background: rgba(0,0,0,.16);
+    padding: 8px 10px 12px !important;
+}
+
+.adm-sidebar-collapsed .admin-shell .nav-item,
+.admin-shell.collapsed .nav-item,
+.adm-sidebar-collapsed .admin-shell .sidebar-collapse-btn,
+.admin-shell.collapsed .sidebar-collapse-btn {
+    position: relative;
+}
+
+[data-admin-denied] {
+    cursor: not-allowed !important;
+    opacity: .55 !important;
+}
+
+.admin-readonly-ribbon {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid rgba(var(--adm-primary-rgb), .22);
+    border-radius: 999px;
+    padding: 6px 12px;
+    color: var(--adm-primary);
+    background: var(--adm-primary-soft);
+    font-size: .78rem;
+    font-weight: 800;
+}

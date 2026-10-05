@@ -13,6 +13,14 @@ require_once __DIR__ . '/includes/funciones_auditoria.php';
 $db = cms_get_connection();
 $site = cms_get_site_data($db);
 $estadoTabla = auditoriaTablaLista($db);
+
+try {
+    admin_requerir_permiso_submenu('auditoria', 'ver');
+} catch (Throwable $exception) {
+    cms_set_flash('danger', $exception->getMessage());
+    cms_redirect('admin.php?panel=dashboard');
+}
+
 $filtros = [
     'id_usuario' => $_GET['id_usuario'] ?? '',
     'modulo' => $_GET['modulo'] ?? '',

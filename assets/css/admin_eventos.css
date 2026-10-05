@@ -1,0 +1,413 @@
+.admin-events-view {
+    display: grid;
+    gap: 16px;
+}
+
+.admin-events-viewbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex-wrap: wrap;
+    padding: 14px;
+    border: 1px solid var(--adm-border);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.admin-events-viewbar__copy {
+    display: grid;
+    gap: 3px;
+    color: var(--adm-text);
+}
+
+.admin-events-viewbar__copy strong {
+    font-size: .95rem;
+}
+
+.admin-events-viewbar__copy span {
+    color: var(--adm-muted);
+    font-size: .84rem;
+}
+
+.admin-events-segment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px;
+    border: 1px solid #d8e2ef;
+    border-radius: 9px;
+    background: #f8fafc;
+}
+
+.admin-events-segment__btn {
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 12px;
+    border: 0;
+    border-radius: 7px;
+    background: transparent;
+    color: #475467;
+    font-weight: 800;
+    font-size: .84rem;
+}
+
+.admin-events-segment__btn.is-active {
+    background: #26384f;
+    color: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .12);
+}
+
+.admin-events-table-wrap {
+    background: #fff;
+    border: 1px solid var(--adm-border);
+}
+
+.admin-events-table-wrap tr.is-feriado-row {
+    background: color-mix(in srgb, #C6005A 5%, #fff);
+}
+
+.admin-events-table-wrap tr.is-feriado-row:hover {
+    background: color-mix(in srgb, #C6005A 9%, #fff);
+}
+
+.badge-soft.is-feriado-badge {
+    background: color-mix(in srgb, #C6005A 16%, #fff);
+    color: #C6005A;
+    border: 1px solid color-mix(in srgb, #C6005A 40%, #fff);
+}
+
+.admin-events-calendar-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 18px;
+    align-items: start;
+}
+
+.admin-events-calendar-card,
+.admin-events-list-card {
+    background: #fff;
+    border: 1px solid var(--adm-border);
+    border-radius: 10px;
+    box-shadow: var(--adm-shadow-sm);
+    overflow: hidden;
+}
+
+.admin-events-calendar-head,
+.admin-events-list-head {
+    min-height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    border-bottom: 1px solid #e7edf5;
+}
+
+.admin-events-calendar-head h4,
+.admin-events-list-head h4 {
+    margin: 0;
+    color: var(--adm-text);
+    font-size: 1rem;
+    font-weight: 850;
+}
+
+.admin-events-list-head span {
+    color: var(--adm-muted);
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.admin-events-calendar-nav {
+    display: inline-flex;
+    gap: 8px;
+}
+
+.admin-events-weekdays {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    padding: 11px 16px;
+    border-bottom: 1px solid #e7edf5;
+    background: #f8fafc;
+}
+
+.admin-events-weekdays span {
+    color: #667085;
+    text-align: center;
+    font-size: .72rem;
+    font-weight: 850;
+    text-transform: uppercase;
+}
+
+.admin-events-month-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(112px, 1fr));
+    padding: 16px;
+    overflow-x: auto;
+}
+
+.admin-events-day {
+    min-height: 116px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px;
+    border-right: 1px solid #e1e8f2;
+    border-bottom: 1px solid #e1e8f2;
+    background: #fff;
+}
+
+.admin-events-day:nth-child(7n + 1) {
+    border-left: 1px solid #e1e8f2;
+}
+
+.admin-events-day:nth-child(-n + 7) {
+    border-top: 1px solid #e1e8f2;
+}
+
+.admin-events-day.is-outside {
+    background: #f9fbfd;
+    color: #98a2b3;
+}
+
+.admin-events-day.is-today {
+    outline: 2px solid #0b68a5;
+    outline-offset: -2px;
+}
+
+.admin-events-day__number {
+    align-self: flex-end;
+    color: #475467;
+    font-size: .76rem;
+    font-weight: 800;
+}
+
+.admin-events-day-label {
+    max-width: 100%;
+    display: block;
+    padding: 3px 6px;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--event-color, #2563eb) 16%, #fff);
+    color: color-mix(in srgb, var(--event-color, #2563eb) 72%, #111827);
+    font-size: .68rem;
+    font-weight: 800;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    border-left: 3px solid var(--event-color, #2563eb);
+}
+
+.admin-events-day-label.is-oculto,
+.admin-events-day-label.is-cancelado {
+    opacity: .72;
+    text-decoration: line-through;
+}
+
+.admin-events-day-label.is-feriado {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border-left-style: dashed;
+    font-weight: 850;
+}
+
+.admin-events-day-label.is-feriado::before {
+    content: "Feriado";
+    flex: 0 0 auto;
+    font-size: .56rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .03em;
+    padding: 1px 4px;
+    border-radius: 3px;
+    background: var(--event-color, #C6005A);
+    color: #fff;
+}
+
+.admin-events-day.has-feriado {
+    background: color-mix(in srgb, var(--adm-border, #d8e2ef) 30%, #fff);
+}
+
+.admin-events-day-more {
+    color: var(--adm-muted);
+    font-size: .68rem;
+    font-weight: 800;
+}
+
+.admin-events-list-card {
+    position: sticky;
+    top: 82px;
+}
+
+.admin-events-list {
+    display: grid;
+    gap: 10px;
+    max-height: 720px;
+    overflow: auto;
+    padding: 16px;
+}
+
+.admin-events-list-item {
+    display: grid;
+    gap: 9px;
+    padding: 14px;
+    border: 1px solid #dde6f1;
+    border-radius: 10px;
+    background: #fff;
+}
+
+.admin-events-list-item__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.admin-events-list-item__top strong {
+    color: var(--adm-text);
+    font-size: .92rem;
+    line-height: 1.25;
+}
+
+.admin-events-list-item__meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    color: #667085;
+    font-size: .78rem;
+}
+
+.admin-events-list-item__meta span:not(:last-child)::after {
+    content: "·";
+    margin-left: 6px;
+    color: #98a2b3;
+}
+
+.admin-events-list-item__actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.admin-events-action {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: #26384f;
+    font-size: .82rem;
+    font-weight: 850;
+    text-decoration: none;
+}
+
+.admin-events-action:hover {
+    color: #0b68a5;
+    text-decoration: underline;
+}
+
+.admin-events-status {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    min-height: 22px;
+    padding: 2px 9px;
+    border-radius: 999px;
+    font-size: .72rem;
+    font-weight: 850;
+    border: 1px solid transparent;
+}
+
+.admin-events-status.is-publicado {
+    background: #ecfdf3;
+    color: #027a48;
+    border-color: #abefc6;
+}
+
+.admin-events-status.is-borrador {
+    background: #fffaeb;
+    color: #b54708;
+    border-color: #fedf89;
+}
+
+.admin-events-status.is-oculto {
+    background: #f2f4f7;
+    color: #475467;
+    border-color: #d0d5dd;
+}
+
+.admin-events-status.is-cancelado {
+    background: #fef3f2;
+    color: #b42318;
+    border-color: #fecdca;
+}
+
+.admin-events-list-item.is-feriado {
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--feriado-color, #C6005A) 45%, #dde6f1);
+    background: color-mix(in srgb, var(--feriado-color, #C6005A) 5%, #fff);
+}
+
+.admin-events-status.is-feriado {
+    background: color-mix(in srgb, var(--feriado-color, #C6005A) 16%, #fff);
+    color: var(--feriado-color, #C6005A);
+    border-color: color-mix(in srgb, var(--feriado-color, #C6005A) 40%, #fff);
+}
+
+.admin-events-empty {
+    display: grid;
+    gap: 4px;
+    padding: 22px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    text-align: center;
+    color: var(--adm-muted);
+}
+
+.admin-events-empty strong {
+    color: var(--adm-text);
+}
+
+@media (max-width: 1199px) {
+    .admin-events-calendar-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .admin-events-list-card {
+        position: static;
+    }
+}
+
+@media (max-width: 767px) {
+    .admin-events-viewbar {
+        align-items: stretch;
+    }
+
+    .admin-events-segment {
+        width: 100%;
+    }
+
+    .admin-events-segment__btn {
+        flex: 1 1 0;
+        justify-content: center;
+    }
+
+    .admin-events-calendar-head,
+    .admin-events-list-head {
+        padding: 12px;
+    }
+
+    .admin-events-weekdays {
+        min-width: 784px;
+    }
+
+    .admin-events-month-grid {
+        grid-template-columns: repeat(7, 112px);
+        padding: 12px;
+    }
+}

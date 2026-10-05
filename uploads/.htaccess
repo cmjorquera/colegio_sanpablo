@@ -1,0 +1,16 @@
+# uploads contiene datos persistentes aportados desde el CMS.
+# Apache 2.4+: nunca interpretar scripts almacenados en este arbol.
+Options -ExecCGI
+
+<FilesMatch "(?i)\.(php[0-9]?|phtml|pht|phar|cgi|pl|py|rb|sh|bash|asp|aspx|jsp|jspx)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_mime.c>
+    RemoveHandler .php .php2 .php3 .php4 .php5 .php7 .phtml .pht .phar .cgi .pl .py .rb .sh .bash .asp .aspx .jsp .jspx
+    RemoveType .php .php2 .php3 .php4 .php5 .php7 .phtml .pht .phar .cgi .pl .py .rb .sh .bash .asp .aspx .jsp .jspx
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

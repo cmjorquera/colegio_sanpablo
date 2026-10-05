@@ -1,0 +1,185 @@
+MEMORIA PRINCIPAL: MENÚS, SUBMENÚS, PÁGINAS Y MULTIMEDIA
+Actualizado: 2026-07-12
+
+MODELO Y CARDINALIDADES
+
+menus
+  └── sub_menus
+        ├── sub_menu_paginas
+        └── sub_menu_pagina_media
+
+Un menú puede tener muchos submenús y cada submenú pertenece lógicamente a un menú por
+sub_menus.id_menu = menus.id_menu. Un submenú puede tener una página administrable y muchos
+elementos multimedia. uq_sub_menu_paginas_submenu impone un único registro de página por
+id_sub_menu. El volcado no declara FOREIGN KEY físicas para estas relaciones.
+
+RESPONSABILIDADES
+
+menus guarda nombre, URL, icono, jerarquía, orden y estado de la navegación principal.
+sub_menus guarda la opción hija, su id_menu, URL, icono, orden y estado; no guarda contenido.
+sub_menu_paginas guarda título, bajada, HTML editorial, medios principales, botón, SEO y auditoría.
+sub_menu_pagina_media guarda la galería: tipo, archivo/URL, título, descripción, visibilidad y orden.
+Las estructuras exactas y sin datos están en logica/tablas_menus_submenus/.
+
+FLUJO ADMINISTRATIVO
+
+admin.php?panel=menus lista menús y despliega sus submenús. El botón editar abre “Editar
+submenú”. Datos administra nombre, menú padre, URL, icono, orden y estado. Página administra
+título, bajada, contenido enriquecido, hero/video, botón y metadatos. Multimedia administra la
+galería, visibilidad, reemplazo y orden.
+
+admin.php recibe accion=guardar_submenu y llama cms_save_submenu() en includes/cms_helpers.php.
+Ese helper guarda sub_menus y llama a cms_save_submenu_page() y
+cms_save_submenu_page_media(). Si la página no existe, cms_save_submenu_page() la inserta; si
+existe, la actualiza. Los uploads se validan por los helpers comunes y se guardan bajo
+uploads/submenus/ID. El reordenamiento usa reorder_submenu_media; las acciones pasan por el
+control de permisos y registran auditoría desde admin.php.
+
+FLUJO PÚBLICO
+
+Los helpers cargan menus y sub_menus activos. cms_submenu_public_url() conserva una URL definida
+y, si falta, genera pagina_submenu.php?id=ID. pagina_submenu.php obtiene el id, llama
+cms_get_public_submenu_page(), une menú padre, submenú y sub_menu_paginas, carga la galería con
+cms_list_submenu_page_media() y muestra hero, título, bajada, HTML, botón cuando texto y URL
+existen, multimedia y navegación hermana. Un id inexistente devuelve 404. Si existe el submenú
+pero no su página, el LEFT JOIN permite usar el nombre y mostrar una página aún sin contenido.
+
+CARGAS EDITORIALES SEGURAS
+
+Para cargas masivas usar INSERT ... ON DUPLICATE KEY UPDATE sobre id_sub_menu. Cuando solo se
+actualicen textos, omitir columnas multimedia del INSERT y del UPDATE: así se conservan
+imagen_hero, hero_video_url, hero_video_archivo, imagen_secundaria, video_url, video_archivo y la
+tabla de galería. Nunca guardar contenido en sub_menus ni borrar la galería como parte de una
+carga editorial.
+
+POBLACIÓN DESDE EL WORD
+
+Fuente: informacion/NUEVA WEB COLEGIO SAN PABLO.docx
+Mapa y diagnóstico: informacion/mapeo_contenidos_submenus.md
+Respaldo previo: informacion/respaldo_sub_menu_paginas_antes_poblacion.sql
+Carga transaccional: informacion/poblar_submenus_desde_word.sql
+
+Pendientes por falta de información o destino: Maternal/Grupos y horarios (11),
+Confesionalidad/Capellanía (38), Confesionalidad/Iglesia Luterana (40), Biblioteca (22 y 41-43),
+y el bloque Admisiones, que no tiene submenú actual compatible. No se inventaron datos.
+
+REGLA DE MEMORIA
+
+Todo cambio futuro en tablas, relaciones, modal, endpoints, guardado, multimedia o
+pagina_submenu.php debe actualizar este archivo. Las notas 03_logica_menu_publico.txt y
+04_logica_menu_administrador.txt quedan como antecedentes generales; este documento es la fuente
+principal específica del módulo.
+
+MEJORAS DEL EDITOR DE SUBMENÚS (2026-07-12)
+
+Archivos modificados: admin.php, includes/cms_helpers.php y assets/css/admin_dashboard.css.
+Mantenimiento opcional: logica/normalizar_entidades_submenu.php.
+
+La población editorial contenía entidades numéricas en campos de sub_menu_paginas. Al imprimir
+esos valores en atributos data-* mediante cms_e(), el ampersand se escapaba otra vez y el DOM
+entregaba a JavaScript el texto literal &#...;. cms_decode_editor_entities() decodifica hasta dos
+capas al leer y antes de guardar los campos editoriales. El HTML válido del contenido permanece
+como HTML. La página pública recibe igualmente el registro normalizado. El script CLI opcional
+detecta filas afectadas, crea primero un respaldo SQL con valores literales y normaliza dentro de
+una transacción.
+
+Guardar submenú ahora usa fetch con FormData y X-Requested-With. admin.php responde JSON UTF-8
+con JSON_UNESCAPED_UNICODE, el registro actualizado y su galería. El offcanvas no se oculta ni se
+reconstruye; el botón muestra spinner/Guardando..., bloquea doble envío, conserva pestaña y scroll,
+actualiza nombre, estado interno, datasets y galería, y notifica éxito o error. El redirect previo
+queda únicamente como fallback para clientes sin JavaScript.
+
+El input Icono se eliminó de Datos. cms_save_submenu() distingue campo ausente de cadena vacía:
+en edición omite icono del UPDATE y conserva el valor existente; para registros nuevos usa vacío.
+
+Multimedia usa dos columnas iguales en escritorio: principal y galería. Ambas tienen altura
+compacta alineada; previews de 170 px; video reproducible con controles y sin autoplay; galería
+horizontal con miniaturas de ancho fijo, rutas/títulos truncados, estado, acciones y arrastre. La
+carga de nueva imagen ocupa la fila compacta inferior. El offcanvas usa altura de viewport,
+estructura flex, cuerpo con min-height:0 y footer fijo. Solo la galería desplaza horizontalmente
+cuando crece; en tablet/móvil las tarjetas pasan a una columna.
+
+Validaciones realizadas: php -l en admin.php, includes/cms_helpers.php,
+pagina_submenu.php y el mantenimiento; búsqueda de input icono residual; revisión de respuesta
+JSON, preservación del ordenamiento Sortable y ausencia de cambios de esquema.
+
+AJUSTE DEFINITIVO DE MULTIMEDIA Y LISTADOS (2026-07-12)
+
+La pestaña Multimedia quedó formada por dos únicas tarjetas hermanas dentro de
+.submenu-media-grid, cuya grilla usa repeat(2,minmax(0,1fr)): izquierda
+.submenu-media-primary y derecha .submenu-media-gallery. Agregar imagen vive dentro de Galería,
+encima de Galería actual; ya no existe una tercera sección inferior.
+
+Las acciones add_submenu_media, delete_submenu_media y toggle_submenu_media se atienden en el
+mismo admin.php?panel=menus con permisos de edición de submenús. Agregar sube mediante el helper
+seguro, inserta sub_menu_pagina_media y devuelve el registro JSON. JavaScript agrega la miniatura
+inmediatamente sin cerrar el offcanvas. Eliminar muestra confirmación SweetAlert, borra por AJAX,
+retira la tarjeta y elimina el archivo solo mediante cms_eliminar_archivo_seguro(). Activar u
+ocultar también es inmediato. Las tarjetas ya no contienen inputs de reemplazo, checkbox de
+eliminación pendiente ni controles de edición desplegables; conservan miniatura, nombre corto,
+estado, menú y asa de arrastre.
+
+El listado principal de menús ya no renderiza URL/Destino. Los listados de submenús tampoco
+muestran URL ni icono: muestran Submenú, Contenido, Multimedia, Estado, Última modificación y
+Acciones. cms_list_submenus() calcula Completo cuando título, bajada y contenido existen;
+Incompleto cuando falta alguno; Vacío cuando los tres faltan; y Enlace externo para HTTP/HTTPS
+que no apunta a pagina_submenu.php. El resumen multimedia combina Hero, cantidad de imágenes y
+videos visibles. La fecha/usuario usa primero sub_menu_paginas y luego sub_menus, resolviendo el
+usuario contra la tabla usuario. No se modificaron tablas, URL guardadas ni enlaces externos.
+
+Archivos modificados en este ajuste: admin.php, includes/cms_helpers.php,
+assets/css/admin_dashboard.css y este documento.
+
+PÁGINA ESPECIAL: INSTITUCIONAL / HISTORIA
+
+Alcance exclusivo: id_sub_menu=2, URL pagina_submenu.php?id=2. La sección visual complementa,
+sin reemplazar, hero, título, bajada, contenido y galería general. No se identifica por nombre.
+
+Tabla: sub_menu_historia_item. Campos: id_historia_item, id_sub_menu, titulo, contenido HTML,
+imagen, imagen_alt, visible, orden, fechas y usuarios de creación/actualización. Relación física
+con sub_menus mediante fk_historia_item_submenu; muchos hitos pertenecen al submenú 2. SQL:
+informacion/crear_tabla_historia_visual.sql y estructura en
+logica/tablas_menus_submenus/sub_menu_historia_item.sql. El SQL debe importarse antes de usar el
+editor; no se crea silenciosamente desde PHP.
+
+Administrador: admin.php llama window.submenuHistoriaConfigure() al abrir el offcanvas. El JS
+assets/js/submenu_historia_admin.js crea realmente la cuarta pestaña solo cuando el id es 2,
+reutiliza CKEditor, lista miniaturas y administra crear/editar, visibilidad, orden y eliminación.
+Estilos: assets/css/submenu_historia_admin.css. Endpoint único:
+ajax/submenu_historia.php, acciones listar, guardar, toggle, ordenar y eliminar; todas validan
+sesión, permiso submenus_publicos/editar e id_sub_menu=2, y responden JSON UTF-8. Imágenes:
+uploads/submenus/2/historia/, mediante validación central, limitadas a JPG/JPEG/PNG/WEBP. La
+eliminación física usa cms_eliminar_archivo_seguro y el reemplazo comprueba referencias.
+
+Render público: pagina_submenu.php consulta hitos visibles únicamente cuando id_sub_menu===2 y
+la tabla existe. Después del bloque completo de contenido/galería incluye
+componentes/submenu_historia_visual.php. CSS: assets/css/submenu_historia_publica.css. JS:
+assets/js/submenu_historia_publica.js. Muestra dos hitos por grupo en escritorio y uno en móvil,
+navegación manual, teclado nativo de botones, swipe y sin autoplay. Si no hay hitos visibles no
+se cargan assets ni se imprime la sección. El contenido pasa por cms_basic_content_html().
+
+ORGANIZACIÓN PERSISTENTE DE MULTIMEDIA DE SUBMENÚS
+
+Todo archivo administrado por una página de submenú se guarda bajo
+uploads/submenus/{id_sub_menu}/, usando el identificador real del registro. Allí conviven imagen
+y video principal, galería y demás recursos generales. No existe uploads/menus porque los menús
+principales no administran multimedia. Los hitos exclusivos de Historia (id_sub_menu=2) se
+separan obligatoriamente en uploads/submenus/2/historia/.
+
+includes/upload_helpers.php crea los directorios ausentes con permisos 0755, rechaza destinos
+vacíos, traversal y caracteres ajenos a segmentos seguros, genera nombres sanitizados con fecha
+y sufijo aleatorio, valida extensión y MIME real, y devuelve únicamente rutas relativas
+uploads/.... La base de datos nunca recibe rutas físicas del servidor. Las extensiones de imagen
+y video tienen listas MIME compatibles; Historia limita además sus imágenes a JPG/JPEG/PNG/WEBP.
+
+uploads es contenido persistente: las actualizaciones no deben eliminarlo ni vaciarlo. El archivo
+uploads/.htaccess desactiva CGI/handlers ejecutables, deniega extensiones de script y agrega
+X-Content-Type-Options: nosniff cuando Apache dispone de los módulos correspondientes. Esta es
+una defensa adicional a la validación de subida y no depende de que Apache permita overrides.
+
+Al reemplazar una imagen de Historia, el archivo anterior se conserva hasta que el UPDATE haya
+finalizado correctamente; luego solo se borra si ninguna página, galería o hito conserva esa
+ruta. Si falla la escritura SQL se limpia únicamente el archivo nuevo. Al eliminar una imagen de
+galería o un hito, primero se confirma que el DELETE afectó el registro y recién después se borra
+el archivo físico, nuevamente comprobando referencias compartidas. Nunca se elimina una carpeta
+completa como parte de estas operaciones.

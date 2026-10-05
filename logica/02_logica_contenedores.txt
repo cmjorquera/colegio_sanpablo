@@ -1,0 +1,208 @@
+LOGICA DE CONTENEDORES
+======================
+
+REGLA PRINCIPAL
+---------------
+
+Contenedor = registro en la tabla seccion.
+Componente = archivo PHP en componentes/{nombre_interno}.php.
+Configuracion del contenedor = registros en seccion_config.
+Items repetibles del contenedor = registros en seccion_item.
+
+La carpeta activa para render publico es componentes/. La carpeta contenedores/ queda como referencia legacy y no debe considerarse carpeta activa del CMS.
+
+QUE ES UN CONTENEDOR
+--------------------
+
+Un contenedor es un bloque visual administrable del sitio publico: topbar, header, hero, noticias, calendario de eventos, galeria, podcast, FAQ, about, estadisticas, footer o modal.
+
+Cada contenedor existe primero como registro en seccion. Luego puede tener configuraciones y/o items. Finalmente necesita un componente PHP que se encargue de pintar el HTML publico.
+
+TABLA QUE LO DEFINE
+-------------------
+
+La tabla seccion define la existencia del contenedor.
+
+Campos importantes:
+
+- id_seccion: identificador interno del contenedor.
+- id_institucion: institucion a la que pertenece.
+- nombre_interno: nombre logico del contenedor y nombre de archivo esperado.
+- titulo_admin: nombre mostrado en el panel.
+- tipo_seccion: tipo funcional, por ejemplo header, carousel, news, events, gallery, podcast.
+- variante: variante visual o de comportamiento.
+- visible: si/no; index.php solo renderiza las secciones visibles.
+- estado: activo, inactivo o borrador.
+- editable: si/no; indica si se puede administrar.
+- usa_config: si/no; indica si usa seccion_config.
+- usa_items: si/no; indica si usa seccion_item.
+- orden: posicion de render en index.php.
+
+SECCION_CONFIG
+--------------
+
+seccion_config guarda pares clave/valor por contenedor.
+
+Ejemplos reales:
+
+- noticias_home: titulo_bloque, subtitulo_bloque, texto_boton, url_boton.
+- calendario_eventos_home: titulo_bloque, subtitulo_bloque, cantidad_items.
+- spotify_podcast_home: titulo_bloque, descripcion_bloque, url_boton, mostrar_episodios.
+- modal_informativo: mostrar, delay_ms, color_boton.
+
+SECCION_ITEM
+------------
+
+seccion_item guarda elementos repetibles del contenedor: slides, noticias, preguntas frecuentes, imagenes de galeria, episodios de podcast, redes sociales, etc.
+
+Campos frecuentes:
+
+- id_seccion: relacion con seccion.
+- id_categoria: relacion opcional con categoria_noticia en noticias.
+- etiqueta: tipo interno del item o categoria visual.
+- titulo, subtitulo, descripcion.
+- imagen, imagen_mobile, video_youtube.
+- boton_1_texto, boton_1_url, boton_2_texto, boton_2_url.
+- url.
+- fecha_publicacion.
+- visible.
+- orden.
+
+COMPONENTES/{NOMBRE_INTERNO}.PHP
+--------------------------------
+
+El archivo del componente toma los datos ya cargados por index.php:
+
+- $institution
+- $sectionConfigsMap
+- $sectionItemsMap
+- $categoriesById
+- $arrMenus
+- $arrSubs
+- $db cuando corresponde
+
+La regla base es que seccion.nombre_interno define el archivo esperado:
+
+spotify_podcast_home -> componentes/spotify_podcast_home.php
+
+Excepcion real actual:
+
+header_principal -> componentes/header.php
+
+Esta excepcion esta definida en cms_get_component_path().
+
+COMO INDEX.PHP CARGA LOS CONTENEDORES
+-------------------------------------
+
+1. Incluye includes/cms_helpers.php.
+2. Abre conexion con cms_get_connection().
+3. Obtiene datos con cms_get_site_data().
+4. Toma site.sections y deja solo visible = si.
+5. Recorre los contenedores en orden.
+6. Lee seccion.nombre_interno.
+7. Llama cms_get_component_path(nombre_interno).
+8. Si existe archivo de componente, lo incluye.
+
+QUE HACE CMS_GET_COMPONENT_PATH()
+---------------------------------
+
+cms_get_component_path() recibe el nombre interno del contenedor y busca el archivo PHP correspondiente en componentes/.
+
+Primero intenta:
+
+componentes/{nombre_interno}.php
+
+Luego aplica fallbacks definidos en el helper. En la base real actual:
+
+header_principal -> componentes/header.php
+
+Si no encuentra archivo, retorna null. En index.php simplemente no se renderiza ese contenedor. En preview_contenedor.php se muestra una advertencia.
+
+PASOS PARA CREAR UN CONTENEDOR NUEVO
+------------------------------------
+
+1. Crear registro en seccion.
+2. Definir nombre_interno con un nombre unico y estable.
+3. Agregar configuraciones en seccion_config si el componente necesita textos, switches o URLs generales.
+4. Agregar items en seccion_item si el componente muestra elementos repetibles.
+5. Crear componentes/{nombre_interno}.php.
+6. Usar cfg() o cms_cfg() para leer configuraciones.
+7. Usar $sectionItemsMap[nombre_interno] para leer items.
+8. Verificar en admin.php?panel=contenedores.
+9. Editar desde editar_contenedor.php?id=ID.
+10. Verificar en index.php.
+
+EJEMPLO PRACTICO: SPOTIFY_PODCAST_HOME
+--------------------------------------
+
+Insert en seccion:
+
+INSERT INTO seccion
+(id_institucion, nombre_interno, titulo_admin, tipo_seccion, variante, visible, estado, editable, usa_config, usa_items, orden, icono_admin, clase_css)
+VALUES
+(1, 'spotify_podcast_home', 'Spotify Podcast Home', 'podcast', 'spotify_home', 'si', 'activo', 'si', 'si', 'si', 8, 'bi bi-spotify', 'spotify-podcast-section');
+
+Inserts en seccion_config:
+
+INSERT INTO seccion_config (id_seccion, clave, valor) VALUES
+(ID_SECCION, 'subtitulo_bloque', 'Podcast oficial'),
+(ID_SECCION, 'titulo_bloque', 'Escucha nuestro podcast en Spotify'),
+(ID_SECCION, 'descripcion_bloque', 'Conversaciones e historias de nuestra comunidad educativa.'),
+(ID_SECCION, 'nombre_canal', 'Voces San Pablo'),
+(ID_SECCION, 'autor_canal', 'Colegio San Pablo'),
+(ID_SECCION, 'texto_boton', 'Ir al canal en Spotify'),
+(ID_SECCION, 'url_boton', 'https://open.spotify.com/'),
+(ID_SECCION, 'mostrar_episodios', 'si'),
+(ID_SECCION, 'cantidad_items', '4');
+
+Inserts en seccion_item si corresponde:
+
+INSERT INTO seccion_item
+(id_seccion, etiqueta, icono, titulo, subtitulo, descripcion, imagen, boton_1_texto, boton_1_url, url, fecha_publicacion, visible, orden)
+VALUES
+(ID_SECCION, 'canal_spotify', 'bi bi-spotify', 'Voces San Pablo', 'Colegio San Pablo', 'Canal institucional del colegio.', 'uploads/secciones/spotify_podcast_home/portada.jpg', 'Abrir en Spotify', 'https://open.spotify.com/', 'https://open.spotify.com/', NULL, 'si', 1),
+(ID_SECCION, 'episodio_spotify', 'bi bi-play-circle-fill', 'Convivencia y respeto', 'Episodio 1 - 20 min', 'Reflexiones de la comunidad escolar.', 'uploads/secciones/spotify_podcast_home/episodio.jpg', 'Escuchar episodio', 'https://open.spotify.com/', 'https://open.spotify.com/', '2026-07-06', 'si', 2);
+
+Crear archivo:
+
+componentes/spotify_podcast_home.php
+
+Verificar:
+
+- admin.php?panel=contenedores
+- editar_contenedor.php?id=ID_SECCION
+- index.php#spotify-podcast-home
+
+REGLA DE ARCHIVOS DE UN CONTENEDOR
+-----------------------------------
+
+Las imagenes (y video/adjunto cuando el contenedor lo permite) de un item de
+seccion_item se guardan como archivo fisico en
+uploads/secciones/{nombre_interno}/, salvo dos excepciones reales:
+
+- Contenedores con tipo_seccion = 'news' (noticias_home): sus imagenes van a
+  uploads/noticias/, no a uploads/secciones/noticias_home/.
+- Paginas de submenu (sub_menu_paginas / sub_menu_pagina_media): usan
+  uploads/submenus/{id_sub_menu}/.
+
+La base de datos (seccion_item, seccion_config, sub_menu_paginas) guarda solo la
+ruta relativa del archivo o, si el contenido es un enlace de YouTube/Spotify u
+otra URL externa, la URL completa en el campo correspondiente (por ejemplo
+seccion_item.video_youtube). Nunca se guarda el archivo binario en la base de
+datos ni se copia un video/audio externo al servidor.
+
+La subida real se resuelve en includes/cms_helpers.php a traves de
+cms_upload_image(), cms_upload_image_payload() y cms_upload_file(), que a su vez
+delegan en cms_guardar_archivo() de includes/upload_helpers.php. Detalle completo
+de la politica de archivos en logica/07_politica_archivos_multimedia.txt.
+
+ERRORES A EVITAR
+----------------
+
+- Crear solo el archivo PHP sin registro en seccion.
+- Crear registro en seccion con nombre_interno distinto al archivo.
+- Usar contenedores/ como carpeta activa.
+- Usar index_1.php, admin_1.php o preview_contenedor_1.php como nombres actuales.
+- Confundir seccion_item de noticias con una tabla noticia: en esta base las noticias del home salen de seccion_item.
+- Confundir menu publico con menu administrador.
+- Ignorar visible, estado y orden al revisar por que algo no aparece.

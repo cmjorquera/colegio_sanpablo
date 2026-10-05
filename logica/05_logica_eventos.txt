@@ -1,0 +1,404 @@
+LOGICA DE EVENTOS
+=================
+
+MODULO VISUAL
+-------------
+
+calendario_eventos_home es el contenedor visual del home. Existe como registro en seccion:
+
+- nombre_interno = calendario_eventos_home
+- tipo_seccion = events
+- variante = calendario_lista
+
+Su archivo publico activo es:
+
+componentes/calendario_eventos_home.php
+
+TABLAS REALES
+-------------
+
+eventos
+Guarda los eventos institucionales reales. Campos principales:
+
+- id_evento
+- titulo
+- slug
+- descripcion_corta
+- descripcion
+- fecha_inicio
+- fecha_termino
+- hora_inicio
+- hora_termino
+- ubicacion
+- categoria
+- color
+- imagen
+- archivo_adjunto
+- destacado
+- visible
+- orden
+- estado
+- creado_en
+- actualizado_en
+
+evento_media
+Guarda multimedia asociada a eventos:
+
+- id_media
+- id_evento
+- tipo: imagen, video o youtube
+- archivo
+- url
+- titulo
+- descripcion
+- portada
+- visible
+- orden
+- creado_en
+
+calendario
+Guarda dias del calendario institucional, feriados y marcas de calendario. El endpoint calendario_eventos_json.php consulta esta tabla con cms_list_calendar_days() para mostrar feriados como fondo en FullCalendar.
+
+dia_semana
+Catalogo de dias de semana: nombre, nombre_corto, orden y es_fin_semana.
+
+seccion_config
+Configura textos y parametros visuales del contenedor calendario_eventos_home, por ejemplo titulo_bloque, subtitulo_bloque y cantidad_items.
+
+seccion_item
+Existe como estructura general de items del CMS. Para eventos puede aparecer como fallback legacy, pero el flujo actual de eventos reales usa eventos y evento_media.
+
+ARCHIVOS INVOLUCRADOS
+---------------------
+
+componentes/calendario_eventos_home.php
+Renderiza el bloque del home. Muestra un calendario FullCalendar y proximos eventos desde cms_list_public_events().
+
+calendario_eventos_json.php
+Endpoint JSON usado por FullCalendar. Devuelve eventos desde eventos y feriados desde calendario.
+
+evento_detalle.php
+Pagina publica de detalle. Acepta:
+
+- evento_detalle.php?id_evento=ID para tabla eventos.
+- evento_detalle.php?id_item=ID como compatibilidad legacy desde seccion_item.
+
+editar_contenedor.php
+Cuando el contenedor es calendario_eventos_home o tipo events, permite crear, editar, cancelar, ocultar y administrar multimedia de eventos.
+
+includes/cms_helpers.php
+Contiene helpers de eventos:
+
+- cms_list_public_events()
+- cms_get_event()
+- cms_save_event()
+- cms_toggle_event_visible()
+- cms_cancel_event()
+- cms_list_event_media()
+- cms_save_event_media_uploads()
+- cms_toggle_event_media_visible()
+- cms_delete_event_media()
+
+FLUJO PUBLICO
+-------------
+
+1. index.php renderiza calendario_eventos_home si seccion.visible = si.
+2. componentes/calendario_eventos_home.php lee textos desde seccion_config.
+3. El calendario carga datos desde calendario_eventos_json.php.
+4. calendario_eventos_json.php mezcla eventos visibles/publicados y feriados del calendario.
+5. Al hacer clic en un evento real, abre evento_detalle.php?id_evento=ID.
+
+DIFERENCIA EVENTOS VS SECCION_ITEM
+----------------------------------
+
+eventos es la fuente actual de eventos institucionales reales.
+
+seccion_item puede contener registros antiguos asociados al contenedor calendario_eventos_home. Es fallback o compatibilidad, no la fuente principal actual para el calendario publico.
+
+REGLAS DE PUBLICACION
+---------------------
+
+Un evento real se muestra publicamente si:
+
+- visible = 1
+- estado no es borrador, oculto ni cancelado
+- fecha_inicio cae dentro del rango consultado
+
+evento_detalle.php aplica la misma restriccion para id_evento.
+
+VISTA ADMINISTRATIVA DE EVENTOS
+-------------------------------
+
+En editar_contenedor.php, cuando el contenedor activo es calendario_eventos_home, la pestaña Items tiene una administracion especial para eventos reales.
+
+Existen dos vistas:
+
+- Tabla: es la vista tradicional de gestion masiva. Mantiene agregar evento, editar, cancelar, ver detalle, cambiar visibilidad, descargar plantilla Excel y subir eventos desde Excel.
+- Calendario: es una vista visual mensual para revision rapida. Muestra los eventos del mes en un calendario grande y una lista lateral con titulo, fecha, hora, ubicacion, estado y acciones Revisar / Editar.
+
+La fuente de datos de ambas vistas es la tabla eventos mediante cms_list_events(). No se debe usar seccion_item como fuente principal para eventos reales. seccion_item queda solo como compatibilidad legacy si existen items antiguos asociados al contenedor.
+
+Archivos usados por la vista administrativa:
+
+- editar_contenedor.php: renderiza la pestaña Items, expone los eventos de la tabla eventos y conserva la tabla actual.
+- assets/css/admin_eventos.css: estilos del selector Tabla / Calendario, calendario mensual y lista lateral.
+- assets/js/admin_eventos.js: cambia entre vistas, guarda la preferencia localStorage calendario_eventos_home_view y maneja mes anterior / siguiente.
+- eventos_descargar_plantilla.php: descarga la plantilla Excel.
+- eventos_preview_importacion.php: valida el Excel y muestra preview.
+- eventos_importar_confirmados.php: inserta eventos seleccionados en la tabla eventos.
+
+Permisos:
+
+- Revisar abre evento_detalle.php?id_evento=ID.
+- Editar usa el mismo flujo de editar_contenedor.php?tab=items&modal=evento&evento=ID.
+- Si el usuario no tiene permiso de editar, la accion Editar de la vista calendario muestra bloqueo visual / mensaje de permiso. Las validaciones backend existentes en editar_contenedor.php se mantienen.
+
+La vista publica del calendario no cambia con esta administracion. componentes/calendario_eventos_home.php y calendario_eventos_json.php siguen siendo el flujo publico.
+
+CALENDARIO INSTITUCIONAL Y FERIADOS
+-----------------------------------
+
+La tabla calendario guarda todos los dias del calendario institucional. No se crea una tabla por año. Cada nuevo año se agrega como nuevos registros usando la columna real ano.
+
+Campos reales relevantes de calendario:
+
+- id_calendario
+- fecha
+- ano
+- mes
+- dia
+- numero_dia_semana
+- nombre_dia_semana
+- es_fin_semana
+- es_feriado
+- es_dia_habil
+- nombre_feriado
+- descripcion_feriado
+- tipo
+- color
+- visible
+
+La tabla dia_semana es el catalogo usado para determinar lunes a domingo. calendario no guarda id_dia_semana directamente; guarda numero_dia_semana y nombre_dia_semana.
+
+Diferencia principal:
+
+- calendario guarda dias, feriados, fines de semana, dias habiles y marcas institucionales.
+- eventos guarda actividades del colegio con titulo, fecha, hora, categoria, ubicacion, estado y multimedia.
+
+Los feriados nacionales de Uruguay van en calendario. El endpoint calendario_eventos_json.php consulta calendario para mostrar feriados como fondo del FullCalendar publico, mientras que los eventos reales salen desde eventos.
+
+Mantenedor administrativo:
+
+- admin_calendario.php administra la tabla calendario.
+- assets/css/admin_calendario.css contiene los estilos del mantenedor.
+- El menu administrador debe apuntar a admin_calendario.php con clave calendario.
+
+Como generar un año nuevo:
+
+1. Entrar a Calendario institucional.
+2. Seleccionar el año.
+3. Presionar Generar año.
+4. El sistema inserta desde 01-01 hasta 31-12.
+5. Si el año ya existe, no duplica dias y muestra: El calendario del año seleccionado ya existe.
+
+Como cargar feriados de Uruguay:
+
+1. Generar primero el año.
+2. Presionar Cargar feriados de Uruguay.
+3. El sistema actualiza fechas existentes en calendario.
+4. Marca es_feriado = 1, es_dia_habil = 0, tipo = feriado, nombre_feriado y color rojo.
+
+Feriados fijos iniciales:
+
+- 01-01 Año Nuevo
+- 01-05 Dia de los Trabajadores
+- 18-07 Jura de la Constitucion
+- 25-08 Declaratoria de la Independencia
+- 25-12 Navidad
+
+El codigo queda preparado para agregar feriados moviles o trasladables dentro de la funcion interna de feriados de Uruguay.
+
+Permisos:
+
+- La clave de permiso del modulo es calendario.
+- Puede ver: entra al mantenedor.
+- Puede editar: genera años, carga feriados y guarda cambios por dia.
+- Sin editar, el usuario puede revisar pero no modificar. El backend bloquea POST y muestra "No tienes permiso para modificar el calendario.".
+
+POLITICA DE ARCHIVOS DEL MODULO EVENTOS
+-----------------------------------------
+
+eventos
+- eventos.imagen (portada del evento): archivo fisico en uploads/eventos/.
+- eventos.archivo_adjunto (PDF, Office o imagen adjunta): archivo fisico en
+  uploads/eventos/adjuntos/.
+- Ambos se suben con cms_upload_image()/cms_upload_file() de
+  includes/cms_helpers.php, que delegan en cms_guardar_archivo() de
+  includes/upload_helpers.php.
+
+evento_media
+- evento_media.archivo (tipo = 'imagen' o 'video'): archivo fisico en
+  uploads/eventos/media/{id_evento}/, uno por evento. Se sube con
+  cms_upload_event_media_file() / cms_save_event_media_uploads().
+- evento_media.url (tipo = 'youtube'): URL externa guardada tal cual en la base
+  de datos; nunca se descarga el video al servidor.
+
+calendario
+- Guarda dias, feriados y marcas institucionales (columnas fecha, es_feriado,
+  nombre_feriado, color, etc.). No maneja archivos fisicos.
+
+dia_semana
+- Catalogo de lunes a domingo. No maneja archivos fisicos.
+
+Archivos locales vs URLs externas
+- Titulo, descripcion, descripcion_corta, ubicacion, categoria, color, fechas y
+  horas de un evento son texto y viven solo en la tabla eventos.
+- Una imagen o adjunto subido desde el panel siempre termina como archivo fisico
+  bajo uploads/eventos/, y la tabla solo guarda su ruta relativa.
+- Un enlace de YouTube en evento_media nunca se convierte en archivo; se guarda
+  como URL en evento_media.url.
+
+seccion_item, cuando existe como fallback legacy de calendario_eventos_home,
+puede referenciar imagenes en uploads/secciones/calendario_eventos_home/ (regla
+general de contenedores), pero no es la fuente activa de multimedia de eventos
+reales.
+
+Detalle completo y comun a todo el CMS en
+logica/07_politica_archivos_multimedia.txt.
+
+FERIADOS NACIONALES EN CALENDARIO
+-------------------------------------
+
+Regla central: los feriados nacionales, institucionales o dias especiales viven
+exclusivamente en la tabla calendario. Los eventos escolares (actividades creadas
+por el colegio) viven exclusivamente en la tabla eventos. No se crea un registro
+en eventos para representar un feriado, y no se lee la tabla eventos para mostrar
+feriados.
+
+- calendario.es_feriado = 1 y calendario.visible = 1 son las condiciones para que
+  un dia se muestre como feriado, tanto en el calendario publico como en el
+  administrativo.
+- calendario.nombre_feriado se muestra dentro del dia (calendario publico y
+  admin) y como titulo de la pagina de detalle.
+- calendario.color, si es un color hexadecimal valido, se usa como acento visual
+  del feriado (fondo suave + badge "Feriado"); si no es valido se usa un color
+  neutro por defecto.
+- calendario.descripcion_feriado se muestra en el detalle publico. Si esta vacia,
+  se muestra el texto neutro "Este día corresponde a un feriado nacional
+  registrado en el calendario institucional." No se inventa contenido historico
+  largo.
+- calendario.nombre_dia_semana ya viene resuelto en la propia tabla (no requiere
+  join con dia_semana) y se usa en el detalle publico y en la lista admin.
+
+Carga masiva de eventos
+- eventos_preview_importacion.php y eventos_importar_confirmados.php trabajan
+  unicamente con la tabla eventos. No leen ni escriben en calendario. Un feriado
+  nunca puede crearse ni modificarse desde la carga masiva de eventos.
+
+Calendario publico (componentes/calendario_eventos_home.php + calendario_eventos_json.php)
+- calendario_eventos_json.php entrega los feriados del rango visible como
+  eventos de FullCalendar independientes de los eventos reales, con
+  extendedProps.type = 'feriado' y url = "feriado_detalle.php?id_calendario=ID".
+- Un clic en un evento escolar abre evento_detalle.php?id_evento=ID. Un clic en
+  un feriado abre feriado_detalle.php?id_calendario=ID. Ambos casos navegan por
+  el mismo manejador eventClick, que simplemente sigue la url de cada evento.
+- La lista lateral "Próximos eventos" solo muestra eventos de la tabla eventos;
+  nunca llama "evento" a un feriado. Cuando no hay proximos eventos, muestra el
+  mensaje "Sin próximos eventos. Los feriados aparecen en el calendario."
+
+Calendario administrativo (editar_contenedor.php + assets/js/admin_eventos.js)
+- La pestaña Items de calendario_eventos_home carga dos fuentes independientes
+  para la vista Calendario: $adminEventCalendarRows (tabla eventos) y
+  $adminHolidayCalendarRows (tabla calendario, vía cms_list_holidays()).
+  Se exponen como dos bloques JSON separados
+  (data-admin-events-json y data-admin-holidays-json).
+- La vista Tabla (gestión masiva) sigue mostrando solo $eventosCalendario
+  (tabla eventos); los feriados nunca aparecen ahí.
+- En la vista Calendario, el dia muestra las etiquetas de feriado (con badge
+  "Feriado") y las etiquetas de evento en la misma celda, visualmente
+  diferenciadas. La lista lateral combina eventos y feriados ordenados por
+  fecha: la tarjeta de un evento conserva las acciones Revisar/Editar; la
+  tarjeta de un feriado solo tiene la acción "Revisar feriado", que abre
+  feriado_detalle.php en una pestaña nueva. Los feriados no tienen accion
+  Editar aqui: se administran desde admin_calendario.php.
+
+Pagina de detalle
+- feriado_detalle.php es una unica pagina publica (no se crea una pagina PHP
+  distinta por cada feriado). Recibe id_calendario o, opcionalmente, fecha
+  (YYYY-MM-DD), y resuelve el registro con cms_get_calendar_holiday(), que solo
+  devuelve filas con es_feriado = 1 y visible = 1.
+- evento_detalle.php sigue leyendo unicamente desde eventos (y seccion_item como
+  fallback legacy); feriado_detalle.php sigue leyendo unicamente desde
+  calendario. Ambas paginas no se mezclan.
+- Boton "Volver" de feriado_detalle.php apunta a index.php#calendario-eventos-home.
+
+Extensiones futuras
+- Si se necesita agregar texto largo, imagenes o adjuntos propios de un feriado
+  en el futuro, se debe extender la tabla calendario (columnas nuevas) o crear
+  una tabla complementaria propia de calendario (por ejemplo
+  calendario_media), pero nunca mezclar esa informacion con eventos ni con
+  evento_media.
+
+VISTA TABLA UNIFICADA DE EVENTOS Y FERIADOS
+-----------------------------------------------
+
+La pestaña Items de calendario_eventos_home tiene dos vistas (Tabla y
+Calendario). Ambas muestran eventos y feriados, pero cada tipo sigue viviendo en
+su propia tabla real: eventos para actividades escolares, calendario para
+feriados. Esta seccion documenta la vista Tabla; la vista Calendario ya estaba
+documentada arriba.
+
+Tabla visual unificada, no union en base de datos
+- editar_contenedor.php arma $tablaRows combinando en memoria PHP los resultados
+  de cms_list_events() (tabla eventos) y cms_list_holidays() (tabla calendario),
+  ordenados por fecha ascendente con usort(). No existe ninguna consulta SQL que
+  una ambas tablas, ni una vista de base de datos: la union ocurre solo para
+  pintar el HTML de la tabla administrativa.
+- La tabla #itemsTable (DataTables) renderiza filas de ambos origenes con una
+  columna Tipo (badge "Evento" o "Feriado"). El buscador y la paginacion de
+  DataTables operan sobre las filas ya renderizadas, por lo que encuentran y
+  paginan eventos y feriados por igual sin configuracion adicional. El orden
+  por defecto es la columna Fecha ascendente.
+- Una fila de feriado se distingue visualmente: fondo suave, badge rosado
+  "Feriado" y sin las acciones propias de eventos (no tiene toggle de
+  visibilidad en linea ni boton Cancelar).
+
+Cada tipo tiene su propio detalle y su propia edicion
+- Fila de evento: Ver abre evento_detalle.php?id_evento=ID; Editar abre el modal
+  de edicion de eventos en editar_contenedor.php (tab=items&modal=evento);
+  Cancelar sigue disponible como hoy. Ninguna de estas acciones toca la tabla
+  calendario.
+- Fila de feriado: Ver feriado abre feriado_detalle.php?id_calendario=ID;
+  Editar feriado abre admin_feriado_editar.php?id_calendario=ID. No hay accion
+  Eliminar para feriados (no existe una forma segura de eliminar un dia de
+  calendario desde esta vista; los dias del calendario institucional se generan
+  y administran desde admin_calendario.php).
+- admin_feriado_editar.php solo actualiza columnas de calendario propias del
+  feriado: nombre_feriado, descripcion_feriado, tipo, color, visible,
+  es_feriado, es_dia_habil. No modifica fecha, ano, mes, dia,
+  numero_dia_semana, nombre_dia_semana ni es_fin_semana (metadatos fijos del
+  dia). No escribe en eventos ni en evento_media bajo ninguna circunstancia.
+
+Permisos
+- Ver y editar feriados usa la misma clave de permiso que admin_calendario.php:
+  el modulo calendario ('ver' y 'editar'), no el modulo contenedores. Es el
+  mismo dominio de datos, independiente de si se edita desde la vista masiva
+  (admin_calendario.php) o desde el detalle puntual
+  (admin_feriado_editar.php).
+- Si el usuario no tiene permiso de editar calendario, el boton "Editar
+  feriado" de la tabla queda con data-admin-denied (opacidad reducida,
+  bloqueado por el listener global de assets/js/admin.js) y muestra el mensaje
+  "No tienes permiso para editar feriados." en un SweetAlert. Si intenta entrar
+  por URL directa a admin_feriado_editar.php, admin_requerir_permiso('calendario',
+  'ver') bloquea el acceso si ni siquiera puede ver, y el guardado por POST
+  vuelve a validar 'calendario','editar' en el servidor aunque el formulario
+  haya llegado habilitado.
+- Ver un evento o un feriado (evento_detalle.php / feriado_detalle.php) no
+  requiere permiso de panel: son paginas publicas, igual que hoy.
+
+Carga masiva
+- eventos_descargar_plantilla.php, eventos_preview_importacion.php y
+  eventos_importar_confirmados.php siguen trabajando unicamente con la tabla
+  eventos. La vista Tabla unificada es solo de lectura para feriados: no hay
+  forma de crear ni importar un feriado desde el flujo de carga masiva de
+  eventos.

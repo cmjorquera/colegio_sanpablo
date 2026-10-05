@@ -1,25 +1,116 @@
 <?php
+require_once __DIR__ . '/admin_permissions.php';
+
+function admin_nav_normalize_href(string $key, string $href): string
+{
+    $key = trim($key);
+    $href = trim($href);
+    $knownRoutes = [
+        'calendario' => 'admin_calendario.php',
+        'usuarios' => 'admin_usuarios.php',
+        'permisos' => 'admin_permisos.php',
+        'auditoria' => 'auditoria_log.php',
+        'comunicados' => 'admin_comunicados.php',
+        'analitica' => 'analitica.php',
+    ];
+
+    if (isset($knownRoutes[$key])) {
+        return $knownRoutes[$key];
+    }
+
+    return $href !== '' ? $href : '#';
+}
 
 function admin_nav_items(): array
 {
-    return [
-        'dashboard'    => ['href' => 'admin.php?panel=dashboard',    'icon' => 'bi-grid-1x2',               'label' => 'Dashboard'],
-        'contenedores' => ['href' => 'admin.php?panel=contenedores', 'icon' => 'bi-layout-text-window-reverse', 'label' => 'Contenedores'],
-        'menus'        => ['href' => 'admin.php?panel=menus',        'icon' => 'bi-list-nested',             'label' => 'Menús'],
-        'configuracion'=> ['href' => 'admin.php?panel=configuracion','icon' => 'bi-sliders2-vertical',      'label' => 'Configuración'],
-        'auditoria'    => ['href' => 'auditoria_log.php',              'icon' => 'bi-clock-history',          'label' => 'Auditoría / Logs'],
-        'analitica'    => ['href' => 'analitica.php',                'icon' => 'bi-bar-chart-line',         'label' => 'Analítica'],
-    ];
-}
+    if (!function_exists('cms_get_connection')) {
+        return [];
+    }
 
-function admin_nav_groups(): array
-{
-    return [
-        'PRINCIPAL'     => ['dashboard', 'contenedores'],
-        'GESTIÓN'       => ['menus'],
-        'SISTEMA'       => ['configuracion', 'auditoria'],
-        'ANALÍTICA'     => ['analitica'],
-    ];
+    try {
+        $db = cms_get_connection();
+        admin_ensure_permissions_menu();
+        $result = $db->query("
+            SELECT id_admin_menu, clave, grupo, label, href, icono, orden, visible, estado
+            FROM admin_menu
+            WHERE visible = 1
+              AND estado = 'activo'
+            ORDER BY CASE grupo
+                WHEN 'PRINCIPAL' THEN 1
+                WHEN 'GESTIÓN DEL SITIO' THEN 2
+                WHEN 'GESTION DEL SITIO' THEN 2
+                WHEN 'SEGURIDAD' THEN 3
+                WHEN 'ANALÍTICA' THEN 4
+                WHEN 'ANALITICA' THEN 4
+                WHEN 'SISTEMA' THEN 5
+                ELSE 99
+            END, orden ASC, id_admin_menu ASC
+        ");
+        if (!$result) {
+            return [];
+        }
+
+        $items = [];
+        while ($row = $result->fetch_assoc()) {
+            $clave = trim((string) ($row['clave'] ?? ''));
+            if ($clave === '') {
+                continue;
+            }
+            if (!admin_tiene_permiso($clave, 'ver')) {
+                continue;
+            }
+            $idAdminMenu = (int) ($row['id_admin_menu'] ?? 0);
+            $items[$idAdminMenu] = [
+                'id' => (int) ($row['id_admin_menu'] ?? 0),
+                'key' => $clave,
+                'group' => trim((string) ($row['grupo'] ?? '')),
+                'href' => admin_nav_normalize_href($clave, (string) ($row['href'] ?? '#')),
+                'icon' => trim((string) ($row['icono'] ?? 'bi-circle')),
+                'label' => trim((string) ($row['label'] ?? $clave)),
+                'order' => (int) ($row['orden'] ?? 0),
+                'children' => [],
+            ];
+        }
+        $result->free();
+
+        if (function_exists('cms_table_exists') && cms_table_exists($db, 'admin_submenu')) {
+            $submenuResult = $db->query("
+                SELECT *
+                FROM admin_submenu
+                WHERE visible = 1
+                  AND estado = 'activo'
+                ORDER BY orden ASC, id_admin_submenu ASC
+            ");
+            if ($submenuResult) {
+                while ($row = $submenuResult->fetch_assoc()) {
+                    $idAdminMenu = (int) ($row['id_admin_menu'] ?? $row['id_menu_admin'] ?? $row['id_menu'] ?? 0);
+                    if (!isset($items[$idAdminMenu])) {
+                        continue;
+                    }
+                    $submenuClave = trim((string) ($row['clave'] ?? ''));
+                    if ($submenuClave !== '' && !admin_tiene_permiso_submenu($submenuClave, 'ver')) {
+                        continue;
+                    }
+                    $submenuLabel = trim((string) ($row['label'] ?? $row['nombre'] ?? $submenuClave));
+                    $submenuHref = admin_nav_normalize_href($submenuClave, (string) ($row['href'] ?? $row['url'] ?? '#'));
+                    $items[$idAdminMenu]['children'][] = [
+                        'id' => (int) ($row['id_admin_submenu'] ?? 0),
+                        'key' => $submenuClave,
+                        'href' => $submenuHref,
+                        'icon' => trim((string) ($row['icono'] ?? 'bi-dot')),
+                        'label' => $submenuLabel !== '' ? $submenuLabel : $submenuClave,
+                        'order' => (int) ($row['orden'] ?? 0),
+                    ];
+                }
+                $submenuResult->free();
+            }
+        }
+
+        return array_values($items);
+    } catch (Throwable $exception) {
+        error_log('admin_nav_items: ' . $exception->getMessage());
+        return [];
+    }
 }
 
 function admin_valid_hex_color(?string $value, string $fallback): string
@@ -59,8 +150,29 @@ function admin_render_layout_start(array $options = []): void
     $admQuaternaryRgb   = admin_hex_to_rgb($admQuaternary);
 
     $navItems  = admin_nav_items();
-    $navGroups = admin_nav_groups();
     $initials  = strtoupper(substr(trim($adminName) !== '' ? trim($adminName) : 'AD', 0, 2));
+    $adminProfileLabel = function_exists('admin_perfil_actual_label') ? admin_perfil_actual_label() : (string) ($_SESSION['admin_rol'] ?? 'Administrador');
+    $currentScript = basename((string) ($_SERVER['SCRIPT_NAME'] ?? ''));
+    $currentPanel = (string) ($_GET['panel'] ?? '');
+    $isNavActive = static function (string $href, string $key = '') use ($currentScript, $currentPanel, $activePanel): bool {
+        if ($key !== '' && $activePanel === $key) {
+            return true;
+        }
+
+        $hrefPath = (string) parse_url($href, PHP_URL_PATH);
+        $hrefScript = basename($hrefPath);
+        if ($hrefScript === '' || $hrefScript !== $currentScript) {
+            return false;
+        }
+
+        $hrefQuery = [];
+        parse_str((string) parse_url($href, PHP_URL_QUERY), $hrefQuery);
+        if (array_key_exists('panel', $hrefQuery)) {
+            return $currentPanel !== '' && (string) $hrefQuery['panel'] === $currentPanel;
+        }
+
+        return $currentPanel === '' && $activePanel === '';
+    };
     ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -244,6 +356,50 @@ function admin_render_layout_start(array $options = []): void
             transition: color var(--adm-transition);
         }
         .nav-item-label { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+        .nav-item-chevron {
+            font-size: .78rem;
+            color: rgba(255,255,255,.35);
+            transition: transform var(--adm-transition);
+            flex-shrink: 0;
+        }
+        .nav-item.has-children.is-open .nav-item-chevron { transform: rotate(180deg); }
+        .nav-subitems {
+            display: none;
+            margin: 2px 0 6px 32px;
+            padding-left: 10px;
+            border-left: 1px solid rgba(255,255,255,.08);
+        }
+        .nav-subitems.is-open { display: block; }
+        .nav-subitem {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 10px;
+            border-radius: var(--adm-radius-sm);
+            color: rgba(255,255,255,.52);
+            font-size: .82rem;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            transition: background var(--adm-transition), color var(--adm-transition);
+        }
+        .nav-subitem:hover {
+            background: rgba(255,255,255,.06);
+            color: rgba(255,255,255,.88);
+        }
+        .nav-subitem.active {
+            background: rgba(var(--adm-primary-rgb),.16);
+            color: #fff;
+        }
+        .nav-subitem-icon {
+            width: 16px;
+            text-align: center;
+            color: rgba(255,255,255,.38);
+            font-size: .86rem;
+            flex-shrink: 0;
+        }
+        .nav-subitem.active .nav-subitem-icon { color: var(--adm-primary); }
+        .nav-subitem-label { overflow: hidden; text-overflow: ellipsis; }
 
         /* Bottom actions */
         .sidebar-bottom {
@@ -281,10 +437,14 @@ function admin_render_layout_start(array $options = []): void
         .admin-shell.collapsed .sidebar-brand-text,
         .admin-shell.collapsed .nav-group-label,
         .admin-shell.collapsed .nav-item-label,
+        .admin-shell.collapsed .nav-item-chevron,
+        .admin-shell.collapsed .nav-subitems,
         .admin-shell.collapsed .collapse-label,
         .adm-sidebar-collapsed .admin-shell .sidebar-brand-text,
         .adm-sidebar-collapsed .admin-shell .nav-group-label,
         .adm-sidebar-collapsed .admin-shell .nav-item-label,
+        .adm-sidebar-collapsed .admin-shell .nav-item-chevron,
+        .adm-sidebar-collapsed .admin-shell .nav-subitems,
         .adm-sidebar-collapsed .admin-shell .collapse-label { display: none; }
         .admin-shell.collapsed .sidebar-brand,
         .adm-sidebar-collapsed .admin-shell .sidebar-brand { padding: 20px 12px 16px; justify-content: center; }
@@ -786,11 +946,15 @@ function admin_render_layout_start(array $options = []): void
             .admin-shell.collapsed .sidebar-brand-text,
             .admin-shell.collapsed .nav-group-label,
             .admin-shell.collapsed .nav-item-label,
+            .admin-shell.collapsed .nav-item-chevron,
             .admin-shell.collapsed .collapse-label,
             .adm-sidebar-collapsed .admin-shell .sidebar-brand-text,
             .adm-sidebar-collapsed .admin-shell .nav-group-label,
             .adm-sidebar-collapsed .admin-shell .nav-item-label,
+            .adm-sidebar-collapsed .admin-shell .nav-item-chevron,
             .adm-sidebar-collapsed .admin-shell .collapse-label { display: block; }
+            .admin-shell.collapsed .nav-subitems.is-open,
+            .adm-sidebar-collapsed .admin-shell .nav-subitems.is-open { display: block; }
             .admin-shell.collapsed .sidebar-brand,
             .adm-sidebar-collapsed .admin-shell .sidebar-brand { padding: 20px 18px 16px; justify-content: flex-start; }
             .admin-shell.collapsed .nav-item,
@@ -812,6 +976,7 @@ function admin_render_layout_start(array $options = []): void
             .stat-card { padding: 14px; }
         }
     </style>
+    <link rel="stylesheet" href="assets/admin/css/admin.css">
     <?= $extraHead ?>
 </head>
 <body>
@@ -828,20 +993,67 @@ function admin_render_layout_start(array $options = []): void
         </div>
 
         <nav class="sidebar-nav">
-            <?php foreach ($navGroups as $groupLabel => $groupKeys): ?>
-                <div class="nav-group">
-                    <span class="nav-group-label"><?= $groupLabel ?></span>
-                    <?php foreach ($groupKeys as $key): ?>
-                        <?php $item = $navItems[$key] ?? null; if (!$item) continue; ?>
-                        <a class="nav-item <?= $activePanel === $key ? 'active' : '' ?>"
-                           href="<?= cms_e($item['href']) ?>"
-                           title="<?= cms_e($item['label']) ?>">
-                            <i class="bi <?= cms_e($item['icon']) ?> nav-item-icon"></i>
-                            <span class="nav-item-label"><?= cms_e($item['label']) ?></span>
-                        </a>
-                    <?php endforeach; ?>
-                </div>
+            <?php $currentGroup = null; ?>
+            <?php foreach ($navItems as $item): ?>
+                <?php
+                $groupLabel = (string) ($item['group'] ?? '');
+                if ($groupLabel !== $currentGroup):
+                    if ($currentGroup !== null): ?>
+                        </div>
+                    <?php endif; ?>
+                    <div class="nav-group">
+                        <span class="nav-group-label"><?= cms_e($groupLabel) ?></span>
+                    <?php $currentGroup = $groupLabel; ?>
+                <?php endif; ?>
+                <?php
+                $children = is_array($item['children'] ?? null) ? $item['children'] : [];
+                $isActiveChild = false;
+                foreach ($children as $childLookup) {
+                    if ($isNavActive((string) ($childLookup['href'] ?? ''), (string) ($childLookup['key'] ?? ''))) {
+                        $isActiveChild = true;
+                        break;
+                    }
+                }
+                $isActiveItem = $isNavActive((string) ($item['href'] ?? ''), (string) ($item['key'] ?? '')) || $isActiveChild;
+                $hasChildren = !empty($children);
+                ?>
+                <?php if ($hasChildren): ?>
+                    <button
+                        class="nav-item has-children <?= $isActiveItem ? 'active is-open' : '' ?>"
+                        type="button"
+                        title="<?= cms_e($item['label'] ?? '') ?>"
+                        data-admin-submenu-toggle
+                        aria-expanded="<?= $isActiveItem ? 'true' : 'false' ?>"
+                    >
+                        <i class="bi <?= cms_e($item['icon'] ?? 'bi-circle') ?> nav-item-icon"></i>
+                        <span class="nav-item-label"><?= cms_e($item['label'] ?? '') ?></span>
+                        <i class="bi bi-chevron-down nav-item-chevron"></i>
+                    </button>
+                    <div class="nav-subitems <?= $isActiveItem ? 'is-open' : '' ?>">
+                        <?php foreach ($children as $child): ?>
+                            <?php
+                            $isActiveSubitem = $isNavActive((string) ($child['href'] ?? ''), (string) ($child['key'] ?? ''));
+                            ?>
+                            <a class="nav-subitem <?= $isActiveSubitem ? 'active' : '' ?>"
+                               href="<?= cms_e($child['href'] ?? '#') ?>"
+                               title="<?= cms_e($child['label'] ?? '') ?>">
+                                <i class="bi <?= cms_e($child['icon'] ?? 'bi-dot') ?> nav-subitem-icon"></i>
+                                <span class="nav-subitem-label"><?= cms_e($child['label'] ?? '') ?></span>
+                            </a>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <a class="nav-item <?= $isActiveItem ? 'active' : '' ?>"
+                       href="<?= cms_e($item['href'] ?? '#') ?>"
+                       title="<?= cms_e($item['label'] ?? '') ?>">
+                        <i class="bi <?= cms_e($item['icon'] ?? 'bi-circle') ?> nav-item-icon"></i>
+                        <span class="nav-item-label"><?= cms_e($item['label'] ?? '') ?></span>
+                    </a>
+                <?php endif; ?>
             <?php endforeach; ?>
+            <?php if ($currentGroup !== null): ?>
+                </div>
+            <?php endif; ?>
         </nav>
 
         <div class="sidebar-bottom">
@@ -881,7 +1093,7 @@ function admin_render_layout_start(array $options = []): void
                 <div class="header-user">
                     <div class="header-user-meta">
                         <strong><?= cms_e($adminName) ?></strong>
-                        <span><?= cms_e($_SESSION['admin_rol'] ?? 'Administrador') ?></span>
+                        <span><?= cms_e($adminProfileLabel) ?></span>
                     </div>
                     <div class="header-avatar"><?= cms_e($initials) ?></div>
                 </div>
@@ -998,6 +1210,7 @@ function admin_render_layout_end(array $options = []): void
 <script src="assets/js/bootstrap.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
+<script src="assets/admin/js/admin.js"></script>
 <script>
 (function () {
     var shell   = document.getElementById('adminShell');
@@ -1005,7 +1218,11 @@ function admin_render_layout_end(array $options = []): void
     var toggle  = document.getElementById('toggleSidebar');
     var mobileToggle = document.getElementById('mobileMenuToggle');
     var overlay = document.getElementById('sidebarOverlay');
+    if (shell) {
+        shell.dataset.sidebarReady = '1';
+    }
 
+    if (!window.adminSidebarReady) {
     /* Restore collapsed state */
     if (shell && localStorage.getItem('adminSidebarCollapsed') === '1') {
         shell.classList.add('collapsed');
@@ -1029,6 +1246,17 @@ function admin_render_layout_end(array $options = []): void
             sidebar.classList.toggle('mobile-open');
             overlay.style.display = sidebar.classList.contains('mobile-open') ? 'block' : 'none';
         });
+    }
+
+    document.querySelectorAll('[data-admin-submenu-toggle]').forEach(function (button) {
+        button.addEventListener('click', function () {
+            var subitems = button.nextElementSibling;
+            if (!subitems || !subitems.classList.contains('nav-subitems')) return;
+            var isOpen = subitems.classList.toggle('is-open');
+            button.classList.toggle('is-open', isOpen);
+            button.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        });
+    });
     }
 
     /* notifyModal: auto-closing notification (no buttons) */

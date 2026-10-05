@@ -1,9 +1,11 @@
 <?php
 $newsItems    = array_values(array_filter($sectionItemsMap['noticias_home'] ?? [], static fn($i) => ($i['visible'] ?? 'si') === 'si'));
+$newsItems    = array_slice($newsItems, 0, 4);
 $tituloBloque = cfg($sectionConfigsMap, 'noticias_home', 'titulo_bloque', 'Últimas Noticias');
 $subtitulo    = cfg($sectionConfigsMap, 'noticias_home', 'subtitulo_bloque', 'Novedades');
 $textoBoton   = cfg($sectionConfigsMap, 'noticias_home', 'texto_boton', 'Ver todas las noticias');
-$urlBoton     = cfg($sectionConfigsMap, 'noticias_home', 'url_boton', 'todas_noticias.php');
+// El botón "Ver todas las noticias" siempre apunta a la bitácora pública, sin depender de config editable.
+$urlBoton     = 'noticias.php';
 
 // Color institucional para los botones de navegación
 $noticiasPrimary = '#2060B0';

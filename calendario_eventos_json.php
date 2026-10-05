@@ -90,19 +90,25 @@ try {
         ];
     }
 
-    // Feriados desde tabla calendario (como eventos de fondo)
+    // Feriados nacionales/institucionales desde la tabla calendario. No son eventos
+    // escolares: nunca se crean ni se leen desde la tabla eventos.
     $calDays = cms_list_calendar_days($db, $dateFrom, $dateTo);
     foreach ($calDays as $date => $day) {
         $isHoliday = !empty($day['es_feriado']) || (($day['tipo'] ?? '') === 'feriado');
         if ($isHoliday && !empty($day['nombre_feriado'])) {
+            $idCalendario = (int) ($day['id_calendario'] ?? 0);
             $output[] = [
-                'id'         => 'feriado_' . $date,
+                'id'         => 'feriado_' . ($idCalendario ?: $date),
                 'title'      => (string) $day['nombre_feriado'],
                 'start'      => $date,
-                'display'    => 'background',
-                'color'      => '#FFF3CD',
-                'classNames' => ['fc-feriado-bg'],
-                'extendedProps' => ['type' => 'feriado'],
+                'allDay'     => true,
+                'url'        => 'feriado_detalle.php?id_calendario=' . $idCalendario,
+                'classNames' => ['fc-feriado-event'],
+                'extendedProps' => [
+                    'type'  => 'feriado',
+                    'color' => cal_color_valid($day['color'] ?? null, '#C6005A'),
+                    'tipo'  => $day['tipo'] ?? 'feriado',
+                ],
             ];
         }
     }

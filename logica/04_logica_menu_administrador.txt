@@ -1,0 +1,279 @@
+LOGICA DEL MENU ADMINISTRADOR Y PERMISOS
+========================================
+
+QUE ES
+------
+
+El menu administrador es el menu lateral del panel interno. Sirve solo para navegacion de usuarios administradores.
+
+No es el menu publico del sitio.
+
+El menu publico usa menus y sub_menus. El menu administrador usa admin_menu y admin_submenu.
+
+TABLAS DEL SIDEBAR
+------------------
+
+admin_menu
+Define opciones principales del panel lateral.
+
+Campos reales:
+
+- id_admin_menu
+- clave
+- grupo
+- label
+- href
+- icono
+- orden
+- visible
+- estado
+- creado_en
+- actualizado_en
+
+admin_submenu
+Define opciones hijas del panel lateral.
+
+Campos reales:
+
+- id_admin_submenu
+- id_admin_menu
+- clave
+- label
+- href
+- icono
+- orden
+- visible
+- estado
+- creado_en
+- actualizado_en
+
+TABLAS DE USUARIOS Y PERFILES
+-----------------------------
+
+usuario
+Contiene las cuentas administrativas.
+
+perfiles
+Define perfiles de acceso.
+
+usuario_perfil
+Relaciona usuarios con perfiles.
+
+perfil_permiso_admin
+Guarda permisos por perfil sobre admin_menu y admin_submenu.
+
+Campos esperados por la implementacion actual:
+
+- id_permiso
+- id_perfil
+- tipo_menu
+- id_menu
+- puede_ver
+- puede_crear
+- puede_editar
+- puede_eliminar
+- creado_en
+- actualizado_en
+
+TIPOS DE PERMISO
+----------------
+
+- ver: permite entrar y ver el modulo.
+- crear: permite registrar informacion nueva.
+- editar: permite modificar, activar, desactivar u ordenar informacion existente.
+- eliminar: permite eliminar u ocultar registros segun la logica del modulo.
+
+REGLAS DE PERFIL
+----------------
+
+El usuario con id 1 mantiene control total del panel.
+
+Los perfiles super_admin o super_administrador tambien tienen acceso total.
+
+El perfil solo_lectura puede ver los modulos permitidos, pero no puede crear, editar ni eliminar.
+
+Si la tabla perfil_permiso_admin no existe, la capa de permisos mantiene compatibilidad y no bloquea el panel completo.
+
+ARCHIVOS INVOLUCRADOS
+---------------------
+
+admin.php
+Panel principal. Valida permisos de dashboard, contenedores, menus, submenus y configuracion. Protege acciones POST como guardar, activar, eliminar y ordenar.
+
+includes/admin_layout.php
+Renderiza el layout administrativo. La funcion admin_nav_items() lee admin_menu y admin_submenu, filtra visible = 1, estado = activo y permisos de visualizacion.
+
+includes/admin_permissions.php
+Centraliza la logica de permisos:
+
+- Detecta usuario actual.
+- Obtiene perfiles desde usuario_perfil y perfiles.
+- Valida permisos contra perfil_permiso_admin.
+- Reconoce Super Admin y Solo Lectura.
+- Crea la entrada administrativa Seguridad / Permisos si falta.
+
+admin_permisos.php
+Pantalla de matriz de permisos. Permite asignar permisos por perfil sobre admin_menu y admin_submenu. Solo el usuario id 1 puede modificar permisos.
+
+admin_usuarios.php
+Gestiona usuarios. Usa permisos del submenu usuarios.
+
+admin_comunicados.php
+Gestiona comunicados. Usa permisos del modulo comunicados.
+
+editar_contenedor.php
+Edita un contenedor especifico. Requiere ver para entrar y crear/editar/eliminar para guardar cambios.
+
+ajax/guardar_orden_contenedores.php
+Protege el ordenamiento AJAX de contenedores con permiso editar.
+
+assets/css/admin_sidebar.css
+Estilos del sidebar administrador.
+
+assets/css/admin.css
+Estilos base compartidos del panel administrador: topbar blanco, botones sobrios, tarjetas, tablas y formularios.
+
+assets/css/admin_tables.css
+Estilos reutilizables para tablas administrativas y la pantalla de usuarios.
+
+assets/css/admin_permissions.css
+Estilos de la matriz de permisos y del modal de permisos por usuario.
+
+assets/css/admin_dashboard.css
+Estilos extraidos desde admin.php para dashboard, menus, submenus y configuracion.
+
+assets/css/admin_contenedores.css
+Estilos extraidos desde editar_contenedor.php para el editor de contenedores.
+
+assets/js/admin_sidebar.js
+Interacciones del sidebar: colapsar, abrir submenus, modo movil y avisos de permiso denegado.
+
+assets/js/admin.js
+JS base del admin. Centraliza avisos de permiso denegado y utilidades globales.
+
+assets/js/admin_permissions.js
+JS de matriz de permisos. Permite marcar filas completas.
+
+includes/mail_helpers.php
+Centraliza el cambio de clave por correo: valida columnas reset_token/reset_token_expira, genera token seguro, guarda expiracion y envia correo con PHPMailer.
+
+config/mail.php
+Archivo de configuracion SMTP. Debe contener host, puerto, usuario, clave, remitente y tipo de seguridad. No debe contener credenciales reales si el repositorio sera publico.
+
+ajax/enviar_correo_clave.php
+Endpoint JSON para enviar correo de cambio de clave desde admin_usuarios.php.
+
+cambiar_clave.php
+Recibe el token, valida expiracion, permite guardar nueva clave con password_hash() y limpia reset_token/reset_token_expira.
+
+FLUJO ADMIN
+-----------
+
+1. El administrador entra a admin.php.
+2. admin.php valida sesion.
+3. includes/admin_permissions.php identifica usuario y perfiles.
+4. admin.php valida permiso ver para el panel solicitado.
+5. admin.php llama admin_render_layout_start().
+6. includes/admin_layout.php ejecuta admin_nav_items().
+7. admin_nav_items() lee admin_menu y admin_submenu.
+8. Cada opcion se muestra solo si visible = 1, estado = activo y el perfil tiene puede_ver.
+9. Al enviar formularios, el backend vuelve a validar crear, editar o eliminar.
+
+EJEMPLO REAL
+------------
+
+Configuracion viene desde admin_menu.
+
+Sus opciones hijas vienen desde admin_submenu:
+
+- Usuarios -> admin_usuarios.php
+- Configuracion del sitio -> admin.php?panel=configuracion
+
+La entrada Seguridad / Permisos se maneja como admin_menu con clave permisos y destino admin_permisos.php.
+
+PERMISOS DESDE USUARIOS
+-----------------------
+
+admin_usuarios.php muestra un boton con icono de escudo en cada usuario cuando el administrador tiene permiso para ver el modulo permisos.
+
+Al hacer clic se abre un modal grande con:
+
+- datos del usuario.
+- selector de perfil asignado.
+- matriz de permisos para admin_menu y admin_submenu.
+- columnas ver, crear, editar y eliminar.
+
+Regla importante de base de datos:
+
+La base actual guarda permisos en perfil_permiso_admin, es decir, por perfil. No existe una tabla real de permisos directos por usuario.
+
+Por eso el modal trabaja asi:
+
+1. Asigna un perfil al usuario en usuario_perfil.
+2. Edita la matriz del perfil seleccionado en perfil_permiso_admin.
+3. El cambio afecta a todos los usuarios que tengan ese mismo perfil.
+
+Solo id_usuario = 1 puede guardar cambios desde ese modal.
+
+CORREO DE CAMBIO DE CLAVE
+-------------------------
+
+admin_usuarios.php mantiene el boton de sobre para enviar correo de cambio de clave.
+
+El envio real se realiza por AJAX contra:
+
+- ajax/enviar_correo_clave.php
+
+Ese endpoint:
+
+1. valida sesion.
+2. valida permiso editar sobre el submenu usuarios.
+3. valida columnas usuario.reset_token y usuario.reset_token_expira.
+4. genera token con random_bytes().
+5. guarda reset_token y reset_token_expira.
+6. arma link hacia cambiar_clave.php.
+7. envia correo mediante PHPMailer usando config/mail.php.
+8. responde JSON.
+
+No se deben hardcodear credenciales SMTP en admin_usuarios.php ni en el endpoint AJAX.
+
+DISENO ADMIN
+------------
+
+El panel administrador usa una estructura visual comun:
+
+- sidebar oscuro, compacto y colapsable.
+- topbar blanco.
+- botones sobrios sin gradientes fuertes.
+- tablas con bordes suaves.
+- tarjetas administrativas con radio contenido.
+- estilos compartidos cargados desde includes/admin_layout.php.
+
+No modificar el menu publico para cambios del sidebar administrador.
+
+MENU PUBLICO VS MENU ADMINISTRADOR
+----------------------------------
+
+Menu publico:
+
+- Tablas: menus, sub_menus.
+- Render: header/header_principal segun componentes/header.php y cms_get_component_path().
+- Lo ven los visitantes del sitio.
+- No usa perfil_permiso_admin.
+
+Menu administrador:
+
+- Tablas: admin_menu, admin_submenu.
+- Render: includes/admin_layout.php.
+- Lo ven usuarios autenticados del panel.
+- Usa perfil_permiso_admin para ocultar o bloquear modulos.
+
+REGLAS IMPORTANTES
+------------------
+
+- admin_menu y admin_submenu no afectan el menu publico.
+- menus y sub_menus no afectan el sidebar administrador.
+- El campo href define el destino de cada opcion administrativa.
+- El campo clave se usa para marcar opciones activas y validar permisos.
+- El campo grupo ordena visualmente el sidebar por secciones como PRINCIPAL, GESTION, SISTEMA o ANALITICA.
+- La validacion importante siempre es backend; la interfaz solo oculta, deshabilita o avisa.

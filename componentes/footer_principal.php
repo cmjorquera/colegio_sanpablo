@@ -108,6 +108,16 @@ $institutionData = is_array($institution ?? null) ? $institution : [];
 $footerSectionConfig = is_array($sectionConfigsMap['footer_principal'] ?? null) ? $sectionConfigsMap['footer_principal'] : [];
 $footerSectionItems = is_array($sectionItemsMap['footer_principal'] ?? null) ? $sectionItemsMap['footer_principal'] : [];
 
+$footerHexColor = static function (?string $value, string $fallback): string {
+    $value = trim((string) $value);
+    return preg_match('/^#(?:[0-9a-fA-F]{3}){1,2}$/', $value) ? $value : $fallback;
+};
+
+$footerColorPrimary = $footerHexColor($institutionData['color_primario'] ?? null, '#e8a030');
+$footerColorSecondary = $footerHexColor($institutionData['color_secundario'] ?? null, '#e07830');
+$footerColorTertiary = $footerHexColor($institutionData['color_terciario'] ?? null, '#2060b0');
+$footerColorQuaternary = $footerHexColor($institutionData['color_cuaternario'] ?? null, '#d94535');
+
 $footerQuickLinksFallback = [
     ['id' => 0, 'label' => 'Inicio', 'url' => '#', 'children' => []],
     ['id' => 0, 'label' => 'Institucional', 'url' => '#', 'children' => []],
@@ -610,14 +620,14 @@ $renderFooterMenuList = static function (array $items, string $listIdPrefix) use
     .footer-color-bar {
         height: 6px;
         background: linear-gradient(to right,
-            var(--sp-amber, #e8a030) 0%,
-            var(--sp-amber, #e8a030) 25%,
-            var(--sp-naranja, #e07830) 25%,
-            var(--sp-naranja, #e07830) 50%,
-            var(--sp-azul, #2060b0) 50%,
-            var(--sp-azul, #2060b0) 75%,
-            var(--sp-rojo, #d94535) 75%,
-            var(--sp-rojo, #d94535) 100%);
+            <?= $escape($footerColorPrimary) ?> 0%,
+            <?= $escape($footerColorPrimary) ?> 25%,
+            <?= $escape($footerColorSecondary) ?> 25%,
+            <?= $escape($footerColorSecondary) ?> 50%,
+            <?= $escape($footerColorTertiary) ?> 50%,
+            <?= $escape($footerColorTertiary) ?> 75%,
+            <?= $escape($footerColorQuaternary) ?> 75%,
+            <?= $escape($footerColorQuaternary) ?> 100%);
     }
 
     @media (max-width: 1199.98px) {

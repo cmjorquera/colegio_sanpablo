@@ -13,6 +13,7 @@ RewriteRule ^admin/$ /admin [R=308,END]
 RewriteRule ^admin$ admin.php [END]
 
 # Navegacion publica: solo rutas de paginas que ya existen.
+RewriteRule ^biblioteca/?$ biblioteca.php [END]
 RewriteRule ^noticias/?$ noticias.php [END]
 RewriteRule ^comunicados/?$ comunicados.php [END]
 RewriteRule ^calendario/?$ index.php [END]

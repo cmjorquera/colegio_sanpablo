@@ -90,3 +90,19 @@ En Plesk, con el sitio publicado desde /httpdocs, crear manualmente el archivo
 /httpdocs/class/conexion_local.php usando las credenciales del respaldo de la
 conexion actual de produccion. Prepararlo antes de activar el codigo nuevo.
 Si falta el archivo local, la clase informa un error controlado sin credenciales.
+
+
+VISTA ESPECIAL DE BIBLIOTECA (2026-10-05)
+---------------------------------------
+biblioteca.php es el controlador publico exclusivo del menu Biblioteca
+(id_menu=10), accesible por /biblioteca. Reutiliza el header/footer actuales,
+sub_menu_paginas y sub_menu_pagina_media. No crea administracion ni tablas.
+includes/biblioteca_helpers.php arma la vista a partir de los lectores actuales.
+includes/submenu_public_media.php contiene sp_submenu_video_embed(), extraida
+sin cambiar su comportamiento de pagina_submenu.php y compartida por ambas.
+Los lectores CMS incorporan un parametro opcional readOnly=false; Biblioteca
+usa true para evitar sincronizaciones, CREATE TABLE y migracion de imagenes
+secundarias durante la lectura publica. El valor por defecto conserva el
+comportamiento anterior de todos los consumidores existentes.
+CSS/JS exclusivos: assets/css/pages/biblioteca.css y assets/js/biblioteca.js.
+El flujo completo y sus limites estan en logica_menus_submenus_paginas.txt.

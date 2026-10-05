@@ -151,3 +151,17 @@ nuevos. El modal publico no recupera ningun acceso ADMINISTRADOR.
 
 No se modifican class/conexion.php, class/conexion_local.php, credenciales,
 PHPMailer o config/mail.php. La configuracion local sigue fuera de Git.
+
+
+EXCEPCION PUBLICA: BIBLIOTECA (2026-10-05)
+---------------------------------------
+/biblioteca -> biblioteca.php, mediante una regla especifica END en .htaccess.
+No cambia /pagina/ID ni se agregan redirecciones sobre paginas de submenu.
+El menu id_menu=10 se identifica por su ID actual, no por el texto editable;
+el submenu llamado Biblioteca que pertenece a otro menu conserva su ruta.
+componentes/header.php usa cms_public_menu_url() y
+cms_public_header_submenu_url() en escritorio y offcanvas. Solo el menu 10 y
+sus hijos enlazan a /biblioteca y /biblioteca#slug-ID. Los demas enlaces
+conservan exactamente la conversion anterior. cms_submenu_public_url() no
+cambia: las paginas genericas y el administrador siguen disponibles.
+La excepcion y sus datos se documentan en logica_menus_submenus_paginas.txt.

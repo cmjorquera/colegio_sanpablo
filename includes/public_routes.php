@@ -17,7 +17,7 @@ function cms_public_url(?string $url): string
     }
     $path = preg_replace('~^(?:\./|/)+~', '', (string) ($parts['path'] ?? ''));
     parse_str((string) ($parts['query'] ?? ''), $query);
-    $routes = ['index.php' => '/', 'noticias.php' => '/noticias', 'todas_noticias.php' => '/noticias', 'comunicados.php' => '/comunicados'];
+    $routes = ['index.php' => '/', 'noticias.php' => '/noticias', 'todas_noticias.php' => '/noticias', 'comunicados.php' => '/comunicados', 'biblioteca.php' => '/biblioteca'];
     $target = $routes[$path] ?? null;
     if ($path === 'admin.php' && !$query) {
         $target = '/admin';
@@ -44,4 +44,34 @@ function cms_public_url(?string $url): string
     }
     return $target . ($query ? '?' . http_build_query($query) : '')
         . (isset($parts['fragment']) ? '#' . $parts['fragment'] : '');
+}
+
+/** Biblioteca is the existing main menu 10, independently of its editable label. */
+function cms_is_biblioteca_menu(array $menu): bool
+{
+    return (int) ($menu['id_menu'] ?? 0) === 10;
+}
+
+function cms_biblioteca_anchor(array $submenu): string
+{
+    $name = strtr((string) ($submenu['nombre'] ?? ''), [
+        'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
+        'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u', 'Ñ' => 'n',
+    ]);
+    $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-');
+    return ($slug !== '' ? $slug : 'seccion') . '-' . (int) ($submenu['id_sub_menu'] ?? 0);
+}
+
+function cms_public_menu_url(array $menu): string
+{
+    return cms_is_biblioteca_menu($menu) ? '/biblioteca' : cms_public_url($menu['url'] ?: '#');
+}
+
+/** Only Biblioteca's header links change; generic submenu URLs remain compatible. */
+function cms_public_header_submenu_url(array $submenu, array $menu): string
+{
+    if (cms_is_biblioteca_menu($menu) && (int) ($submenu['id_menu'] ?? 0) === (int) $menu['id_menu']) {
+        return '/biblioteca#' . cms_biblioteca_anchor($submenu);
+    }
+    return cms_public_url($submenu['url'] ?: '#');
 }

@@ -88,10 +88,7 @@ try {
 }
 
 $pageTitle = trim((string) ($newsItem['titulo'] ?? 'Noticia'));
-$image = trim((string) ($newsItem['imagen'] ?? ''));
-if ($image === '') {
-    $image = 'assets/images/frontis_01.jpg';
-}
+$image = cms_public_image($newsItem['imagen'] ?? '');
 $detailGallery = ($newsItem && $db instanceof mysqli) ? array_values(array_filter(cms_get_news_gallery_config($db, (int) ($newsItem['id_seccion'] ?? 0), (int) ($newsItem['id_item'] ?? 0)), static fn(array $item): bool => (int) ($item['visible'] ?? 1) === 1)) : [];
 $youtubeEmbed = $newsItem ? cms_youtube_embed_url($newsItem['video_youtube'] ?? '') : '';
 $youtubeThumb = '';
@@ -253,7 +250,7 @@ $isExternalButton = preg_match('/^https?:\/\//i', $buttonUrl) === 1;
                             <div class="carousel-inner">
                                 <?php foreach ($detailGallery as $index => $detailImage): ?>
                                     <div class="carousel-item <?= $index === 0 ? 'active' : '' ?>">
-                                        <img src="<?= e((string) $detailImage['archivo']) ?>" alt="<?= e((string) ($detailImage['titulo'] ?: ($newsItem['titulo'] ?? 'Noticia'))) ?>">
+                                        <img src="<?= e(cms_public_image($detailImage['archivo'] ?? '')) ?>" alt="<?= e((string) ($detailImage['titulo'] ?: ($newsItem['titulo'] ?? 'Noticia'))) ?>">
                                     </div>
                                 <?php endforeach; ?>
                             </div>
@@ -298,7 +295,7 @@ $isExternalButton = preg_match('/^https?:\/\//i', $buttonUrl) === 1;
                                 <div class="sp-news-related-list">
                                     <?php foreach ($relatedNews as $related): ?>
                                         <a class="sp-news-related-item" href="/noticia/<?= (int) $related['id_item'] ?>">
-                                            <img src="<?= e($related['imagen'] ?: 'assets/images/frontis_01.jpg') ?>" alt="<?= e($related['titulo'] ?? 'Noticia relacionada') ?>">
+                                            <img src="<?= e(cms_public_image($related['imagen'] ?? '')) ?>" alt="<?= e($related['titulo'] ?? 'Noticia relacionada') ?>">
                                             <strong><?= e($related['titulo'] ?? '') ?></strong>
                                         </a>
                                     <?php endforeach; ?>

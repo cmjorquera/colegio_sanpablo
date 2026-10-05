@@ -197,7 +197,7 @@ $colorSecundario = $institution['color_secundario'] ?? '#E8A030';
                                 ?>
                                 <a class="nt-card" href="/noticia/<?= (int) ($newsItem['id_item'] ?? 0) ?>" data-nt-search="<?= e($searchText) ?>">
                                     <div class="nt-card-img">
-                                        <img src="<?= e($newsItem['imagen'] ?: 'assets/images/frontis_01.jpg') ?>" alt="<?= e($newsItem['titulo'] ?? '') ?>" loading="lazy">
+                                        <img src="<?= e(cms_public_image($newsItem['imagen'] ?? '')) ?>" alt="<?= e($newsItem['titulo'] ?? '') ?>" loading="lazy">
                                     </div>
                                     <div class="nt-card-body">
                                         <?php if ($categoria !== ''): ?>
@@ -240,6 +240,14 @@ $colorSecundario = $institution['color_secundario'] ?? '#E8A030';
 
     <script src="assets/js/jquery-3.7.1.min.js"></script>
     <script src="assets/js/bootstrap.min.js"></script>
+    <script src="assets/js/meanmenu.js"></script>
+    <script src="assets/js/swiper-bundle.min.js"></script>
+    <script src="assets/js/jquery.counterup.min.js"></script>
+    <script src="assets/js/wow.min.js"></script>
+    <script src="assets/js/magnific-popup.min.js"></script>
+    <script src="assets/js/nice-select.min.js"></script>
+    <script src="assets/js/parallax.js"></script>
+    <script src="assets/js/jquery.waypoints.js"></script>
     <script src="assets/js/script.js"></script>
     <?php if (!empty($years)): ?>
     <script>

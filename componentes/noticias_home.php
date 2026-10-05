@@ -55,7 +55,7 @@ if (!empty($institution['color_terciario']) && preg_match('/^#(?:[0-9a-fA-F]{3})
                         <div class="swiper-slide">
                             <a class="noticia-card noticia-card--link" href="<?= e($cardUrl) ?>">
                                 <div class="img-wrap">
-                                    <img src="<?= e($item['imagen'] ?: 'assets/images/frontis_01.jpg') ?>"
+                                    <img src="<?= e(cms_public_image($item['imagen'] ?? '')) ?>"
                                          alt="<?= e($item['titulo']) ?>"
                                          loading="lazy">
                                 </div>

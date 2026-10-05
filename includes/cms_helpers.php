@@ -2,6 +2,8 @@
 require_once __DIR__ . '/../class/conexion.php';
 require_once __DIR__ . '/upload_helpers.php';
 require_once __DIR__ . '/public_routes.php';
+require_once __DIR__ . '/public_images.php';
+require_once __DIR__ . '/submenu_public_media.php';
 
 function cms_e(?string $value): string
 {
@@ -600,10 +602,12 @@ function cms_get_component_path(string $name): ?string
     return is_file($path) ? $path : null;
 }
 
-function cms_get_site_data(mysqli $db): array
+function cms_get_site_data(mysqli $db, bool $readOnly = false): array
 {
     $institutionId = cms_get_institution_id($db);
-    cms_sync_sections($db, $institutionId);
+    if (!$readOnly) {
+        cms_sync_sections($db, $institutionId);
+    }
 
     $institution = null;
     $sections = [];
@@ -939,9 +943,11 @@ function cms_submenu_public_url(array $submenu): string
     return '/pagina/' . (int) ($submenu['id_sub_menu'] ?? 0);
 }
 
-function cms_list_submenu_page_media(mysqli $db, int $idSubMenu): array
+function cms_list_submenu_page_media(mysqli $db, int $idSubMenu, bool $readOnly = false): array
 {
-    cms_ensure_submenu_page_tables($db);
+    if (!$readOnly) {
+        cms_ensure_submenu_page_tables($db);
+    }
     $stmt = $db->prepare('SELECT * FROM sub_menu_pagina_media WHERE id_sub_menu = ? ORDER BY orden ASC, id_media ASC');
     if (!$stmt) {
         return [];
@@ -1167,9 +1173,11 @@ function cms_reorder_submenu_page_media(mysqli $db, int $idSubMenu, array $ids):
     $stmt->close();
 }
 
-function cms_get_public_submenu_page(mysqli $db, int $idSubMenu): ?array
+function cms_get_public_submenu_page(mysqli $db, int $idSubMenu, bool $readOnly = false): ?array
 {
-    cms_ensure_submenu_page_tables($db);
+    if (!$readOnly) {
+        cms_ensure_submenu_page_tables($db);
+    }
     $stmt = $db->prepare("SELECT sm.*, m.nombre AS menu_padre, m.id_menu,
                                  sp.titulo AS pagina_titulo, sp.bajada AS pagina_bajada,
                                  sp.contenido AS pagina_contenido,
@@ -1198,9 +1206,11 @@ function cms_get_public_submenu_page(mysqli $db, int $idSubMenu): ?array
     if (!$row) {
         return null;
     }
-    cms_migrate_submenu_secondary_image_to_gallery($db, $idSubMenu, (string) ($row['pagina_imagen_secundaria'] ?? ''));
-    $row['pagina_imagen_secundaria'] = '';
-    $row['pagina_media'] = cms_list_submenu_page_media($db, $idSubMenu);
+    if (!$readOnly) {
+        cms_migrate_submenu_secondary_image_to_gallery($db, $idSubMenu, (string) ($row['pagina_imagen_secundaria'] ?? ''));
+        $row['pagina_imagen_secundaria'] = '';
+    }
+    $row['pagina_media'] = cms_list_submenu_page_media($db, $idSubMenu, $readOnly);
     return cms_decode_submenu_editor_row($row);
 }
 

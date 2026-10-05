@@ -32,13 +32,13 @@ $urlBoton = cms_public_url($institution['url_boton_principal'] ?? '#');
                             $active = $i === 0 ? ' class="active"' : '';
                         ?>
                             <li<?= $active ?>>
-                                <a href="<?= e(cms_public_url($menu['url'] ?: '#')) ?>">
+                                <a href="<?= e(cms_public_menu_url($menu)) ?>">
                                     <?= e($menu['nombre']) ?><?= $hasSubs ? ' <span aria-hidden="true">&#9662;</span>' : '' ?>
                                 </a>
                                 <?php if ($hasSubs): ?>
                                     <ul class="dropdown">
                                         <?php foreach ($arrSubs[$idMenu] as $sub): ?>
-                                            <li><a href="<?= e(cms_public_url($sub['url'] ?: '#')) ?>"><?= e($sub['nombre']) ?></a></li>
+                                            <li><a href="<?= e(cms_public_header_submenu_url($sub, $menu)) ?>"><?= e($sub['nombre']) ?></a></li>
                                         <?php endforeach; ?>
                                     </ul>
                                 <?php endif; ?>
@@ -69,14 +69,14 @@ $urlBoton = cms_public_url($institution['url_boton_principal'] ?? '#');
                 $hasSubs = !empty($arrSubs[$idMenu]);
             ?>
                 <div class="border rounded-4 p-3">
-                    <a href="<?= e(cms_public_url($menu['url'] ?: '#')) ?>" class="d-flex align-items-center justify-content-between text-decoration-none text-dark fw-semibold">
+                    <a href="<?= e(cms_public_menu_url($menu)) ?>" class="d-flex align-items-center justify-content-between text-decoration-none text-dark fw-semibold">
                         <span><?= e($menu['nombre']) ?></span>
                         <?php if ($hasSubs): ?><i class="fas fa-chevron-right small text-muted"></i><?php endif; ?>
                     </a>
                     <?php if ($hasSubs): ?>
                         <div class="mt-2 d-flex flex-column gap-2">
                             <?php foreach ($arrSubs[$idMenu] as $sub): ?>
-                                <a href="<?= e(cms_public_url($sub['url'] ?: '#')) ?>" class="text-decoration-none text-muted small"><?= e($sub['nombre']) ?></a>
+                                <a href="<?= e(cms_public_header_submenu_url($sub, $menu)) ?>" class="text-decoration-none text-muted small"><?= e($sub['nombre']) ?></a>
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>

@@ -206,3 +206,53 @@ ERRORES A EVITAR
 - Confundir seccion_item de noticias con una tabla noticia: en esta base las noticias del home salen de seccion_item.
 - Confundir menu publico con menu administrador.
 - Ignorar visible, estado y orden al revisar por que algo no aparece.
+
+
+MODAL INFORMATIVO: CARGA Y DIAGNOSTICO (2026-10-05)
+-------------------------------------------------
+- cms_get_site_data() construye los mapas por nombre_interno. index.php incluye
+  modal_informativo solo si seccion.visible = 'si' y estado = 'activo'. Los
+  valores reales son si/no y activo/inactivo, no los numeros 1/0.
+- componentes/modal_informativo.php necesita ademas un seccion_item visible
+  ('si') con titulo, descripcion o imagen. Activar el contenedor no activa
+  automaticamente sus items. Se usa el primer item visible con contenido.
+- Es un modal propio, no Bootstrap: hidden + aria-hidden inicialmente;
+  .is-open lo muestra, backdrop interno y z-index 99990. No usa .show,
+  cookies ni sessionStorage.
+- CSS: assets/css/pages/modal_informativo.css. JS independiente:
+  assets/js/modal_informativo.js, cargado con defer y con soporte para carga
+  posterior a DOMContentLoaded. Cada nodo se inicializa una sola vez.
+- seccion_config.mostrar: siempre ignora la marca; una_vez (valor por defecto)
+  consulta localStorage. delay_ms controla el retraso (por defecto 650 ms).
+- Clave: sp_info_modal_seen_ + los primeros 14 caracteres SHA1 de titulo,
+  descripcion, imagen, texto y URL del boton, en ese orden. No se cambio el
+  hash ni la regla. Cerrar, pulsar el boton o Escape guarda '1'; abrir no lo
+  guarda. Cambiar ese contenido genera otra clave y permite verlo nuevamente.
+  Recargar o Ctrl+F5 no borra localStorage. Si el almacenamiento esta bloqueado,
+  se permite mostrar el modal en esa visita.
+- Defecto corregido: la vista previa usaba la misma clave del sitio publico.
+  Cerrar el preview podia impedir verlo despues en la portada del mismo origen.
+  data-preview se determina por SCRIPT_NAME=preview_contenedor.php. Ahora el
+  preview muestra el contenido sin leer ni escribir la marca del visitante.
+  Las marcas anteriores no se borran automaticamente: podrian representar un
+  cierre real del visitante y no se puede distinguir su origen retrospectivo.
+- El error getTotalLength del template no era la causa del bloqueo del modal:
+  en Chrome, con el codigo original, coexistian la excepcion y el modal abierto.
+  El listener del modal se registra por separado antes de ejecutar script.js.
+  La excepcion si interrumpia el final de ese script, incluido WOW.
+- Si vuelve a fallar: primero buscar [data-sp-info-modal] en el HTML recibido.
+  Si falta, revisar estado/visible del contenedor, visible/contenido del item y
+  version desplegada. Si existe, revisar data-mode, data-hash, data-delay y SOLO
+  su clave localStorage. Comprobar los nuevos CSS/JS con HTTP 200, is-open,
+  hidden y consola. No borrar todo el almacenamiento ni cambiar a siempre
+  como solucion general. Comprobar tambien sin extensiones.
+- La lectura HTTP de paginaweb.sanpablo.edu.uy en esta revision no contenia el
+  modal e incluia el antiguo acceso administrativo en el encabezado. No prueba
+  la configuracion actual de QA ni que estos cambios esten desplegados.
+  El parpadeo reportado no se reprodujo; su causa exacta sigue sin confirmarse.
+- content-youtube-embed.js no existe en este repositorio. Para clasificar el
+  error TrustedHTML hace falta la URL completa del stack: chrome-extension://
+  identifica una extension; una URL de terceros identifica ese recurso/frame.
+  No se atribuye a YouTube solamente por el nombre ni se debilita CSP.
+  powerPreference es una advertencia del navegador; su emisor se verifica en
+  el stack. No se agregan capturas globales para silenciar errores.

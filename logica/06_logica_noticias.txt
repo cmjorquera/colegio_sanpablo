@@ -136,3 +136,37 @@ REGLAS IMPORTANTES
 - El boton "Ver todas las noticias" siempre apunta a noticias.php; url_boton y cantidad_items siguen en seccion_config pero ya no se editan desde editar_contenedor.php (se fuerzan a noticias.php y 4 al guardar).
 - noticias.php es la bitacora publica con pestanas por anio; ya esta implementada (ver seccion ARCHIVOS INVOLUCRADOS).
 - No documentar una tabla noticia si no existe en qaseduc_colegio_spablo.sql.
+
+
+IMAGENES AUSENTES Y RECURSOS PUBLICOS (2026-10-05)
+------------------------------------------------
+- includes/public_images.php define cms_public_image(), incluido por
+  cms_helpers.php. Home, bitacora, detalle, relacionadas y galeria verifican
+  las rutas locales contra la raiz fisica antes de emitir src. Las rutas
+  validas se publican desde /; no dependen de /noticia/ID ni /pagina/ID.
+- Si la ruta esta vacia o el archivo local no existe, se reutiliza
+  /assets/images/frontis_01.jpg. No se inventan archivos ni se cambia la BD.
+  Las URLs http(s) externas conservan su comportamiento; no se consulta su
+  disponibilidad desde PHP. No se aceptan rutas locales que salgan de la raiz.
+- La referencia del item 11 en el archivo SQL local apunta a
+  uploads/noticias/alumna-del-colegio-san-pablo-es-premiada-por-cambridge-debido-a-su-excelencia-acad-mica-en-los-ex-menes-igcse-20260615114729-d4e535-20260615165043-a081a5-20260929182259-b87f90.jpg
+  Este archivo no existe en el workspace ni esta versionado. Hay una version
+  anterior con otro nombre; no se sustituye automaticamente por esa imagen.
+  La referencia y el archivo no coinciden. Sin el historial del servidor no
+  puede afirmarse si fue borrado, renombrado o no desplegado; el dump no prueba
+  el registro vigente de produccion.
+- noticias.php carga las mismas dependencias de script.js que index.php.
+  Antes cargaba solo jQuery/Bootstrap, provocando meanmenu is not a function.
+- Verificacion: PHP/JS lint y Chrome sin extensiones con HTML renderizado de
+  las vistas reales y datos de prueba, sin ejecutar SQL. Rutas comprobadas:
+  /, /pagina/1, /noticias y /admin (vista de login); escritorio y movil.
+  El servidor de pruebas mapea las rutas: no sustituye validar mod_rewrite
+  en Apache ni prueba autenticacion/consultas reales. El PHP CLI local carece
+  de mbstring; el fixture de noticias usa un sustituto temporal de
+  mb_strtolower solo para renderizar. El codigo del proyecto no se altera
+  para ocultar esa limitacion del entorno de prueba.
+- Resultado: 26 comprobaciones de navegador y 8 casos de rutas de imagen
+  correctos. Incluyen inicializacion posterior a DOMContentLoaded y SVG real
+  en una pagina sin recorrido vertical. En el login el navegador solicito
+  /favicon.ico (ausente); fue un 404 separado, no una imagen de noticia ni
+  una excepcion JavaScript. No se agrego un icono inventado.

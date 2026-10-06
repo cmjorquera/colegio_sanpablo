@@ -259,3 +259,17 @@ versiona y se reemplaza; uploads/ se acumula y solo crece.
   compatibilidad total con las rutas planas existentes.
 - Corregir el hallazgo de rutas con backslash en sub_menu_pagina_media (seccion
   11) mediante una migracion de datos puntual y revisada, no automatica.
+
+15. CABECERAS DE MENUS (2026-10-05)
+-----------------------------------
+
+La cabecera propia de cada menu usa uploads/menus/{id_menu}/. Guarda una imagen
+o video principal en menus, separada de los principales y galerias de submenus.
+Reutiliza los validadores, limites y nombres unicos de upload_helpers.php; no
+se guardan archivos en la raiz ni se cambia la organizacion de otros modulos.
+Al reemplazar/eliminar se actualiza primero la referencia dentro de una
+transaccion y solo despues del commit se borra el archivo anterior si no tiene
+referencias compartidas. Ante error al comprobar referencias se conserva.
+El borrado sigue restringido por realpath a uploads. Nunca reemplazar esta
+carpeta durante un despliegue. Detalle administrativo, campos y Biblioteca:
+logica/logica_menus_submenus_paginas.txt, CABECERA PROPIA DEL MENU.

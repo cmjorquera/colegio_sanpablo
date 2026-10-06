@@ -4,6 +4,7 @@ require_once __DIR__ . '/upload_helpers.php';
 require_once __DIR__ . '/public_routes.php';
 require_once __DIR__ . '/public_images.php';
 require_once __DIR__ . '/submenu_public_media.php';
+require_once __DIR__ . '/menu_media_helpers.php';
 
 function cms_e(?string $value): string
 {
@@ -622,7 +623,7 @@ function cms_get_site_data(mysqli $db, bool $readOnly = false): array
         $institution = $resInstitution->fetch_assoc();
     }
 
-    $resMenus = $db->query("SELECT id_menu, nombre, url, icono, orden FROM menus WHERE estado = 1 ORDER BY orden ASC, id_menu ASC");
+    $resMenus = $db->query("SELECT id_menu, nombre, url, icono, orden, hero_tipo, imagen_hero, hero_video_url, hero_video_archivo FROM menus WHERE estado = 1 ORDER BY orden ASC, id_menu ASC");
     if ($resMenus) {
         $arrMenus = $resMenus->fetch_all(MYSQLI_ASSOC);
         $resMenus->free();
@@ -1026,18 +1027,19 @@ function cms_submenu_file_is_referenced(mysqli $db, string $path): bool
     $path = trim($path);
     if ($path === '') { return false; }
     foreach ([
+        ['menus', ['imagen_hero', 'hero_video_archivo']],
         ['sub_menu_paginas', ['imagen_hero', 'hero_video_archivo', 'imagen_secundaria', 'video_archivo']],
         ['sub_menu_pagina_media', ['archivo']],
         ['sub_menu_historia_item', ['imagen']],
     ] as [$table, $columns]) {
         if (!cms_table_exists($db, $table)) { continue; }
-        $where = implode(' OR ', array_map(static fn(string $column): string => '`' . $column . '` = ?', $columns));
+        $where = implode(' OR ', array_map(static fn(string $column): string => "REPLACE(TRIM(LEADING '/' FROM `$column`), CHAR(92), '/') = ?", $columns));
         $stmt = $db->prepare('SELECT 1 FROM `' . $table . '` WHERE ' . $where . ' LIMIT 1');
         if (!$stmt) { return true; }
         $types = str_repeat('s', count($columns));
-        $values = array_fill(0, count($columns), $path);
+        $values = array_fill(0, count($columns), ltrim(str_replace('\\', '/', $path), '/'));
         $stmt->bind_param($types, ...$values);
-        $stmt->execute();
+        if (!$stmt->execute()) { $stmt->close(); return true; }
         $found = (bool) $stmt->get_result()->fetch_row();
         $stmt->close();
         if ($found) { return true; }
@@ -2554,21 +2556,40 @@ function cms_save_menu(mysqli $db, array $post): int
     if ($nombre === '') {
         throw new RuntimeException('El nombre del menu es obligatorio.');
     }
+    $newHeaderPaths = [];
+    $oldHeaderPaths = [];
+    $db->begin_transaction();
+    try {
+        if ($idMenu > 0) {
+            $stmt = $db->prepare('UPDATE menus SET nombre = ?, url = ?, icono = ?, estado = ?, actualizado_en = NOW(), actualizado_por = ? WHERE id_menu = ?');
+            $stmt->bind_param('sssiii', $nombre, $url, $icono, $estado, $idUsuario, $idMenu);
+        } else {
+            $res = $db->query('SELECT COALESCE(MAX(orden), 0) + 1 AS next_orden FROM menus');
+            $orden = $res ? (int) $res->fetch_assoc()['next_orden'] : 1;
+            $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
+            $stmt = $db->prepare('INSERT INTO menus (nombre, url, icono, orden, estado, fecha_creacion, hora_creacion, ip_creacion, actualizado_en, actualizado_por) VALUES (?, ?, ?, ?, ?, CURDATE(), CURTIME(), ?, NOW(), ?)');
+            $stmt->bind_param('sssiisi', $nombre, $url, $icono, $orden, $estado, $ip, $idUsuario);
+        }
 
-    if ($idMenu > 0) {
-        $stmt = $db->prepare('UPDATE menus SET nombre = ?, url = ?, icono = ?, estado = ?, actualizado_en = NOW(), actualizado_por = ? WHERE id_menu = ?');
-        $stmt->bind_param('sssiii', $nombre, $url, $icono, $estado, $idUsuario, $idMenu);
-    } else {
-        $res = $db->query('SELECT COALESCE(MAX(orden), 0) + 1 AS next_orden FROM menus');
-        $orden = $res ? (int) $res->fetch_assoc()['next_orden'] : 1;
-        $ip = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
-        $stmt = $db->prepare('INSERT INTO menus (nombre, url, icono, orden, estado, fecha_creacion, hora_creacion, ip_creacion, actualizado_en, actualizado_por) VALUES (?, ?, ?, ?, ?, CURDATE(), CURTIME(), ?, NOW(), ?)');
-        $stmt->bind_param('sssiisi', $nombre, $url, $icono, $orden, $estado, $ip, $idUsuario);
+        if (!$stmt->execute()) { throw new RuntimeException('No se pudo guardar el menú.'); }
+        $savedId = $idMenu > 0 ? $idMenu : (int) $db->insert_id;
+        $stmt->close();
+        if (array_key_exists('menu_hero_tipo', $post)) {
+            $oldHeaderPaths = cms_save_menu_header($db, $savedId, $post, $newHeaderPaths);
+        }
+        $db->commit();
+    } catch (Throwable $error) {
+        $db->rollback();
+        foreach ($newHeaderPaths as $newPath) { cms_eliminar_archivo_seguro($newPath); }
+        throw $error;
     }
-
-    $stmt->execute();
-    $savedId = $idMenu > 0 ? $idMenu : (int) $db->insert_id;
-    $stmt->close();
+    foreach ($oldHeaderPaths as $oldPath) {
+        try {
+            if (!cms_menu_header_file_is_referenced($db, $oldPath)) { cms_eliminar_archivo_seguro($oldPath); }
+        } catch (Throwable $error) {
+            error_log('Cabecera de menu guardada; archivo anterior conservado al no poder comprobar sus referencias.');
+        }
+    }
     return $savedId;
 }
 

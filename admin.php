@@ -726,6 +726,10 @@ admin_render_layout_start([
                                 data-url="<?= cms_e($menu['url']) ?>"
                                 data-icono="<?= cms_e($menu['icono']) ?>"
                                 data-estado="<?= (int) $menu['estado'] ?>"
+                                data-hero-tipo="<?= cms_e($menu['hero_tipo'] ?? 'imagen') ?>"
+                                data-imagen-hero="<?= cms_e($menu['imagen_hero'] ?? '') ?>"
+                                data-hero-video-url="<?= cms_e($menu['hero_video_url'] ?? '') ?>"
+                                data-hero-video-archivo="<?= cms_e($menu['hero_video_archivo'] ?? '') ?>"
                                 onclick="abrirModalMenu(this)">
                                 <i class="bi bi-pencil-square"></i>
                             </button>
@@ -826,9 +830,9 @@ admin_render_layout_start([
 
     <!-- Modal Menú -->
     <div class="modal fade" id="modalMenu" tabindex="-1" aria-labelledby="modalMenuLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
             <div class="modal-content">
-                <form method="post" id="formModalMenu">
+                <form method="post" id="formModalMenu" enctype="multipart/form-data">
                     <input type="hidden" name="accion" value="guardar_menu">
                     <input type="hidden" name="id_menu" id="modalMenuId" value="0">
                     <div class="modal-header">
@@ -836,6 +840,12 @@ admin_render_layout_start([
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                     </div>
                     <div class="modal-body">
+                        <ul class="submenu-editor-tabs" role="tablist" aria-label="Edición del menú">
+                            <li role="presentation"><button type="button" class="active" data-bs-toggle="tab" data-bs-target="#menuTabDatos" id="menuTabDatosButton" role="tab" aria-controls="menuTabDatos" aria-selected="true">Datos</button></li>
+                            <li role="presentation"><button type="button" data-bs-toggle="tab" data-bs-target="#menuTabCabecera" id="menuTabCabeceraButton" role="tab" aria-controls="menuTabCabecera" aria-selected="false">Cabecera</button></li>
+                        </ul>
+                        <div class="tab-content">
+                        <div class="tab-pane fade show active" id="menuTabDatos" role="tabpanel" aria-labelledby="menuTabDatosButton">
                         <div class="mb-3">
                             <label class="form-label">Nombre <span class="text-danger">*</span></label>
                             <input class="form-control" name="nombre" id="modalMenuNombre" required>
@@ -851,6 +861,11 @@ admin_render_layout_start([
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="estado" id="modalMenuEstado">
                             <label class="form-check-label" for="modalMenuEstado">Activo</label>
+                        </div>
+                        </div>
+                        <div class="tab-pane fade" id="menuTabCabecera" role="tabpanel" aria-labelledby="menuTabCabeceraButton">
+                            <?php include __DIR__ . '/componentes/menu_cabecera_editor.php'; ?>
+                        </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -1449,7 +1464,7 @@ admin_render_layout_start([
 <?php
 admin_render_layout_end([
     'extra_scripts' => (in_array($panel, ['menus', 'submenus'], true)
-        ? '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script><script src="assets/js/submenu_gallery_admin.js"></script>'
+        ? '<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script><script src="assets/js/submenu_gallery_admin.js"></script><script src="assets/js/menu_header_admin.js"></script>'
         : '') . <<<'HTML'
     <script>
         $(function () {
@@ -1835,33 +1850,6 @@ admin_render_layout_end([
                 });
             });
         })();
-
-        function abrirModalMenu(btn) {
-            var modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('modalMenu'));
-            var titulo = document.getElementById('modalMenuLabel');
-            var idInput = document.getElementById('modalMenuId');
-            var nombreInput = document.getElementById('modalMenuNombre');
-            var urlInput = document.getElementById('modalMenuUrl');
-            var iconoInput = document.getElementById('modalMenuIcono');
-            var estadoCheck = document.getElementById('modalMenuEstado');
-
-            if (btn) {
-                titulo.textContent = 'Editar menú';
-                idInput.value = btn.dataset.id || '0';
-                nombreInput.value = btn.dataset.nombre || '';
-                urlInput.value = btn.dataset.url || '';
-                iconoInput.value = btn.dataset.icono || '';
-                estadoCheck.checked = btn.dataset.estado === '1';
-            } else {
-                titulo.textContent = 'Nuevo menú';
-                idInput.value = '0';
-                nombreInput.value = '';
-                urlInput.value = '';
-                iconoInput.value = '';
-                estadoCheck.checked = true;
-            }
-            modal.show();
-        }
 
         function abrirModalSubmenu(btn, defaultIdMenu, preferredTabId) {
             if (window.submenuGalleryAdmin.isBusy()) { return; }

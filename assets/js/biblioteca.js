@@ -1,5 +1,37 @@
 (function () {
     function initializeLibrary() {
+        var heroImage = document.querySelector('[data-library-hero-image]');
+        if (heroImage) {
+            function restoreHeroImage() {
+                var fallback = heroImage.dataset.fallback;
+                if (fallback && heroImage.getAttribute('src') !== fallback) heroImage.src = fallback;
+                else heroImage.hidden = true;
+            }
+            heroImage.addEventListener('error', restoreHeroImage);
+            if (heroImage.complete && !heroImage.naturalWidth) restoreHeroImage();
+        }
+        var heroVideo = document.querySelector('[data-library-hero-video]');
+        var videoToggle = document.querySelector('[data-library-video-toggle]');
+        if (heroVideo && videoToggle) {
+            function updateVideoToggle() {
+                var action = heroVideo.paused ? 'Reproducir' : 'Pausar';
+                videoToggle.textContent = action + ' video';
+                videoToggle.setAttribute('aria-label', action + ' video de cabecera');
+            }
+            function restoreVideoFallback() { heroVideo.hidden = true; videoToggle.hidden = true; }
+            heroVideo.addEventListener('error', restoreVideoFallback);
+            if (heroVideo.error) restoreVideoFallback();
+            heroVideo.addEventListener('play', updateVideoToggle);
+            heroVideo.addEventListener('pause', updateVideoToggle);
+            videoToggle.addEventListener('click', function () {
+                if (heroVideo.paused) heroVideo.play().catch(restoreVideoFallback);
+                else heroVideo.pause();
+            });
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                heroVideo.autoplay = false; heroVideo.pause();
+            }
+            updateVideoToggle();
+        }
         if (window.bootstrap && window.bootstrap.Carousel) {
             document.querySelectorAll('[data-library-carousel]').forEach(function (gallery) {
                 window.bootstrap.Carousel.getOrCreateInstance(gallery, { interval: false, ride: false, touch: true });

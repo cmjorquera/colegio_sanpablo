@@ -70,8 +70,18 @@ $libraryTitle = $library['title'] ?? 'Biblioteca';
     <?php include __DIR__ . '/componentes/header.php'; ?>
     <main id="biblioteca-contenido" style="<?= e(cms_public_institution_theme($institution ?? [])) ?>">
         <?php if ($library !== null): ?>
-            <section class="sp-library-hero" aria-labelledby="biblioteca-titulo">
-                <img class="sp-library-hero__image" src="<?= e($library['hero']) ?>" alt="" fetchpriority="high">
+            <section class="sp-library-hero<?= $library['hero']['type'] === 'embed' ? ' sp-library-hero--embed' : '' ?>" aria-labelledby="biblioteca-titulo">
+                <?php $headerMedia = $library['hero']; ?>
+                <?php $headerImageSrc = $headerMedia['type'] === 'imagen' ? $headerMedia['src'] : $headerMedia['fallback']; ?>
+                <?php if ($headerImageSrc !== ''): ?>
+                    <img class="sp-library-hero__image" src="<?= e($headerImageSrc) ?>" data-library-hero-image data-fallback="<?= e($headerMedia['fallback']) ?>" alt="" fetchpriority="high">
+                <?php endif; ?>
+                <?php if ($headerMedia['type'] === 'video'): ?>
+                    <video class="sp-library-hero__video" src="<?= e($headerMedia['src']) ?>" poster="<?= e($headerMedia['fallback']) ?>" autoplay muted loop playsinline preload="metadata" aria-label="Video de cabecera de <?= e($libraryTitle) ?>" data-library-hero-video></video>
+                    <button type="button" class="sp-library-hero__video-toggle" data-library-video-toggle aria-label="Pausar video de cabecera">Pausar video</button>
+                <?php elseif ($headerMedia['type'] === 'embed'): ?>
+                    <iframe class="sp-library-hero__embed" src="<?= e($headerMedia['src']) ?>" title="Video de cabecera de <?= e($libraryTitle) ?>" allow="encrypted-media; picture-in-picture; fullscreen" allowfullscreen></iframe>
+                <?php endif; ?>
                 <div class="container sp-library-hero__content">
                     <nav class="sp-library-breadcrumb" aria-label="Ruta de navegación">
                         <a href="/">Inicio</a><span aria-hidden="true">›</span><span aria-current="page"><?= e($libraryTitle) ?></span>

@@ -54,7 +54,6 @@ function cms_biblioteca_view(array $menu, array $pages): array
 {
     $sections = [];
     $gallery = [];
-    $hero = '';
     $subtitle = '';
     foreach ($pages as $page) {
         $title = trim((string) ($page['pagina_titulo'] ?? '')) ?: (string) $page['nombre'];
@@ -64,9 +63,6 @@ function cms_biblioteca_view(array $menu, array $pages): array
         $image = cms_public_image(cms_biblioteca_current_url($page['pagina_imagen_hero'] ?? ''), '');
         if ($image !== '') {
             $images[$image] = ['src' => $image, 'title' => $title, 'description' => ''];
-            if ($hero === '') {
-                $hero = $image;
-            }
         }
         foreach (['pagina_hero_video', 'pagina_video'] as $prefix) {
             $file = cms_public_image(cms_biblioteca_current_url($page[$prefix . '_archivo'] ?? ''), '');
@@ -125,7 +121,7 @@ function cms_biblioteca_view(array $menu, array $pages): array
     return [
         'title' => (string) $menu['nombre'],
         'subtitle' => $subtitle,
-        'hero' => $hero !== '' ? $hero : cms_public_image('assets/images/frontis_01.jpg'),
+        'hero' => cms_menu_header_media($menu),
         'sections' => $sections,
         'gallery' => count($gallery) >= 2 ? array_values($gallery) : [],
     ];

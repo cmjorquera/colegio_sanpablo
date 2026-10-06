@@ -326,6 +326,10 @@
     padding: 10px;
     box-shadow: var(--adm-shadow-sm);
 }
+#formModalMenu { display:flex; flex-direction:column; min-height:0; overflow:hidden; }
+#formModalMenu .modal-body { overflow-y:auto; }
+.menu-header-editor [hidden] { display:none !important; }
+.menu-header-editor .submenu-hero-mode input:focus-visible + span { outline:3px solid var(--adm-primary); outline-offset:3px; }
 .submenu-media-primary,
 .submenu-media-gallery { height:390px; min-width:0; overflow:hidden; }
 .submenu-media-gallery { display:flex; flex-direction:column; }

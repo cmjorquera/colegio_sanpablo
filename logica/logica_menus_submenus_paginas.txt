@@ -1,5 +1,5 @@
 MEMORIA PRINCIPAL: MENÚS, SUBMENÚS, PÁGINAS Y MULTIMEDIA
-Actualizado: 2026-07-12
+Actualizado: 2026-10-05
 
 MODELO Y CARDINALIDADES
 
@@ -15,7 +15,8 @@ id_sub_menu. El volcado no declara FOREIGN KEY físicas para estas relaciones.
 
 RESPONSABILIDADES
 
-menus guarda nombre, URL, icono, jerarquía, orden y estado de la navegación principal.
+menus guarda nombre, URL, icono, jerarquía, orden y estado de la navegación principal,
+y su propia cabecera: hero_tipo, imagen_hero, hero_video_url y hero_video_archivo.
 sub_menus guarda la opción hija, su id_menu, URL, icono, orden y estado; no guarda contenido.
 sub_menu_paginas guarda título, bajada, HTML editorial, medios principales, botón, SEO y auditoría.
 sub_menu_pagina_media guarda la galería: tipo, archivo/URL, título, descripción, visibilidad y orden.
@@ -230,9 +231,9 @@ Navegacion:
   /biblioteca antes de # para funcionar con base href="/" y enlaces profundos.
 
 Presentacion y multimedia:
-- Hero: nombre del menu, primera bajada no vacia y primera imagen_hero valida
-  entre los submenus ordenados. menus no administra imagenes propias. Si no hay
-  imagen, se reutiliza /assets/images/frontis_01.jpg; no hay imagen inventada.
+- Hero: nombre del menu y primera bajada no vacia. Desde 2026-10-05, la imagen
+  o video procede exclusivamente de la cabecera propia en menus. Sin medio
+  valido se reutiliza /assets/images/frontis_01.jpg, nunca el principal de un submenu.
 - Cada seccion usa nombre, pagina_titulo (o nombre si falta), bajada, contenido
   editorial y boton existente. cms_basic_content_html() conserva el tratamiento
   de HTML administrado; el adaptador de Biblioteca normaliza enlaces antiguos.
@@ -497,3 +498,77 @@ rechazadas. El agregado usa respuesta simulada porque un upload HTTP real no
 puede verificarse en PHP CLI. No se verificaron escrituras reales de QA ni
 autenticacion contra una sesion real; no se ejecuto SQL, migracion, commit ni
 push. Fixtures y copias de dependencias temporales se eliminan al finalizar.
+
+
+CABECERA PROPIA DEL MENU: IMPLEMENTADA (2026-10-05)
+
+El usuario confirmo la creacion manual en menus de hero_tipo (imagen/video),
+imagen_hero, hero_video_url y hero_video_archivo. Se utilizan esos cuatro campos.
+No se ejecuto SQL sobre ninguna BD real ni se modificaron archivos SQL en esta
+implementacion. El archivo informacion/agregar_cabecera_menus.sql pertenece a
+la propuesta anterior, ya aplicada manualmente; no hay migracion automatica.
+Los volcados historicos conservan su estructura anterior.
+
+RESPONSABILIDADES: menus guarda exclusivamente la multimedia de su propia
+cabecera. sub_menu_paginas conserva los principales de cada submenu;
+sub_menu_pagina_media conserva sus galerias, visibilidad y orden. Presentacion,
+La funcion de la Biblioteca, Objetivos y futuros submenus son independientes
+de la cabecera del menu. No hay backfill ni copia de sus imagenes al menu.
+
+ADMINISTRACION: el modal Editar/Nuevo menu de admin.php?panel=menus contiene
+Datos (Nombre, URL, Icono y Activo existentes) y Cabecera. Cabecera reutiliza
+el lenguaje visual y las clases del editor multimedia de submenus; permite
+Imagen/Video, previsualizar, cargar, reemplazar o eliminar el medio y reabrir
+con la configuracion persistida. Es comun para cualquier id_menu, sin ramas
+especiales para Biblioteca. Los permisos y la accion guardar_menu permanecen.
+Los consumidores anteriores que solo guardan Datos conservan la cabecera.
+
+ARCHIVOS: uploads/menus/{id_menu}/, incluso para un menu nuevo, con su ID real.
+Se reutilizan upload_helpers.php y los wrappers comunes: nombres unicos,
+validacion de extension/MIME y limites existentes (imagen 8 MB, video 150 MB).
+Video subido: MP4/WEBM/MOV/M4V; URL: formatos YouTube/Vimeo reconocidos por
+sp_submenu_video_embed(), sin agregar proveedores. Un solo tipo activo:
+al cambiar a imagen se limpian las referencias de video y viceversa. Un video
+nuevo subido tiene prioridad sobre la URL; una URL cambiada reemplaza el local.
+Eliminar el video elimina ambas referencias. No se crean dependencias nuevas.
+
+GUARDADO SEGURO: Datos y Cabecera se guardan en la misma transaccion; la fila
+se lee FOR UPDATE. Ante error se revierte y se elimina exclusivamente el nuevo
+archivo generado. Los archivos anteriores se eliminan solo DESPUES del commit,
+mediante cms_eliminar_archivo_seguro(), dentro de uploads y si no se encuentran
+referencias en otros menus, principales/galerias/historia de submenus u otros
+registros multimedia del CMS (incluida configuracion JSON). Ante duda o error
+al comprobar referencias, se conserva el archivo. La comprobacion comun de
+submenus tambien protege archivos utilizados en cabeceras de menus.
+
+BIBLIOTECA: cms_biblioteca_view() obtiene hero exclusivamente mediante
+cms_menu_header_media($menu), con los campos de la fila menus. Sin medio propio
+valido, usa assets/images/frontis_01.jpg; nunca toma el principal de Presentacion.
+La bajada y el contenido de las secciones mantienen sus lectores existentes.
+La imagen tiene respaldo ante error de carga; un video local usa el respaldo
+como poster/fondo y vuelve a el si no se puede reproducir. El video local
+conserva autoplay/muted/loop/playsinline y object-fit:cover, con control de pausa
+y respeto de movimiento reducido. El iframe externo no fuerza autoplay.
+Se mantienen overlay, titulo, breadcrumb, alturas y diseno aprobado, asi como
+indice, anclas, galerias, carruseles, header/footer y botones flotantes.
+Los otros menus solo reciben la administracion reutilizable; sus paginas
+publicas mantienen el render existente.
+
+IMPLEMENTACION: includes/menu_media_helpers.php centraliza seleccion, guardado
+y referencias; includes/cms_helpers.php integra lectura y transaccion;
+componentes/menu_cabecera_editor.php contiene los campos compartidos del modal;
+assets/js/menu_header_admin.js administra apertura, tipos y previews sin JS
+nuevo inline. Los estilos minimos se integran en admin_dashboard.css y
+pages/biblioteca.css; biblioteca.js conserva su navegacion y carruseles.
+
+VALIDACION: 107 comprobaciones locales con Chrome sin extensiones, PHP real y mysqli
+simulado/persistencia de fixtures, sin acceso a BD real. Cargas reales por HTTP,
+imagen nueva/reemplazo/eliminacion, video local/YouTube/Vimeo, cambios de tipo,
+reapertura, otro menu y creacion con ID propio. Archivo compartido conservado,
+MIME falso/URL no compatible rechazados y rollback con limpieza del upload nuevo.
+Datos sin Cabecera conserva su medio. Presentacion y sus galerias permanecen
+independientes. Administracion y Biblioteca comprobadas a 1920/1600/1366/1024/
+768/390/320 px; alturas originales 410/340/310 px, carruseles funcionales.
+Los proveedores externos se simulan solo para probar el iframe; su reproduccion
+remota y las escrituras/autenticacion reales de QA no se verificaron. Los
+fixtures, capturas y uploads de prueba se eliminan al finalizar. No commit/push.

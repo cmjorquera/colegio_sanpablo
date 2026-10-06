@@ -1,7 +1,7 @@
 <?php if (!empty($historyItems)): ?>
-<section class="historia-visual" aria-labelledby="historiaVisualTitulo">
+<section class="historia-visual" aria-labelledby="<?= e($historyTitleId ?? 'historiaVisualTitulo') ?>">
   <div class="historia-visual__contenedor">
-    <header class="historia-visual__cabecera"><span>Nuestra trayectoria</span><h2 id="historiaVisualTitulo">Historia</h2></header>
+    <header class="historia-visual__cabecera"><span>Nuestra trayectoria</span><h2 id="<?= e($historyTitleId ?? 'historiaVisualTitulo') ?>"><?= e($historyTitle ?? 'Historia') ?></h2></header>
     <div class="historia-visual__carrusel" data-history-carousel>
       <?php foreach ($historyItems as $item): ?>
         <article class="historia-hito">

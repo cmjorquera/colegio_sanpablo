@@ -1,1 +1,22 @@
-(function(){const root=document.querySelector('[data-history-carousel]');if(!root)return;const cards=[...root.children],prev=document.querySelector('[data-history-prev]'),next=document.querySelector('[data-history-next]'),status=document.querySelector('[data-history-status]');let page=0,startX=0;function size(){return matchMedia('(max-width:767px)').matches?1:2}function draw(){const n=size(),pages=Math.ceil(cards.length/n);if(page>=pages)page=pages-1;if(page<0)page=0;cards.forEach((c,i)=>c.classList.toggle('is-visible',i>=page*n&&i<(page+1)*n));if(status)status.textContent=(page+1)+' / '+pages;if(prev)prev.disabled=page===0;if(next)next.disabled=page===pages-1}if(prev)prev.onclick=()=>{page--;draw()};if(next)next.onclick=()=>{page++;draw()};root.addEventListener('touchstart',e=>startX=e.touches[0].clientX,{passive:true});root.addEventListener('touchend',e=>{const d=e.changedTouches[0].clientX-startX;if(Math.abs(d)>50){page+=d<0?1:-1;draw()}},{passive:true});addEventListener('resize',draw);draw()})();
+(function () {
+    document.querySelectorAll('[data-history-carousel]').forEach(function (root) {
+        var section = root.closest('.historia-visual'), cards = Array.from(root.children);
+        var prev = section.querySelector('[data-history-prev]'), next = section.querySelector('[data-history-next]');
+        var status = section.querySelector('[data-history-status]'), page = 0, startX = 0;
+        function draw() {
+            var size = matchMedia('(max-width:767px)').matches ? 1 : 2;
+            var pages = Math.ceil(cards.length / size);
+            page = Math.max(0, Math.min(page, pages - 1));
+            cards.forEach(function (card, i) { card.classList.toggle('is-visible', i >= page * size && i < (page + 1) * size); });
+            if (status) status.textContent = (page + 1) + ' / ' + pages;
+            if (prev) prev.disabled = page === 0;
+            if (next) next.disabled = page === pages - 1;
+        }
+        if (prev) prev.addEventListener('click', function () { page--; draw(); });
+        if (next) next.addEventListener('click', function () { page++; draw(); });
+        root.addEventListener('touchstart', function (event) { startX = event.touches[0].clientX; }, { passive: true });
+        root.addEventListener('touchend', function (event) { var distance = event.changedTouches[0].clientX - startX; if (Math.abs(distance) > 50) { page += distance < 0 ? 1 : -1; draw(); } }, { passive: true });
+        window.addEventListener('resize', draw);
+        draw();
+    });
+})();

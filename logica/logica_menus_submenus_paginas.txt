@@ -186,113 +186,148 @@ el archivo físico, nuevamente comprobando referencias compartidas. Nunca se eli
 completa como parte de estas operaciones.
 
 
-BIBLIOTECA: PAGINA PUBLICA ESPECIAL (2026-10-05)
+PAGINA TEMATICA DE MENU: ARQUITECTURA GENERICA (2026-10-05)
 
-Alcance exclusivo: menus.id_menu=10, confirmado por el volcado de referencia.
-Sus hijos actuales son 41, 42 y 43, pero NO se codifica esa lista: se recorren
-los hijos activos del menu en cada solicitud. El submenu 22 llamado Biblioteca
-pertenece a otro menu y conserva el comportamiento generico. Cambiar el nombre
-del menu 10 no rompe su identidad. Si se reinstala con otros IDs, revisar
-cms_is_biblioteca_menu() y el mapeo real antes de adaptar esta excepcion.
+Biblioteca fue la primera referencia funcional. Ahora existe UNA arquitectura
+para los menus compatibles, sin IDs/nombres especiales y sin copiar paginas.
+Los apartados posteriores de ajustes visuales y galerias describen el historial
+de Biblioteca; sus nombres de archivos/clases originales se sustituyeron por
+los nombres genericos indicados aqui. No se ejecuta SQL ni se cambian datos.
 
-Ruta: /biblioteca. Controlador: biblioteca.php. .htaccess agrega unicamente
-RewriteRule ^biblioteca/?$ biblioteca.php [END]. Se conservan todas las reglas
-anteriores, archivos fisicos y /pagina/{id}; pagina_submenu.php no se elimina.
-cms_public_url() reconoce biblioteca.php como /biblioteca sin alterar otras
-conversiones ni endpoints. No se escribe ningun destino en la base de datos.
+MODELO:
+menus -> hero propio (imagen/video)
+      -> sub_menus activos, orden + id_sub_menu
+         -> sub_menu_paginas (LEFT JOIN; el nombre sirve de titulo si falta pagina)
+         -> principales imagen/video
+         -> sub_menu_pagina_media visible, orden + id_media
+         -> sub_menu_historia_item visible, si la tabla instalada tiene hitos.
+No hay un segundo editor ni un segundo almacenamiento de contenido.
 
-Datos y administracion:
-- cms_get_site_data($db, true) obtiene institucion, menus y submenus activos.
-- cms_biblioteca_load_pages() valida id_menu/estado, usa
-  cms_get_public_submenu_page($db, id, true) y ordena por orden + id_sub_menu.
-- El lector mantiene el JOIN menus/sub_menus/LEFT JOIN sub_menu_paginas,
-  decodificacion editorial y cms_list_submenu_page_media($db, id, true).
-- El parametro opcional readOnly de esos lectores vale false por defecto.
-  true omite sincronizacion de secciones, creacion de tablas y migracion de
-  imagen_secundaria a galeria. Biblioteca solo lee; no crea ni migra registros.
-  Las tablas existentes deben estar instaladas. Menu inactivo/ausente devuelve
-  404; un error de carga devuelve 503 con mensaje publico sin detalles sensibles.
-- Administrador -> edita submenu/pagina/multimedia -> siguiente solicitud de
-  /biblioteca lee la misma informacion, sin textos copiados ni cache editorial.
-  No hay nueva pantalla ni guardado paralelo. La nota anterior de poblacion
-  desde Word es historica: el volcado actual SI incluye textos en 41-43.
+ARCHIVOS ACTIVOS:
+pagina_menu.php: controlador/render compartido.
+includes/pagina_menu_helpers.php: resolver, lector por lotes, adaptador y navegacion.
+includes/public_routes.php: politica de elegibilidad, URL, slug y anchors.
+componentes/pagina_menu_galeria.php: unica plantilla de galeria.
+assets/css/pages/pagina-menu.css y assets/js/pagina-menu.js: estilos y conducta comunes.
+componentes/header.php: usa la misma politica en escritorio y offcanvas.
+biblioteca.php: adaptador minimo de compatibilidad a la ruta biblioteca; no renderiza.
+Se sustituyeron biblioteca_helpers.php, biblioteca_galeria.php, biblioteca.css y
+biblioteca.js tras revisar referencias. No quedan dos implementaciones completas.
 
-Navegacion:
-- cms_public_menu_url() lleva exclusivamente el menu 10 a /biblioteca.
-- cms_public_header_submenu_url() lleva sus hijos a anchors de la nueva vista.
-- cms_biblioteca_anchor() normaliza el nombre a caracteres ASCII seguros y
-  agrega el id_sub_menu: presentacion-41, la-funcion-de-la-biblioteca-42,
-  objetivos-43. El ID evita colisiones, incluso si dos nombres son iguales.
-- El indice usa nombres administrados; escritorio muestra tarjeta sticky y
-  bajo 992 px un details/summary compacto, usable incluso sin JavaScript.
-- biblioteca.js cierra el indice movil, actualiza el fragmento sin otra carga,
-  desplaza al bloque, enfoca su titulo y marca aria-current=location al leer.
-  Conserva Ctrl/clic y respeta prefers-reduced-motion. Los links incluyen
-  /biblioteca antes de # para funcionar con base href="/" y enlaces profundos.
+URL Y ELEGIBILIDAD:
+- Menu activo con al menos un submenu interno activo: puede generar pagina.
+- menus.url vacia o '#': slug ASCII desde el nombre, por ejemplo Confesionalidad
+  -> /confesionalidad y 3er Ciclo EBI -> /3er-ciclo-ebi. No escribe ese slug en BD.
+- URL local amigable de un solo segmento, minusculas/letras/numeros/guiones:
+  se utiliza tal cual, por ejemplo /ruta-estable. Configurar este campo existente
+  permite renombrar el menu sin cambiar su URL. El modal Datos explica la regla.
+- Nombre duplicado, slug reservado o directorio/archivo fisico ocupado: para
+  URLs generadas se utiliza /menu/ID. Todos los duplicados conservan identidad
+  mediante ID; no se elige silenciosamente el primero. Un destino explicito
+  reservado/fisico se conserva como enlace especial, sin sobreescribirlo.
+- URL externa/protocolo, archivo, PHP de otra pagina, query, fragmento especial
+  o ruta con varios segmentos: se conserva su destino, sin pagina automatica.
+- Un menu sin hijos internos activos (incluido solo enlaces externos) no genera
+  pagina vacia. No hay conversion ni cambios automaticos en datos existentes.
+- Compatibilidad: biblioteca.php -> /biblioteca; /pagina/ID y los PHP individuales
+  siguen disponibles. /menu/ID permite identificar un menu compatible sin slug.
+- .htaccess deja pasar -f/-d y todas las rutas especificas existentes. Al final,
+  /menu/ID y un unico patron de slug resuelven pagina_menu.php; no hay una regla
+  por menu. Los parametros de ruta sustituyen la query para evitar suplantarlos.
+  Ruta/menu no encontrado o inactivo: 404. Error de carga: 503, sin datos sensibles.
 
-Presentacion y multimedia:
-- Hero: nombre del menu y primera bajada no vacia. Desde 2026-10-05, la imagen
-  o video procede exclusivamente de la cabecera propia en menus. Sin medio
-  valido se reutiliza /assets/images/frontis_01.jpg, nunca el principal de un submenu.
-- Cada seccion usa nombre, pagina_titulo (o nombre si falta), bajada, contenido
-  editorial y boton existente. cms_basic_content_html() conserva el tratamiento
-  de HTML administrado; el adaptador de Biblioteca normaliza enlaces antiguos.
-- Se usan pagina_imagen_hero y pagina_imagen_secundaria, videos principales
-  (hero_video_url/archivo y video_url/archivo) y pagina_media visible.
-- sp_submenu_video_embed(), compartida con la pagina generica, conserva YouTube
-  y Vimeo. Videos locales tienen controles y no autoplay. Los iframes son lazy.
-- cms_public_image() valida archivos locales. Medios locales ausentes se omiten;
-  no se dejan cajas de placeholder. Solo el hero requiere el respaldo existente.
-- Las secciones con medios alternan columnas en escritorio; con solo texto
-  ocupan el ancho. No se interpretan parrafos para inventar tarjetas o datos.
-- La galeria final combina imagenes visibles de pagina_media e imagenes
-  secundarias legacy, deduplicadas por URL. Se muestra con dos o mas imagenes
-  validas distintas. No se copian archivos. Cada imagen permite abrir el original.
-- El texto de Objetivos del volcado contiene horarios/direcciones. Se conserva
-  dentro del contenido editorial; no se extraen automaticamente ni se crean
-  tarjetas de horarios/contacto porque no existen campos propios de Biblioteca.
-- CSS exclusivo y acotado: assets/css/pages/biblioteca.css. No se agrega style
-  ni CSS inline a biblioteca.php. JS exclusivo: assets/js/biblioteca.js.
-  Header/footer compartidos conservan sus estilos y scripts actuales.
+NAVEGACION:
+Click en el nombre del padre abre su pagina; el dropdown se conserva por hover
+ademas de focus-within para teclado. Submenus internos enlazan a URL#slug-ID;
+la URL individual /pagina/ID permanece accesible historicamente. Interno significa
+URL vacia/'#' o la propia /pagina/ID (incluida su conversion desde pagina_submenu.php).
+Los destinos externos/archivos/enlaces especiales del hijo no se reemplazan.
+Mi San Pablo es mixto: por preferencia expresa del usuario, muestra el contenido
+interno y conserva Ceibal, portal de padres y webmail en header/indice como enlaces.
+No se descargan portales ni se inventan secciones editoriales para esos destinos.
 
-Dominio y compatibilidad:
-- Las rutas y recursos nuevos son desde / y usan el dominio del despliegue,
-  paginaweb.sanpablo.edu.uy. No se hardcodea un host para navegar.
-- cms_biblioteca_current_url() normaliza SOLO en esta vista las referencias al
-  sitio antiguo sanpablo.edu.uy/www.sanpablo.edu.uy, incluido Inicio en las copias
-  de datos del header. No modifica la BD ni otras vistas; mi.sanpablo.edu.uy y
-  mail.sanpablo.edu.uy son servicios independientes y conservan sus URLs.
-- Los demas menus/submenus conservan el render generico. No se adapta todavia
-  Institucional, Maternal, Inicial, Primaria u otros. La unica extraccion de
-  pagina_submenu.php es el helper de video, con el mismo nombre/comportamiento.
+Indice: datos/nombres activos y ordenados de cada menu. Desktop sticky; bajo
+992px, details/summary compacto en una sola columna. JS cierra el indice/offcanvas,
+espera desbloquear scroll, enfoca el titulo y desplaza suavemente respetando
+movimiento reducido. aria-current marca la seccion. Solo intercepta anchors de
+la pagina actual; Ctrl/clic, otros menus y destinos externos mantienen su conducta.
+El ID evita colisiones entre nombres; fragments antiguos slug-ID se resuelven
+por identidad numerica si se renombro el submenu. No se codifican IDs de menus.
 
-Reutilizacion futura (no implementada):
-Si otro menu requiere una vista especial, crear deliberadamente su controlador,
-ruta y adaptador de vista, reutilizando los lectores editoriales y el helper de
-multimedia. Agregar la excepcion de navegacion para su ID verificado y sus tests.
-No convertir automaticamente todos los menus ni asignar Biblioteca a nombres
-parecidos. El modelo de submenus sigue siendo la fuente administrable comun.
+LECTURA Y RENDIMIENTO:
+cms_get_site_data($db,true) conserva header/footer y configuracion institucional,
+sin sincronizacion/DDL/migraciones. El lector tematico agrega dos consultas
+preparadas por id_menu: paginas con LEFT JOIN y multimedia de TODOS sus hijos,
+mas una consulta opcional de hitos y su comprobacion de tabla. Cuatro lecturas
+constantes con Historia instalada, tanto para 3 como para 103 secciones. No hay
+consulta por imagen/submenu. Se decodifican entidades editoriales con el helper
+existente. Se filtran hijos inactivos, ajenos y de destinos externos/especiales.
+Cada nueva solicitud refleja edicion, orden, estado y medios guardados por CMS.
 
-Validacion sin SQL:
-Se usan datos PUBLICOS leidos del archivo SQL de referencia (no ejecutado) y
-lectores mysqli simulados que rechazan toda escritura. Se comprueban contenido,
-orden, actualizacion del fixture, visibilidad, medios/galeria y compatibilidad.
-El escenario multimedia usa recursos existentes SOLO en el fixture temporal;
-no crea registros ni imagenes de ejemplo en el proyecto. Chrome usa HTML
-renderizado por el controlador real, sin extensiones. El servidor temporal
-mapea /biblioteca y /pagina/1: no prueba mod_rewrite en Apache ni un guardado
-real desde el administrador. El PHP CLI local no tiene mysqli; sus tipos se
-simulan solo en el test, sin cambiar la conexion ni la configuracion del proyecto.
+HERO Y MULTIMEDIA:
+El hero pertenece exclusivamente a menus.hero_tipo/imagen_hero/hero_video_url/
+hero_video_archivo, campos que el usuario ya creo manualmente. Se reutilizan
+menu_media_helpers.php y el editor Datos/Cabecera para cualquier menu.
+Sin medio propio valido: assets/images/frontis_01.jpg; nunca un principal de hijo.
+Local: autoplay muted loop playsinline, cover, respaldo y pausa/movimiento reducido.
+YouTube/Vimeo: helper compartido, iframe sin forzar autoplay. Overlay, titulo,
+breadcrumb y dimensiones del diseno aprobado permanecen.
+Principales de cada hijo, videos, secundarios legacy y galeria mantienen sus
+campos/lector y no se copian a menus. Historia se recupera por relacion, no por
+un ID especial, y reutiliza el componente visual existente; su JS admite varias
+instancias. La pagina individual de Historia y su administracion no se modifican.
 
-Resultado: 73 comprobaciones PHP y 40 de navegador correctas a 1920, 1366,
-1024, 768, 390 y 320 px. Sin overflow ni errores JS propios; recursos locales
-correctos. El enlace de un submenu del offcanvas en la propia Biblioteca
-espera hidden.bs.offcanvas antes de enfocar/desplazar, evitando backdrop y
-bloqueo del scroll. Reproductores de terceros se aislaron en el fixture de
-multimedia; no se verifico la disponibilidad o reproduccion de videos externos.
-La funcion de video compartida coincide exactamente con la extraccion original.
-PHP lint, node --check y git diff --check completados. Sin SQL, commit ni push.
+GALERIAS:
+0 imagenes: no contenedor. 1: imagen estatica sin flechas/indicadores. 2 o mas:
+Bootstrap Carousel ya instalado, anterior/siguiente/indicadores/teclado/swipe,
+sin autoplay. Deduplicacion por URL dentro de cada galeria; se conserva el orden
+editorial. Principales separados de galeria. Se mantiene tambien el agregado
+final de la referencia Biblioteca, deduplicado y solo con >=2 imagenes distintas:
+una imagen puede aparecer en su seccion y en ese agregado, por la regla funcional
+preexistente; no se crean duplicados fisicos ni registros. IDs unicos por anchor.
 
+DISENO Y RESPONSIVE:
+CSS/JS renombrados/generalizados conservan el marco maximo 1800px, indice 255px,
+columnas alternadas y reglas 1200/992/576px. Solo texto ocupa el ancho; medios
+invalidos se omiten sin placeholders. Imagenes de galeria usan contain y alturas
+estables; principales conservan el tratamiento anterior. Colores desde institucion
+mediante public_theme.php: tokens validados en data-menu-theme y aplicados por JS,
+reglas visuales centralizadas en CSS, sin bloques CSS ni estilo nuevo inline en PHP.
+Header/footer y botones flotantes siguen compartidos y mantienen su apariencia.
+
+FUTUROS MENUS:
+Crear/activar menu desde administracion, dejar URL vacia o definir /ruta-estable,
+agregar submenus internos activos y editar su Pagina/Multimedia; configurar
+Cabecera del padre. No crear otro PHP/CSS/JS ni ejecutar SQL. Enlaces especiales
+mantienen su destino. Los ejemplos del volcado habilitan Institucional, Maternal,
+Inicial, Primaria, 3er Ciclo EBI, Bachillerato, Libre Asistido, Confesionalidad,
+Biblioteca y Mi San Pablo; la seleccion en runtime depende de registros activos.
+Inicio conserva la URL externa registrada. No se escribio ninguna URL en BD.
+
+VALIDACION Y LIMITES:
+Pruebas con datos publicos del volcado, fixtures temporales y mysqli que rechaza
+cualquier sentencia no SELECT. Comparacion de Biblioteca contra la version
+anterior, Confesionalidad como segundo caso y los demas menus compatibles.
+Simulaciones de edicion/orden/estado/medios solo sobre JSON, no sobre QA.
+No se verifico un guardado autenticado real ni mod_rewrite en Apache/Plesk;
+el servidor PHP de prueba reproduce el mapeo de rutas. Tampoco reproduccion
+remota de proveedores. Fixtures y capturas se eliminan al finalizar. Sin SQL,
+cambios de credenciales, commit ni push.
+Resultado: 100 comprobaciones PHP y 137 de Chrome (237 en total), sin errores JS
+ni fallos HTTP inesperados. Biblioteca comparada con HEAD a 1920/1600/1366/1024/
+768/390/320 px: mismos datos editoriales, ancho, hero 410/340/310 y galerias.
+Confesionalidad contiene dinamicamente sus seis hijos activos del volcado. Se
+verificaron dropdown por teclado, offcanvas, anchors/foco, fragment renombrado,
+swipe real emulado, Historia, galerias 0/1/2+, estado/orden/deduplicacion y texto
+sin columna multimedia vacia. Video local reproducible con pausa/reanudacion y
+movimiento reducido, y Vimeo, en los siete anchos. Menu futuro sin fila de pagina,
+ruta estable tras renombrar, inactividad, 404/503, query protegida y entrada PHP
+legacy verificados. Se rechazo contenido/enlaces peligrosos codificados usando
+el saneado editorial existente mas validacion del esquema al normalizar URL.
+Dimensiones locales reservadas sin solicitar imagenes externas ni consultas
+adicionales: evitan desplazar el destino del anchor por lazy loading. PHP lint,
+node --check y git diff --check completados. Sin cambios a los editores multimedia,
+drag & drop, permisos, conexion ni archivos SQL.
 
 BIBLIOTECA: ANCHO E IDENTIDAD INSTITUCIONAL (2026-10-05)
 
@@ -502,6 +537,10 @@ push. Fixtures y copias de dependencias temporales se eliminan al finalizar.
 
 CABECERA PROPIA DEL MENU: IMPLEMENTADA (2026-10-05)
 
+Entrega previa a la generalizacion: el almacenamiento y editor siguen vigentes;
+sus referencias a archivos publicos originales son historicas. El render actual
+usa pagina_menu.php, pagina_menu_helpers.php, pagina-menu.css y pagina-menu.js.
+
 El usuario confirmo la creacion manual en menus de hero_tipo (imagen/video),
 imagen_hero, hero_video_url y hero_video_archivo. Se utilizan esos cuatro campos.
 No se ejecuto SQL sobre ninguna BD real ni se modificaron archivos SQL en esta
@@ -551,8 +590,8 @@ conserva autoplay/muted/loop/playsinline y object-fit:cover, con control de paus
 y respeto de movimiento reducido. El iframe externo no fuerza autoplay.
 Se mantienen overlay, titulo, breadcrumb, alturas y diseno aprobado, asi como
 indice, anclas, galerias, carruseles, header/footer y botones flotantes.
-Los otros menus solo reciben la administracion reutilizable; sus paginas
-publicas mantienen el render existente.
+En la primera entrega solo Biblioteca consumia el hero; la arquitectura generica
+posterior lo utiliza para todos los menus compatibles, segun el apartado actual.
 
 IMPLEMENTACION: includes/menu_media_helpers.php centraliza seleccion, guardado
 y referencias; includes/cms_helpers.php integra lectura y transaccion;

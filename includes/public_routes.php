@@ -46,32 +46,81 @@ function cms_public_url(?string $url): string
         . (isset($parts['fragment']) ? '#' . $parts['fragment'] : '');
 }
 
-/** Biblioteca is the existing main menu 10, independently of its editable label. */
-function cms_is_biblioteca_menu(array $menu): bool
+function cms_public_slug(string $name): string
 {
-    return (int) ($menu['id_menu'] ?? 0) === 10;
-}
-
-function cms_biblioteca_anchor(array $submenu): string
-{
-    $name = strtr((string) ($submenu['nombre'] ?? ''), [
+    $name = html_entity_decode($name, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+    $name = strtr($name, [
         'á' => 'a', 'é' => 'e', 'í' => 'i', 'ó' => 'o', 'ú' => 'u', 'ü' => 'u', 'ñ' => 'n',
         'Á' => 'a', 'É' => 'e', 'Í' => 'i', 'Ó' => 'o', 'Ú' => 'u', 'Ü' => 'u', 'Ñ' => 'n',
     ]);
     $slug = trim((string) preg_replace('/[^a-z0-9]+/', '-', strtolower($name)), '-');
-    return ($slug !== '' ? $slug : 'seccion') . '-' . (int) ($submenu['id_sub_menu'] ?? 0);
+    return $slug;
 }
 
-function cms_public_menu_url(array $menu): string
+function cms_menu_page_anchor(array $submenu): string
 {
-    return cms_is_biblioteca_menu($menu) ? '/biblioteca' : cms_public_url($menu['url'] ?: '#');
+    return (cms_public_slug((string) ($submenu['nombre'] ?? '')) ?: 'seccion') . '-' . (int) ($submenu['id_sub_menu'] ?? 0);
 }
 
-/** Only Biblioteca's header links change; generic submenu URLs remain compatible. */
-function cms_public_header_submenu_url(array $submenu, array $menu): string
+/** Only the submenu's own individual page is eligible for an in-page section. */
+function cms_menu_submenu_is_internal(array $submenu): bool
 {
-    if (cms_is_biblioteca_menu($menu) && (int) ($submenu['id_menu'] ?? 0) === (int) $menu['id_menu']) {
-        return '/biblioteca#' . cms_biblioteca_anchor($submenu);
+    $id = (int) ($submenu['id_sub_menu'] ?? 0);
+    if ($id <= 0 || (isset($submenu['estado']) && (int) $submenu['estado'] !== 1)) { return false; }
+    $url = trim((string) ($submenu['url'] ?? ''));
+    return $url === '' || $url === '#' || rtrim(cms_public_url($url), '/') === '/pagina/' . $id;
+}
+
+/** Null means an intentional external/file/special destination, left untouched. */
+function cms_menu_page_route(array $menu): ?string
+{
+    $id = (int) ($menu['id_menu'] ?? 0);
+    if ($id <= 0) { return null; }
+    $url = trim((string) ($menu['url'] ?? ''));
+    if ($url === '' || $url === '#') {
+        $path = cms_public_slug((string) ($menu['nombre'] ?? ''));
+    } elseif (ltrim($url, '/') === 'biblioteca.php') {
+        // Historical entry point, not a menu identity or a second renderer.
+        $path = 'biblioteca';
+    } elseif (rtrim($url, '/') === '/menu/' . $id) {
+        return '/menu/' . $id;
+    } elseif (preg_match('~^/?([a-z0-9]+(?:-[a-z0-9]+)*)/?$~D', $url, $match)) {
+        $path = $match[1];
+    } else {
+        return null;
     }
-    return cms_public_url($submenu['url'] ?: '#');
+    $reserved = ['admin', 'noticias', 'comunicados', 'calendario', 'noticia', 'evento', 'pagina', 'feriado', 'menu'];
+    $occupied = $path === '' || in_array($path, $reserved, true) || file_exists(__DIR__ . '/../' . $path);
+    if ($occupied && $url !== '' && $url !== '#') { return null; }
+    return $occupied ? '/menu/' . $id : '/' . $path;
+}
+
+function cms_menu_page_url(array $menu, array $submenus, array $menus = []): ?string
+{
+    if (isset($menu['estado']) && (int) $menu['estado'] !== 1) { return null; }
+    $id = (int) ($menu['id_menu'] ?? 0);
+    $hasInternal = false;
+    foreach ($submenus as $sub) {
+        if ((int) ($sub['id_menu'] ?? 0) === $id && cms_menu_submenu_is_internal($sub)) { $hasInternal = true; break; }
+    }
+    $route = $hasInternal ? cms_menu_page_route($menu) : null;
+    if ($route === null) { return null; }
+    foreach ($menus as $other) {
+        if ((int) ($other['id_menu'] ?? 0) !== $id && cms_menu_page_route($other) === $route) { return '/menu/' . $id; }
+    }
+    return $route;
+}
+
+function cms_public_menu_url(array $menu, array $submenus = [], array $menus = []): string
+{
+    return cms_menu_page_url($menu, $submenus, $menus) ?? cms_public_url($menu['url'] ?: '#');
+}
+
+function cms_public_header_submenu_url(array $submenu, array $menu, ?string $menuUrl = null): string
+{
+    if ($menuUrl !== null && cms_menu_submenu_is_internal($submenu)
+        && (int) ($submenu['id_menu'] ?? 0) === (int) ($menu['id_menu'] ?? 0)) {
+        return $menuUrl . '#' . cms_menu_page_anchor($submenu);
+    }
+    return cms_submenu_public_url($submenu);
 }

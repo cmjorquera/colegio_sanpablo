@@ -48,7 +48,7 @@ POLITICA DE ARCHIVOS
 assets/ contiene recursos propios del sistema. uploads/ contiene archivos fisicos
 subidos por usuarios desde el panel administrador, organizados por modulo
 (secciones/{nombre_interno}/, noticias/, eventos/, institucion/, comunicados/,
-submenus/{id}/). La base de datos solo guarda texto, URLs externas (YouTube,
+submenus/{id}/, menus/{id}/). La base de datos solo guarda texto, URLs externas (YouTube,
 Spotify, etc.) o la ruta relativa de un archivo local; nunca un binario ni una
 ruta absoluta del servidor. Las subidas nuevas pasan por
 includes/upload_helpers.php (cms_guardar_archivo). El detalle completo, incluida
@@ -92,17 +92,21 @@ conexion actual de produccion. Prepararlo antes de activar el codigo nuevo.
 Si falta el archivo local, la clase informa un error controlado sin credenciales.
 
 
-VISTA ESPECIAL DE BIBLIOTECA (2026-10-05)
----------------------------------------
-biblioteca.php es el controlador publico exclusivo del menu Biblioteca
-(id_menu=10), accesible por /biblioteca. Reutiliza el header/footer actuales,
-sub_menu_paginas y sub_menu_pagina_media. No crea administracion ni tablas.
-includes/biblioteca_helpers.php arma la vista a partir de los lectores actuales.
-includes/submenu_public_media.php contiene sp_submenu_video_embed(), extraida
-sin cambiar su comportamiento de pagina_submenu.php y compartida por ambas.
-Los lectores CMS incorporan un parametro opcional readOnly=false; Biblioteca
-usa true para evitar sincronizaciones, CREATE TABLE y migracion de imagenes
-secundarias durante la lectura publica. El valor por defecto conserva el
-comportamiento anterior de todos los consumidores existentes.
-CSS/JS exclusivos: assets/css/pages/biblioteca.css y assets/js/biblioteca.js.
-El flujo completo y sus limites estan en logica_menus_submenus_paginas.txt.
+PAGINAS TEMATICAS DE MENU (2026-10-05)
+-------------------------------------
+pagina_menu.php es el controlador publico generico para menus activos con
+submenus internos. Biblioteca fue la primera referencia y ahora usa esta misma
+arquitectura; biblioteca.php conserva solo la entrada PHP historica.
+includes/pagina_menu_helpers.php resuelve el menu y carga paginas/multimedia por
+lotes, con SELECT preparados y sin DDL/migraciones. public_routes.php y .htaccess
+resuelven slugs dinamicos, conservan rutas especificas, archivos y /pagina/ID.
+menus.url local amigable tiene prioridad; vacia genera slug desde nombre; para
+colisiones usa /menu/ID. Destinos externos/especiales y menus sin hijos internos
+no se convierten. Mi San Pablo conserva sus portales externos y reune su contenido
+interno, por preferencia del usuario. El hero pertenece a menus; principales y
+galerias pertenecen a cada submenu. No hay segundo editor ni nuevos campos.
+CSS/JS comunes: assets/css/pages/pagina-menu.css y assets/js/pagina-menu.js.
+Galeria compartida: componentes/pagina_menu_galeria.php. El header/footer y
+componentes existentes se reutilizan. Los archivos completos exclusivos de
+Biblioteca se sustituyeron tras revisar referencias. Arquitectura, compatibilidad,
+rendimiento y validacion: logica/logica_menus_submenus_paginas.txt.

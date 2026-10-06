@@ -66,7 +66,8 @@ FLUJO VISITANTE
 4. cms_get_component_path('header_principal') devuelve componentes/header.php.
 5. componentes/header.php recorre menus y sub_menus.
 6. El visitante ve el menu superior.
-7. Si hace clic en un submenu interno, abre /pagina/ID (resuelta internamente a pagina_submenu.php?id=ID).
+7. En menus tematicos, click padre abre /ruta y click hijo interno /ruta#slug-ID.
+   /pagina/ID (pagina_submenu.php?id=ID) conserva el acceso individual historico.
 
 REGLAS IMPORTANTES
 ------------------
@@ -76,7 +77,8 @@ REGLAS IMPORTANTES
 - No confundir con admin_menu.
 - No confundir con admin_submenu.
 - El menu publico se renderiza en el header del sitio.
-- Si un submenu no tiene URL externa, el helper puede generar /pagina/ID (resuelta internamente a pagina_submenu.php?id=ID).
+- Los submenus internos conservan /pagina/ID como URL individual; el header puede
+  enlazar su seccion en la pagina tematica del padre, sin eliminar la individual.
 - Las paginas de submenu usan sub_menu_paginas y sub_menu_pagina_media cuando existen.
 
 DIFERENCIA CON CONTENEDORES
@@ -95,7 +97,8 @@ archivos PHP y las tablas actuales; no se renombran archivos ni se actualiza SQL
 mod_rewrite de Apache 2.4. El hosting debe permitir estas directivas en .htaccess.
 Antes de reescribir, las condiciones -f/-d dejan pasar archivos y directorios
 fisicos. No hay un fallback generico hacia index.php: rutas desconocidas quedan
-sin reescribir. assets, uploads, api, ajax, includes, PHPMailer, archivos PHP
+con 404. Desde la generalizacion, un slug desconocido llega al controlador y
+recibe 404; no se envia a index.php. assets, uploads, api, ajax, includes, PHPMailer, archivos PHP
 internos y descargables conservan sus rutas. uploads/.htaccess sigue intacto.
 
 Relacion URL publica -> archivo existente:
@@ -153,15 +156,26 @@ No se modifican class/conexion.php, class/conexion_local.php, credenciales,
 PHPMailer o config/mail.php. La configuracion local sigue fuera de Git.
 
 
-EXCEPCION PUBLICA: BIBLIOTECA (2026-10-05)
----------------------------------------
-/biblioteca -> biblioteca.php, mediante una regla especifica END en .htaccess.
-No cambia /pagina/ID ni se agregan redirecciones sobre paginas de submenu.
-El menu id_menu=10 se identifica por su ID actual, no por el texto editable;
-el submenu llamado Biblioteca que pertenece a otro menu conserva su ruta.
-componentes/header.php usa cms_public_menu_url() y
-cms_public_header_submenu_url() en escritorio y offcanvas. Solo el menu 10 y
-sus hijos enlazan a /biblioteca y /biblioteca#slug-ID. Los demas enlaces
-conservan exactamente la conversion anterior. cms_submenu_public_url() no
-cambia: las paginas genericas y el administrador siguen disponibles.
-La excepcion y sus datos se documentan en logica_menus_submenus_paginas.txt.
+PAGINAS TEMATICAS: NAVEGACION GENERICA (2026-10-05)
+--------------------------------------------------
+Los menus activos con hijos internos usan pagina_menu.php. Biblioteca ya no es
+una excepcion por id_menu: comparte controlador, helpers, CSS/JS y galerias.
+Click padre abre pagina; dropdown sigue disponible por hover/focus y offcanvas.
+Hijos internos enlazan a /ruta-menu#slug-ID; destinos externos/especiales conservan
+su URL. /pagina/ID y biblioteca.php siguen disponibles por compatibilidad.
+
+URLs: menus.url vacia/'#' genera slug desde nombre. Una ruta local de un segmento
+permite fijar la URL desde el campo existente. Slug duplicado/reservado/ocupado
+usa /menu/ID si era generado. Enlaces externos, archivos, destinos especiales y
+menus sin hijos internos mantienen su comportamiento; no se escriben URLs en BD.
+Mi San Pablo, mixto, reune contenido interno y conserva portales externos en la
+navegacion. Inicio conserva la URL externa registrada. Se habilitan dinamicamente
+los restantes menus compatibles sin lista de IDs ni reglas Apache por nombre.
+
+.htaccess conserva las rutas especificas y -f/-d; al final agrega los patrones
+/menu/ID y /slug a pagina_menu.php. Parametros route_id/route_slug sustituyen la
+query para evitar alterar la ruta. Desconocidos/inactivos: 404; fallo: 503 generico.
+includes/public_routes.php comparte politica de URL/elegibilidad con header y
+resolver. Anchors usan nombre normalizado + id_sub_menu; pagina-menu.js resuelve
+fragments antiguos por ID al renombrar y solo intercepta links de la pagina actual.
+Documentacion completa y pruebas: logica/logica_menus_submenus_paginas.txt.

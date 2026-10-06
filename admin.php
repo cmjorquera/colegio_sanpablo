@@ -853,6 +853,7 @@ admin_render_layout_start([
                         <div class="mb-3">
                             <label class="form-label">URL</label>
                             <input class="form-control" name="url" id="modalMenuUrl" placeholder="#">
+                            <small class="text-muted">Con submenús internos, deja la URL vacía para generar la página temática desde el nombre, o indica una ruta como /nombre-del-menu para conservarla al renombrar. Los destinos externos, archivos y enlaces especiales mantienen su comportamiento.</small>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Ícono <small class="text-muted">(clase Bootstrap Icons, ej: bi-home)</small></label>

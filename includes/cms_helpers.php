@@ -2581,9 +2581,15 @@ function cms_save_menu(mysqli $db, array $post): int
     } catch (Throwable $error) {
         $db->rollback();
         foreach ($newHeaderPaths as $newPath) { cms_eliminar_archivo_seguro($newPath); }
+        if ($error instanceof mysqli_sql_exception) {
+            error_log('CMS menu header: reason=database_save menu_id=' . $idMenu . ' code=' . (int) $error->getCode());
+            throw new RuntimeException('No se pudo guardar el menu. La cabecera anterior se conserva.', 0, $error);
+        }
         throw $error;
     }
     foreach ($oldHeaderPaths as $oldPath) {
+        // Legacy paths outside this module can lose their reference, but not their file.
+        if (!preg_match('~^uploads/menus/[1-9][0-9]*/[^/]+$~', str_replace('\\', '/', $oldPath))) { continue; }
         try {
             if (!cms_menu_header_file_is_referenced($db, $oldPath)) { cms_eliminar_archivo_seguro($oldPath); }
         } catch (Throwable $error) {

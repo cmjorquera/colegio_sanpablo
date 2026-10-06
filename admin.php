@@ -31,6 +31,19 @@ require_once __DIR__ . '/includes/cms_helpers.php';
 require_once __DIR__ . '/includes/admin_layout.php';
 require_once __DIR__ . '/includes/funciones_auditoria.php';
 
+// PHP discards POST and FILES when post_max_size is exceeded.
+try {
+    cms_upload_check_request_size();
+} catch (RuntimeException $uploadError) {
+    if (strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest') {
+        http_response_code(413);
+        header('Content-Type: application/json; charset=UTF-8');
+        echo json_encode(['ok' => false, 'message' => $uploadError->getMessage()]);
+        exit;
+    }
+    cms_set_flash('danger', $uploadError->getMessage());
+    cms_redirect('admin.php?panel=' . urlencode((string) ($_GET['panel'] ?? 'menus')));
+}
 $db = cms_get_connection();
 $institutionId = cms_get_institution_id($db);
 cms_sync_sections($db, $institutionId);

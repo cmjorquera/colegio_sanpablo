@@ -447,3 +447,77 @@ componentes/menu_cabecera_editor.php contiene los campos compartidos del modal;
 assets/js/menu_header_admin.js administra apertura, tipos y previews sin JS
 nuevo inline. Los estilos minimos se integran en admin_dashboard.css y
 pages/pagina-menu.css; pagina-menu.js administra navegacion y carruseles.
+
+CORRECCION DE SUBIDA DE CABECERAS (2026-10-05)
+
+Diagnostico reproducido con HTTP multipart real y persistencia simulada (sin BD):
+PHP disponible sin php.ini usa upload_max_filesize=2M, post_max_size=8M y tiene
+Fileinfo deshabilitado. Un JPG de 3 MB llega con UPLOAD_ERR_INI_SIZE (1), antes
+de MIME/carpeta/move_uploaded_file/guardado. El mensaje generico anterior venia
+de cms_validar_imagen cuando error != UPLOAD_ERR_OK; no de una ruta de submenu.
+No se inspeccionaron los ajustes efectivos del servidor QA ni de Plesk.
+
+Flujo vigente: formModalMenu envia POST multipart normal, sin AJAX de guardado;
+menu_header_admin.js habilita solo los campos del tipo seleccionado. El archivo
+se recibe en $_FILES['menu_imagen_hero'] (video: menu_hero_video_archivo).
+cms_save_menu controla la transaccion y llama cms_save_menu_header por id_menu.
+Los wrappers reutilizan cms_guardar_archivo: codigo de PHP, is_uploaded_file,
+extension/nombre, limite CMS y MIME real; carpeta calculada desde la raiz,
+realpath contenido en uploads, permisos y move_uploaded_file. Se crean carpetas
+0755 automaticamente; nunca se usa una ruta absoluta del PC ni permisos 0777.
+
+Fisico: {raiz_proyecto}/uploads/menus/{id_menu}/{nombre-seguro-unico}.
+BD: menus.imagen_hero = uploads/menus/{id_menu}/{nombre-seguro-unico}.jpg
+(o extension admitida). Nunca ruta fisica ni dominio. hero_tipo='imagen' y
+campos video limpios al cambiar de tipo, segun la logica existente.
+Formatos imagen conservados: JPG/JPEG/PNG/WEBP/GIF/SVG/ICO; video MP4/WEBM/MOV/M4V.
+No se amplian formatos. Validacion de MIME sigue siendo obligatoria: sin Fileinfo
+se rechaza la subida con mensaje claro; nunca se valida solo por extension.
+
+Reemplazo: subir primero, actualizar referencia y confirmar transaccion;
+solo despues borrar el anterior cuando no esta compartido. Fallo de subida o
+BD: rollback, conservar anterior y limpiar exclusivamente el archivo nuevo.
+Eliminar imagen: quitar referencia, confirmar y comprobar referencias antes
+de borrar. La limpieza de cabeceras solo borra archivos de uploads/menus/ID/;
+rutas legacy de otros modulos pierden su referencia pero conservan el archivo.
+Ante duda o error de comprobacion se conserva el archivo anterior.
+
+Video conserva URL YouTube/Vimeo y archivo local. Un archivo nuevo tiene
+prioridad; cambiar imagen/video limpia el tipo incompatible. El lector generico
+cms_menu_header_media lee menus y pagina_menu.php renderiza su resultado; nunca
+usa la imagen principal de un submenu. Sin medio valido sigue frontis_01.jpg.
+No se modificaron plantilla, hero, navegacion, galerias ni responsive.
+
+Errores: codigo PHP y limite efectivo distinguibles; logs CMS upload registran
+reason/php_error/limites/SAPI sin nombre de archivo, ruta fisica ni credenciales.
+Se distingue formato, MIME, tamano, carpeta, permisos, movimiento y Fileinfo.
+Fallo MySQL registra codigo e id_menu, sin exponer el mensaje SQL al usuario.
+POST mayor que post_max_size se detecta antes del flujo CMS de guardado; mensaje flash
+para POST normal y respuesta JSON 413 para AJAX. No simula un guardado exitoso.
+
+CONFIGURACION DE TRANSPORTE:
+.user.ini en la raiz declara upload_max_filesize=150M y post_max_size=160M para
+CGI/FastCGI/FPM, alineados con los limites existentes del CMS (8MB imagen/150MB
+video). No se intenta ini_set: esos ajustes se aplican antes de ejecutar PHP.
+Plesk: confirmar Fileinfo, file_uploads, limites efectivos del dominio, carpeta
+temporal y permisos de uploads. Un ajuste administrativo puede prevalecer;
+.user.ini puede tardar hasta user_ini.cache_ttl en aplicarse. No se toco Plesk.
+PHP integrado/CLI no lee automaticamente .user.ini. Arranque local equivalente:
+php -c .user.ini -d extension=fileinfo -S 127.0.0.1:8000
+La extension debe estar instalada en ese PHP; no se modifico su configuracion
+externa. Los limites web efectivos pueden diferir de los del PHP de consola.
+.gitignore no excluye uploads/menus; los directorios se crean en runtime.
+.htaccess preserva archivos fisicos y uploads/.htaccess sigue bloqueando scripts.
+No reemplazar uploads al desplegar Git; contiene medios persistentes.
+
+VALIDACION REPETIBLE:
+node tests/menu_header_upload.cjs: 25 comprobaciones con archivos HTTP reales,
+validadores/guardado/limpieza/render del helper reales y mysqli simulado sobre
+JSON temporal. JPG mayor de 2MB, PNG, reemplazo, eliminar, volver a subir,
+imagen->video URL/local->imagen, invalido, demasiado grande, nombres especiales,
+dos menus independientes, archivo compartido, rollback, Fileinfo ausente y POST
+excesivo. Los archivos generados se eliminan al terminar. Sin SQL real ejecutado.
+php -n tests/pagina_menu.php: 76 comprobaciones de arquitectura publica correctas.
+PHP lint, node --check y git diff --check correctos. No se verifico guardado
+contra QA autenticado ni reproduccion del MP4 minimo usado para validar MIME.
+Sin cambios de estructura/archivos SQL, credenciales, commit ni push.

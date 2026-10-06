@@ -114,6 +114,14 @@ body {
     .sp-floating-comunicados.sp-floating-inscripciones { display: inline-flex; }
 }
 
+@media (max-width: 575.98px) {
+    .sp-header .container-fluid { padding-inline: 16px; }
+    .sp-header-row { gap: 12px; }
+    .sp-header-row > div:first-child { flex-shrink: 1; min-width: 0; }
+    .sp-logo img { max-width: 100%; height: auto; max-height: 70px; }
+    .sp-header-actions { flex-shrink: 0; }
+}
+
 /* ---- HERO / SLIDER ---- */
 .sp-hero {
     background: var(--sp-crema);

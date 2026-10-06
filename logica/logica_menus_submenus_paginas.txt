@@ -190,9 +190,7 @@ PAGINA TEMATICA DE MENU: ARQUITECTURA GENERICA (2026-10-05)
 
 Biblioteca fue la primera referencia funcional. Ahora existe UNA arquitectura
 para los menus compatibles, sin IDs/nombres especiales y sin copiar paginas.
-Los apartados posteriores de ajustes visuales y galerias describen el historial
-de Biblioteca; sus nombres de archivos/clases originales se sustituyeron por
-los nombres genericos indicados aqui. No se ejecuta SQL ni se cambian datos.
+Los estilos y galerias se describen con los componentes comunes actuales. No se ejecuta SQL ni se cambian datos.
 
 MODELO:
 menus -> hero propio (imagen/video)
@@ -305,149 +303,22 @@ Biblioteca y Mi San Pablo; la seleccion en runtime depende de registros activos.
 Inicio conserva la URL externa registrada. No se escribio ninguna URL en BD.
 
 VALIDACION Y LIMITES:
-Pruebas con datos publicos del volcado, fixtures temporales y mysqli que rechaza
-cualquier sentencia no SELECT. Comparacion de Biblioteca contra la version
-anterior, Confesionalidad como segundo caso y los demas menus compatibles.
-Simulaciones de edicion/orden/estado/medios solo sobre JSON, no sobre QA.
-No se verifico un guardado autenticado real ni mod_rewrite en Apache/Plesk;
-el servidor PHP de prueba reproduce el mapeo de rutas. Tampoco reproduccion
-remota de proveedores. Fixtures y capturas se eliminan al finalizar. Sin SQL,
-cambios de credenciales, commit ni push.
-Resultado: 100 comprobaciones PHP y 137 de Chrome (237 en total), sin errores JS
-ni fallos HTTP inesperados. Biblioteca comparada con HEAD a 1920/1600/1366/1024/
-768/390/320 px: mismos datos editoriales, ancho, hero 410/340/310 y galerias.
-Confesionalidad contiene dinamicamente sus seis hijos activos del volcado. Se
-verificaron dropdown por teclado, offcanvas, anchors/foco, fragment renombrado,
-swipe real emulado, Historia, galerias 0/1/2+, estado/orden/deduplicacion y texto
-sin columna multimedia vacia. Video local reproducible con pausa/reanudacion y
-movimiento reducido, y Vimeo, en los siete anchos. Menu futuro sin fila de pagina,
-ruta estable tras renombrar, inactividad, 404/503, query protegida y entrada PHP
-legacy verificados. Se rechazo contenido/enlaces peligrosos codificados usando
-el saneado editorial existente mas validacion del esquema al normalizar URL.
-Dimensiones locales reservadas sin solicitar imagenes externas ni consultas
-adicionales: evitan desplazar el destino del anchor por lazy loading. PHP lint,
-node --check y git diff --check completados. Sin cambios a los editores multimedia,
-drag & drop, permisos, conexion ni archivos SQL.
-
-BIBLIOTECA: ANCHO E IDENTIDAD INSTITUCIONAL (2026-10-05)
-
-Ajuste visual exclusivamente. Se conservan consultas, contenido, multimedia,
-orden, anchors, biblioteca.js y administracion. No se ejecuta SQL.
-El limite provenia de .container de Bootstrap: 1140px desde 1200px y
-1194px desde 1400px en la copia instalada; el ancho restante se repartia
-en margenes automaticos.
-El marco de .sp-library-layout y .sp-library-hero__content pasa a width:100%,
-max-width:1800px y padding-inline:clamp(24px,4vw,80px), centrado. El hero solo
-alinea su texto; no se redisenan imagen, altura ni overlay. El indice conserva
-255px y la columna de contenido recibe el resto con minmax(0,1fr), gap 52px.
-Bajo 1200px: padding clamp(24px,3vw,36px), indice 220px, gap 32px y
-multimedia en una columna. Bajo 992px:
-una columna e indice movil details/summary existente. Bajo 576px: margenes
-internos de 22px. No hay desplazamientos artificiales ni cambios globales
-sobre .container. Header y footer mantienen sus propios contenedores.
-
-Origen de colores: el array institution ya cargado por cms_get_site_data().
-No hay consulta adicional ni sistema paralelo de configuracion. Se extrae
-sp_public_hex_color() de index.php a includes/public_theme.php sin cambiar su
-validacion o los defaults del inicio. index.php solo importa ese mismo helper;
-su HTML, colores y comportamiento conservan los valores anteriores.
-Biblioteca expone en su main las variables existentes --sp-db-primary,
---sp-db-secondary, --sp-db-tertiary y --sp-db-quaternary, correspondientes a
-color_primario/secundario/terciario/cuaternario de institucion. Se limita ese
-alcance al contenido de Biblioteca, para no recolorear el header/footer.
-No se agregan bloques style; se transmiten variables como ya hace index.php.
-
-cms_public_institution_theme() agrega --sp-db-accent-background y
---sp-db-accent-foreground. No existia un helper PUBLICO de usar_gradientes:
-ahora se decide centralmente entre primario plano y gradiente primario/secundario.
-Si ambos extremos no permiten un texto comun legible, el segundo extremo se
-mezcla con el primario para mantener contraste. El texto de la tarjeta puede
-ser blanco o negro segun luminancia. Los defaults centrales son los mismos
-que ya tenia la portada, para colores ausentes/invalidos; Biblioteca NO guarda
-una paleta propia ni una copia de los colores del colegio en su CSS.
-
-biblioteca.css deriva --sp-library-accent, --sp-library-accent-ink,
---sp-library-accent-soft, --sp-library-accent-hover y
---sp-library-accent-border con color-mix. Se usan en
-encabezado del indice, seleccion, hover, indicadores, etiquetas, enlaces,
-botones y foco. Texto oscuro derivado y tintes suaves mantienen legibilidad.
-Los neutros y el overlay original del hero no son colores de identidad.
-fuente_principal no tenia un consumidor publico centralizado; se reviso y
-se conserva la tipografia actual para respetar el alcance visual solicitado.
-Cambiar color_primario en administracion se refleja en la siguiente carga
-sin editar biblioteca.css. usar_gradientes=0 muestra color plano; =1 gradiente.
-
-Validacion visual: 52 comprobaciones de Chrome a 1920,1600,1366,1024,768,390
- y 320px, con antes/despues, contenido identico, indice compacto, anchors,
-seleccion, offcanvas sin backdrop y recursos locales correctos. Columna de
-contenido: 863->1339px a 1920, 863->1150px a 1600 y 809->935px a 1366.
-En movil conserva 22px de margen y la navegacion existente. Se comprobaron
-paletas alternativas plana, gradiente y extremos claro/oscuro con fixtures,
-ademas de 9 comprobaciones PHP de validacion y generacion de variables.
-No se ejecuto SQL ni se cambio configuracion institucional real. PHP lint y
-git diff --check correctos. Sin cambios a biblioteca.js, helpers de datos,
-rutas, consultas ni credenciales. Los fixtures se eliminan al finalizar.
-
-
-BIBLIOTECA: GALERIAS PUBLICAS EN CARRUSEL (2026-10-05)
-
-Correccion de render publico. El adaptador anterior reunia imagen principal,
-secundaria heredada y pagina_media en images; la plantilla recorria todas en
-figures consecutivos. Eso apilaba la galeria y confundia el principal con ella.
-Ahora images conserva solo pagina_imagen_hero y videos conserva sus lectores
-existentes. gallery de cada seccion contiene las imagenes visibles de
-pagina_media; pagina_imagen_secundaria sigue siendo compatible como imagen de
-galeria heredada, sin migrar registros. El principal nunca se agrega de oficio.
-Origen: cms_get_public_submenu_page()/cms_list_submenu_page_media() existentes,
-en modo lectura, desde sub_menu_pagina_media, en su orden editorial. No hay
-consultas nuevas, SQL ejecutado ni modificaciones a administracion/cargas.
-
-componentes/biblioteca_galeria.php se reutiliza para cada submenu y la galeria
-general. Cero imagenes: no emite contenedor ni espacio. Una: imagen sin
-Carousel, flechas ni indicadores. Dos o mas: Bootstrap 5 Carousel ya instalado,
-sin nuevas dependencias, sin avance automatico; anterior/siguiente,
-indicadores, teclado y swipe. IDs: anchor del submenu + -galeria; para el
-general, biblioteca-galeria-general. Instancias y controles independientes.
-assets/js/biblioteca.js inicializa el swipe al cargar y actualiza el estado
-accesible y el foco de los enlaces de cada diapositiva. Conserva el indice,
-anchors, offcanvas y seguimiento de secciones existentes.
-
-Galeria de la Biblioteca CONSERVA la regla previa: agrega automaticamente las
-galerias visibles de los submenus (y secundarias heredadas), deduplica por URL
-dentro del agregado y aparece solo cuando hay al menos dos imagenes distintas.
-Por ello una misma imagen se ve en su submenu y tambien en la galeria general:
-es una duplicacion conceptual explicita de la implementacion anterior. Se
-conserva para no cambiar silenciosamente la regla funcional; suprimir el
-agregado o sustituirlo requiere una decision posterior. Ahora el agregado se
-muestra en UN carrusel, sin una lista vertical de imagenes.
-
-Titulos: se muestra solo titulo editorial no vacio, junto a la descripcion
-si existe. El uploader actual rellena un titulo vacio con el nombre fisico:
-cms_biblioteca_gallery_title() omite esos valores cuando coinciden con basename
-o su nombre sin extension. No modifica el dato guardado. Un titulo realmente
-vacio no se reemplaza por el nombre del submenu ni deja una leyenda vacia;
-el alt usa el titulo de seccion como respaldo accesible.
-
-CSS exclusivo de Biblioteca: viewport de altura estable por breakpoint,
-object-fit:contain para mostrar la imagen completa sin deformarla, bordes de
-10px, controles de 44px y colores desde las variables institucionales actuales.
-Las leyendas se superponen discretamente sin cambiar la altura entre slides.
-Los indicadores pueden envolver si hay muchas imagenes, sin overflow. Se
-conservan el marco ancho, header/footer, hero, rutas y paleta existente.
-
-Validacion: 20 comprobaciones PHP del adaptador y 163 de Chrome sin extensiones,
-con el controlador real renderizado sobre fixtures temporales, sin conexion a
-BD. Se reproducen Presentacion principal+4, Funcion principal+2 y Objetivos
-principal+2, ademas de cero/una imagen, titulos vacios/editoriales/derivados de
-archivo, imagen inactiva, legado secundario, video principal y deduplicacion.
-Anchos: 1920,1600,1366,1024,768,390 y 320px. Sin overflow, recursos locales
-fallidos ni errores JS. Verificados anterior/siguiente, indicadores, independencia
-de los cuatro carruseles, altura constante entre las distintas proporciones,
-swipe real emulado a 390/320px, anchors/foco y cierre del offcanvas sin backdrop.
-No se verifican los registros reales de QA, un guardado administrativo ni Apache:
-los fixtures no ejecutan SQL y se eliminan al finalizar. PHP lint, node --check
-y git diff --check correctos. Sin commit ni push.
-
+La recuperacion reviso git status y git diff: al comenzar estaban limpios y la
+arquitectura generica ya estaba presente. No se reconstruyo ni duplico.
+Prueba repetible: php -n tests/pagina_menu.php. Usa catalogos publicos leidos como
+texto y mysqli simulado que rechaza escrituras; nunca conecta a la base de datos.
+Comprueba rutas, excepciones, Mi San Pablo, secciones activas, anclas, galerias,
+lecturas por lotes, entrada invalida, saneado y dimensiones locales.
+Prueba de navegador: node tests/pagina_menu_browser.cjs. Renderiza el controlador
+real con la conexion simulada, carga los assets reales y comprueba Biblioteca y
+Confesionalidad en 1920/1600/1366/1024/768/390/320 px.
+No verifica autenticacion/guardado administrativo real, datos actuales de QA,
+mod_rewrite en Apache/Plesk ni reproduccion remota de proveedores.
+Resultado de esta revision: 76 comprobaciones PHP y 97 de Chrome correctas.
+Sin excepciones JavaScript, desbordamiento horizontal ni fallos de sintaxis PHP/JS.
+El encabezado compartido adapta margenes, logo y separacion en pantallas menores
+de 576px para que el boton del menu quepa tambien a 320px.
+Sin SQL ejecutado, cambios de credenciales, commit ni push.
 
 REPARACION DE ACCIONES Y ORDEN DE GALERIA ADMINISTRATIVA (2026-10-05)
 
@@ -515,31 +386,9 @@ Biblioteca no cambia: cms_list_submenu_page_media() ya hace ORDER BY orden ASC,
 id_media ASC; el adaptador preserva esa secuencia y filtra medios inactivos.
 El carrusel publico respeta el orden administrativo sin consultas paralelas.
 
-Validacion sin SQL sobre BD real: 17 comprobaciones PHP con mysqli simulado,
-ejecutando los helpers reales, y 32 comprobaciones Chrome sin extensiones.
-Arrastre por coordenadas: ABCD->DABC; reapertura tres veces; cancelar eliminar
-B sin peticion; eliminar B->DAC; reabrir; agregar E->DACE; arrastrar la imagen
-recien agregada; rechazar otro reorder y restaurar; activar/ocultar; recarga y
-persistencia del fixture; carrusel publico DACE. Otras galerias intactas. Menu
-comprobado por hit testing fuera del clipping, cierre exterior, cero errores JS
-y cero respuestas HTTP fallidas inesperadas. Revisado overflow a 768/390px.
-Tambien se comprobaron teclado/Escape, doble clic sin doble peticion y
-eliminacion rechazada sin retirar la tarjeta. El borrado del registro y la
-comprobacion de referencias usan transaccion; el archivo fisico se elimina
-despues del commit, para no borrar un archivo si falla la operacion de BD.
-Backend: normalizacion 1..N, IDs ajenos/repetidos/incompletos, rollback, archivo
-exclusivo eliminado, archivo compartido conservado y rutas fuera de uploads
-rechazadas. El agregado usa respuesta simulada porque un upload HTTP real no
-puede verificarse en PHP CLI. No se verificaron escrituras reales de QA ni
-autenticacion contra una sesion real; no se ejecuto SQL, migracion, commit ni
-push. Fixtures y copias de dependencias temporales se eliminan al finalizar.
-
-
 CABECERA PROPIA DEL MENU: IMPLEMENTADA (2026-10-05)
 
-Entrega previa a la generalizacion: el almacenamiento y editor siguen vigentes;
-sus referencias a archivos publicos originales son historicas. El render actual
-usa pagina_menu.php, pagina_menu_helpers.php, pagina-menu.css y pagina-menu.js.
+El editor y almacenamiento son comunes a todos los menus. El render publico usa pagina_menu.php, pagina_menu_helpers.php, pagina-menu.css y pagina-menu.js.
 
 El usuario confirmo la creacion manual en menus de hero_tipo (imagen/video),
 imagen_hero, hero_video_url y hero_video_archivo. Se utilizan esos cuatro campos.
@@ -580,7 +429,7 @@ registros multimedia del CMS (incluida configuracion JSON). Ante duda o error
 al comprobar referencias, se conserva el archivo. La comprobacion comun de
 submenus tambien protege archivos utilizados en cabeceras de menus.
 
-BIBLIOTECA: cms_biblioteca_view() obtiene hero exclusivamente mediante
+RENDER COMUN: cms_menu_page_view() obtiene hero exclusivamente mediante
 cms_menu_header_media($menu), con los campos de la fila menus. Sin medio propio
 valido, usa assets/images/frontis_01.jpg; nunca toma el principal de Presentacion.
 La bajada y el contenido de las secciones mantienen sus lectores existentes.
@@ -590,24 +439,11 @@ conserva autoplay/muted/loop/playsinline y object-fit:cover, con control de paus
 y respeto de movimiento reducido. El iframe externo no fuerza autoplay.
 Se mantienen overlay, titulo, breadcrumb, alturas y diseno aprobado, asi como
 indice, anclas, galerias, carruseles, header/footer y botones flotantes.
-En la primera entrega solo Biblioteca consumia el hero; la arquitectura generica
-posterior lo utiliza para todos los menus compatibles, segun el apartado actual.
+La arquitectura generica utiliza la cabecera propia para todos los menus compatibles.
 
 IMPLEMENTACION: includes/menu_media_helpers.php centraliza seleccion, guardado
 y referencias; includes/cms_helpers.php integra lectura y transaccion;
 componentes/menu_cabecera_editor.php contiene los campos compartidos del modal;
 assets/js/menu_header_admin.js administra apertura, tipos y previews sin JS
 nuevo inline. Los estilos minimos se integran en admin_dashboard.css y
-pages/biblioteca.css; biblioteca.js conserva su navegacion y carruseles.
-
-VALIDACION: 107 comprobaciones locales con Chrome sin extensiones, PHP real y mysqli
-simulado/persistencia de fixtures, sin acceso a BD real. Cargas reales por HTTP,
-imagen nueva/reemplazo/eliminacion, video local/YouTube/Vimeo, cambios de tipo,
-reapertura, otro menu y creacion con ID propio. Archivo compartido conservado,
-MIME falso/URL no compatible rechazados y rollback con limpieza del upload nuevo.
-Datos sin Cabecera conserva su medio. Presentacion y sus galerias permanecen
-independientes. Administracion y Biblioteca comprobadas a 1920/1600/1366/1024/
-768/390/320 px; alturas originales 410/340/310 px, carruseles funcionales.
-Los proveedores externos se simulan solo para probar el iframe; su reproduccion
-remota y las escrituras/autenticacion reales de QA no se verificaron. Los
-fixtures, capturas y uploads de prueba se eliminan al finalizar. No commit/push.
+pages/pagina-menu.css; pagina-menu.js administra navegacion y carruseles.

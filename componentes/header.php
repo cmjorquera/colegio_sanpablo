@@ -28,21 +28,13 @@ $urlBoton = cms_public_url($institution['url_boton_principal'] ?? '#');
                     <ul>
                         <?php foreach ($arrMenus as $i => $menu):
                             $idMenu = (int) $menu['id_menu'];
-                            $hasSubs = !empty($arrSubs[$idMenu]);
-                            $headerMenuPageUrl = cms_menu_page_url($menu, $arrSubs[$idMenu] ?? [], $arrMenus);
                             $active = $i === 0 ? ' class="active"' : '';
                         ?>
+                            <!-- Sin desplegable de submenús en escritorio: el menú enlaza directo a su página -->
                             <li<?= $active ?>>
                                 <a href="<?= e(cms_public_menu_url($menu, $arrSubs[$idMenu] ?? [], $arrMenus)) ?>">
-                                    <?= e($menu['nombre']) ?><?= $hasSubs ? ' <span aria-hidden="true">&#9662;</span>' : '' ?>
+                                    <?= e($menu['nombre']) ?>
                                 </a>
-                                <?php if ($hasSubs): ?>
-                                    <ul class="dropdown">
-                                        <?php foreach ($arrSubs[$idMenu] as $sub): ?>
-                                            <li><a href="<?= e(cms_public_header_submenu_url($sub, $menu, $headerMenuPageUrl)) ?>"><?= e($sub['nombre']) ?></a></li>
-                                        <?php endforeach; ?>
-                                    </ul>
-                                <?php endif; ?>
                             </li>
                         <?php endforeach; ?>
                     </ul>

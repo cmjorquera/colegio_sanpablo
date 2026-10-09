@@ -317,3 +317,14 @@ Archivos modificados: noticias.php, editar_contenedor.php, includes/cms_helpers.
 Resumen (detalle completo en logica/logica_admin_permisos_y_layout.txt):
 - noticias.php ahora carga $arrMenus/$arrSubs igual que index.php antes de incluir el header publico (arreglaba foreach sobre null).
 - El contenedor noticias_home ya no tiene fila de edicion inline; Agregar item y Editar comparten el mismo modal itemModal, con Visible oculto (se preserva vía input oculto), Categoria/Titulo/Etiqueta visual en 3 columnas, toggle de video (YouTube o archivo local reutilizando seccion_item.url), galeria del detalle con subida instantanea (AJAX) cuando la noticia ya existe, backdrop estatico y boton "Guardar".
+
+CAMBIO: header publico sin desplegable de submenus (2026-10-09)
+------------------------------------------------------------------
+
+Archivos modificados: componentes/header.php.
+
+Resumen:
+- En el menu de escritorio (.sp-nav) ya no se renderiza el <ul class="dropdown"> ni la flecha (&#9662;) junto al nombre del menu; al pasar el mouse no aparecen submenus.
+- Cada menu sigue enlazando a cms_public_menu_url() (pagina del menu).
+- El menu movil (offcanvas #spHeaderMobileNav) no se modifico: sigue listando los submenus.
+- Tablas usadas: menu, sub_menu (sin cambios). Los submenus siguen existiendo en el CMS y en el footer.

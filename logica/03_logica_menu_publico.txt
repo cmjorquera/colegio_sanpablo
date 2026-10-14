@@ -85,3 +85,9 @@ DIFERENCIA CON CONTENEDORES
 El menu publico no es un contenedor independiente llamado menu_principal. En la base actual, el header_principal es el contenedor visual que muestra el menu usando menus y sub_menus.
 
 El helper cms_remove_legacy_menu_principal_section() elimina el contenedor legacy menu_principal si aparece.
+
+
+RESTAURACION DESDE MAIN (2026-10-14)
+------------------------------------
+Se recupero en qa la navegacion de menus principales hacia pagina_menu.php con rutas amigables mediante .htaccess. El header enlaza al menu principal; los submenus internos son secciones con anclas dentro de la pagina del menu, sin desplegable en escritorio. En movil se conserva offcanvas y se utiliza el indice responsive de la pagina tematica. Se restauraron pagina_menu.php, includes/pagina_menu_helpers.php, public_routes.php, public_images.php, public_theme.php, public_floating_actions.php, submenu_public_media.php, menu_media_helpers.php, componentes/pagina_menu_galeria.php, assets/js/pagina-menu.js, assets/css/pages/pagina-menu.css, componentes/header.php y el CSS de la pagina publica. includes/cms_helpers.php carga los helpers recuperados.
+No se modifico la base de datos ni main. Pendiente validar en servidor QA rutas rewrite, menu, anclas, contenido, media y responsive antes de promocionar a main.

@@ -33,19 +33,19 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
         <section class="admin-login-brand" aria-labelledby="institution-title">
             <div class="admin-login-brand-top">
                 <img class="admin-login-logo" src="<?= cms_e($logoInstitucion) ?>" alt="<?= cms_e($nombreInstitucion) ?>" id="institution-logo">
-                <span class="admin-login-brand-kicker">Gestión institucional</span>
+                <span class="admin-login-brand-kicker">Gestión de sitio web</span>
             </div>
             <div class="admin-login-intro">
-                <p class="admin-login-eyebrow"><span class="admin-login-status-dot"></span> Plataforma de administración educativa</p>
+                <p class="admin-login-eyebrow"><span class="admin-login-status-dot"></span> Plataforma de gestión de páginas web</p>
                 <h1 id="institution-title"><?= cms_e($nombreInstitucion) ?></h1>
-                <p>Un espacio seguro para administrar contenidos, comunicaciones y la presencia digital de nuestra comunidad educativa.</p>
+                <p>Sistema de administración del sitio web institucional: organiza páginas, publica noticias y gestiona imágenes, videos y usuarios.</p>
                 <div class="admin-login-brand-features" aria-label="Funciones de la plataforma">
-                    <span>Contenidos</span><span>Comunicaciones</span><span>Comunidad</span>
+                    <span>Páginas web</span><span>Noticias</span><span>Multimedia</span><span>Usuarios</span>
                 </div>
             </div>
             <div class="admin-login-brand-bottom">
                 <div class="admin-login-colorband" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
-                <p>Una experiencia digital pensada para instituciones educativas.</p>
+                <p>Comunicamos hoy la educación del mañana.</p>
             </div>
         </section>
         <section class="admin-login-content" aria-labelledby="login-title">
@@ -57,13 +57,13 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
                     <div class="admin-login-platform-copy">
                         <span class="admin-login-platform-eyebrow">Tecnología y desarrollo</span>
                         <a href="https://webnia.cl/" target="_blank" rel="noopener noreferrer" class="admin-login-platform-name" aria-label="Visitar Webnia">webnia<span>.cl</span> <span aria-hidden="true">↗</span></a>
-                        <p>Plataforma adaptable a distintas instituciones educativas.</p>
+                        <p>Desarrollo y gestión de sitios web institucionales.</p>
                     </div>
                 </div>
                 <div class="admin-login-card">
                     <p class="admin-login-eyebrow">Acceso institucional</p>
-                    <h2 id="login-title">Bienvenido de nuevo</h2>
-                    <p class="admin-login-subtitle">Ingresa tus credenciales para acceder al panel administrativo.</p>
+                    <h2 id="login-title">Iniciar sesión</h2>
+                    <p class="admin-login-subtitle">Ingresa tus credenciales para administrar el sitio web de Colegio San Pablo.</p>
                     <form id="admin-access-form" action="login_check.php" method="post">
                         <div id="admin-access-alert" class="admin-login-alert" role="alert" hidden></div>
                         <div class="admin-login-field">
@@ -79,15 +79,16 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
                                 </button>
                             </div>
                         </div>
+                        <div class="admin-login-password-actions"><a href="mailto:soporte@webnia.cl?subject=Recuperar%20acceso%20CMS%20San%20Pablo">¿Olvidaste tu contraseña?</a></div>
                         <button id="admin-access-submit" class="admin-login-submit" type="submit">Ingresar al panel <span aria-hidden="true">→</span></button>
                     </form>
                     <div class="admin-login-card-footer"><span aria-hidden="true">●</span> Acceso exclusivo para personal autorizado</div>
                     <noscript><p>Activa JavaScript en tu navegador para iniciar sesión desde este formulario.</p></noscript>
                 </div>
                 <div class="admin-login-ecosystem">
-                    <span class="admin-login-ecosystem-label">Diseñado para entornos educativos</span>
+                    <span class="admin-login-ecosystem-label">Plataforma para sitios web educativos</span>
                     <div class="admin-login-ecosystem-tags" aria-label="Tipos de instituciones compatibles">
-                        <span>◈ Colegios</span><span>▦ Liceos</span><span>◇ Redes educativas</span>
+                        <span>◈ Sitios escolares</span><span>▦ Portales institucionales</span><span>◇ Gestión de contenidos</span>
                     </div>
                     <p>Desarrollado por <a href="https://webnia.cl/" target="_blank" rel="noopener noreferrer">Webnia.cl</a> · <?= date('Y') ?></p>
                 </div>

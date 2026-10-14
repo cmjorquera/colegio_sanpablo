@@ -75,7 +75,7 @@
             }
         });
 
-        window.setTimeout(openModal, Math.max(0, delay));
+        window.setTimeout(openModal, preview ? 0 : Math.max(0, delay));
     }
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeModal, { once: true });

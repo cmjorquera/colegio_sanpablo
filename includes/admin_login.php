@@ -52,7 +52,7 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
             <div class="admin-login-content-inner">
                 <div class="admin-login-platform" aria-label="Información de la plataforma">
                     <div class="admin-login-platform-mark" aria-hidden="true">
-                        <span class="admin-login-platform-symbol">W</span>
+                        <img src="assets/images/marcas/logo_webnia_02.png" alt="" class="admin-login-webnia-logo" onerror="this.closest('.admin-login-platform-mark').style.display='none'">
                     </div>
                     <div class="admin-login-platform-copy">
                         <span class="admin-login-platform-eyebrow">Tecnología y desarrollo</span>

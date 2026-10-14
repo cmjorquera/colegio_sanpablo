@@ -1,8 +1,14 @@
 <?php
 session_start();
 
+require_once __DIR__ . '/includes/admin_permissions.php';
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: index.php?login=1');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    require __DIR__ . '/includes/admin_login.php';
+    exit;
+}
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['panel'])) {
+    header('Location: admin.php?panel=contenedores');
     exit;
 }
 

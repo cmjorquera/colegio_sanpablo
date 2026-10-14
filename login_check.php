@@ -88,6 +88,7 @@ try {
         exit;
     }
 
+    session_regenerate_id(true);
     $_SESSION['admin_logged'] = true;
     $_SESSION['admin_id'] = (int) $user['id_usuario'];
     $_SESSION['id_usuario'] = (int) $user['id_usuario'];

@@ -159,7 +159,7 @@ if ($mostrarEmail && $email !== '') {
             </div>
             <div class="d-flex align-items-center gap-3 flex-wrap">
                 <?php if ($mostrarBotonIngresar): ?>
-                    <a href="admin.php" class="sp-login-btn" title="Ingresar al sistema">
+                    <a href="#" class="sp-login-btn" data-bs-toggle="modal" data-bs-target="#modalLogin" title="Ingresar al sistema">
                         <i class="fas fa-sign-in-alt"></i>
                         <span><?= e($textoBotonIngresar) ?></span>
                     </a>
@@ -183,6 +183,52 @@ if ($mostrarEmail && $email !== '') {
                         <?php endforeach; ?>
                     </div>
                 <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="modal fade" id="modalLogin" tabindex="-1" aria-labelledby="modalLoginLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content sp-modal-login">
+            <div class="sp-modal-colorband"></div>
+            <div class="modal-body p-0">
+                <div class="sp-modal-header">
+                    <button type="button" class="sp-modal-close" data-bs-dismiss="modal" aria-label="Cerrar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div class="sp-modal-logo">
+                        <i class="fas fa-school"></i>
+                    </div>
+                    <h5 id="modalLoginLabel">Mi Colegio San Pablo</h5>
+                    <p>Elige el área a la que deseas ingresar:</p>
+                </div>
+
+                <div class="sp-modal-areas" id="loginAreaSelector">
+                    <a href="#" class="sp-area-btn" data-bs-dismiss="modal">
+                        <i class="fas fa-user-graduate"></i>
+                        <span>Área Alumnos</span>
+                        <i class="fas fa-chevron-right sp-area-arrow"></i>
+                    </a>
+
+                    <a href="#" class="sp-area-btn" data-bs-dismiss="modal">
+                        <i class="fas fa-users"></i>
+                        <span>Área Padres</span>
+                        <i class="fas fa-chevron-right sp-area-arrow"></i>
+                    </a>
+
+                    <a href="#" class="sp-area-btn" data-bs-dismiss="modal">
+                        <i class="fas fa-briefcase"></i>
+                        <span>Área Funcionario</span>
+                        <i class="fas fa-chevron-right sp-area-arrow"></i>
+                    </a>
+
+                    <a href="#" class="sp-area-btn" data-bs-dismiss="modal">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <span>Área Docentes</span>
+                        <i class="fas fa-chevron-right sp-area-arrow"></i>
+                    </a>
+                </div>
+
             </div>
         </div>
     </div>

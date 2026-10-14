@@ -219,3 +219,7 @@ Centralizacion de datos institucionales (Topbar, octubre 2026)
 
 MODAL INFORMATIVO (2026-10-14)
 El contenedor modal_informativo solo renderiza un item si visible='si' y posee contenido. El estado activo de seccion no reemplaza la visibilidad del item. La configuracion mostrar='una_vez' utiliza localStorage con hash del contenido; mostrar='siempre' lo abre en cada carga. Para pruebas desde editar_contenedor.php, el boton 'Probar modal en sitio' usa index.php?preview_modal=1: solo una sesion admin autenticada puede forzar vista previa, incluso si el item esta oculto, sin escribir localStorage ni modificar la configuracion. En publico normal se respetan visible y mostrar. Sin migraciones SQL ni borrado de datos.
+
+
+CORRECCION MODAL INFORMATIVO (2026-10-14)
+Se elimino la inicializacion JavaScript y CSS inline de componentes/modal_informativo.php y se centralizo en assets/js/modal_informativo.js y assets/css/pages/modal_informativo.css, restaurados desde main. Solo un inicializador maneja apertura, cierre y localStorage. El modo una_vez se conserva por hash de contenido, siempre abre en cada visita y preview_modal=1 fuerza apertura solo con sesion admin. Para que aparezca al publico el item debe tener visible=si, el contenedor debe estar activo y visible, y el visitante no debe tener el hash marcado como visto. No borrar el contenedor ni datos. Probar en ventana privada, consola JS y Network antes de dar por validado.

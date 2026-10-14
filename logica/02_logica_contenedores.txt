@@ -206,3 +206,12 @@ ERRORES A EVITAR
 - Confundir seccion_item de noticias con una tabla noticia: en esta base las noticias del home salen de seccion_item.
 - Confundir menu publico con menu administrador.
 - Ignorar visible, estado y orden al revisar por que algo no aparece.
+
+
+Centralizacion de datos institucionales (Topbar, octubre 2026)
+- Fuente unica de direccion, telefono y correo: tabla institucion, administrada desde admin.php?panel=configuracion (Datos institucionales).
+- editar_contenedor.php muestra esos tres valores como solo lectura, con enlace al mantenedor institucional.
+- guardar_topbar_general ya no actualiza institucion: solo guarda observacion/visibilidad de seccion y configuraciones propias del Topbar en seccion_config.
+- Se conservan los switches de direccion, telefono, correo, redes y boton ingresar, y el texto del boton.
+- No se modifican redes sociales de seccion_item ni sus URL en esta etapa; requieren auditoria independiente.
+- Sin cambios de esquema SQL ni migraciones. Aplicar primero en QA; produccion se publica por separado.

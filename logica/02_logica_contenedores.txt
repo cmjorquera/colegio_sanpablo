@@ -215,3 +215,7 @@ Centralizacion de datos institucionales (Topbar, octubre 2026)
 - Se conservan los switches de direccion, telefono, correo, redes y boton ingresar, y el texto del boton.
 - No se modifican redes sociales de seccion_item ni sus URL en esta etapa; requieren auditoria independiente.
 - Sin cambios de esquema SQL ni migraciones. Aplicar primero en QA; produccion se publica por separado.
+
+
+MODAL INFORMATIVO (2026-10-14)
+El contenedor modal_informativo solo renderiza un item si visible='si' y posee contenido. El estado activo de seccion no reemplaza la visibilidad del item. La configuracion mostrar='una_vez' utiliza localStorage con hash del contenido; mostrar='siempre' lo abre en cada carga. Para pruebas desde editar_contenedor.php, el boton 'Probar modal en sitio' usa index.php?preview_modal=1: solo una sesion admin autenticada puede forzar vista previa, incluso si el item esta oculto, sin escribir localStorage ni modificar la configuracion. En publico normal se respetan visible y mostrar. Sin migraciones SQL ni borrado de datos.

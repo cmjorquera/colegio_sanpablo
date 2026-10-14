@@ -1040,7 +1040,7 @@ admin_render_layout_start([
             <h3 class="mb-1"><?= cms_e($section['titulo_admin']) ?></h3>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="<?= cms_e(cms_get_preview_target($section['nombre_interno'])) ?>" target="_blank" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right me-1"></i>Ver en sitio</a>
+            <a href="<?= cms_e(($section['nombre_interno'] ?? '') === 'modal_informativo' ? 'index.php?preview_modal=1' : cms_get_preview_target($section['nombre_interno'])) ?>" target="_blank" rel="noopener" class="btn btn-outline-secondary"><i class="bi bi-box-arrow-up-right me-1"></i><?= ($section['nombre_interno'] ?? '') === 'modal_informativo' ? 'Probar modal en sitio' : 'Ver en sitio' ?></a>
         </div>
     </div>
 </div>

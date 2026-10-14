@@ -79,7 +79,7 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
                                 </button>
                             </div>
                         </div>
-                        <div class="admin-login-password-actions"><a href="mailto:soporte@webnia.cl?subject=Recuperar%20acceso%20CMS%20San%20Pablo">¿Olvidaste tu contraseña?</a></div>
+                        <div class="admin-login-password-actions"><span title="La recuperación automática por correo está pendiente de configurar">¿Olvidaste tu contraseña? Contacta al administrador.</span></div>
                         <button id="admin-access-submit" class="admin-login-submit" type="submit">Ingresar al panel <span aria-hidden="true">→</span></button>
                     </form>
                     <div class="admin-login-card-footer"><span aria-hidden="true">●</span> Acceso exclusivo para personal autorizado</div>

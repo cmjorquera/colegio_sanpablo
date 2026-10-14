@@ -167,3 +167,12 @@ Correccion: se restaura el editor tipo acordeon para noticias_home (2026-07-07)
 - Nueva funcion admin_render_news_item_editor() en editar_contenedor.php centraliza el HTML del editor para reutilizarlo tanto en creacion como en edicion.
 - El parametro GET edit_item controla que fila tiene el acordeon abierto (?edit_item=ID#news-edit-ID); new_item=1 abre el panel de creacion (#news-new-item). Ambos alternan (toggle) al volver a hacer clic.
 - Se mantiene el drag and drop del listado; la fila de edicion usa data-id="{id}-editor" para viajar junto a su fila real al reordenar (igual que la logica original).
+
+
+Centralizacion de datos institucionales (Topbar, octubre 2026)
+- Fuente unica de direccion, telefono y correo: tabla institucion, administrada desde admin.php?panel=configuracion (Datos institucionales).
+- editar_contenedor.php muestra esos tres valores como solo lectura, con enlace al mantenedor institucional.
+- guardar_topbar_general ya no actualiza institucion: solo guarda observacion/visibilidad de seccion y configuraciones propias del Topbar en seccion_config.
+- Se conservan los switches de direccion, telefono, correo, redes y boton ingresar, y el texto del boton.
+- No se modifican redes sociales de seccion_item ni sus URL en esta etapa; requieren auditoria independiente.
+- Sin cambios de esquema SQL ni migraciones. Aplicar primero en QA; produccion se publica por separado.

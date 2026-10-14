@@ -1061,16 +1061,48 @@ function admin_render_layout_start(array $options = []): void
                 <i class="bi bi-box-arrow-up-right nav-item-icon"></i>
                 <span class="nav-item-label">Ver sitio</span>
             </a>
-            <a class="nav-item" href="index.php?logout=1" title="Cerrar sesión">
-                <i class="bi bi-box-arrow-left nav-item-icon"></i>
-                <span class="nav-item-label">Cerrar sesión</span>
-            </a>
+            <?php
+            if (empty($_SESSION['csrf_logout'])) {
+                $_SESSION['csrf_logout'] = bin2hex(random_bytes(32));
+            }
+            ?>
+            <form method="post" action="cerrar_sesion.php" class="m-0" data-admin-logout-form>
+                <input type="hidden" name="csrf_logout" value="<?= htmlspecialchars($_SESSION['csrf_logout'], ENT_QUOTES, 'UTF-8') ?>">
+                <button class="nav-item w-100 text-start border-0" type="submit" title="Cerrar sesión">
+                    <i class="bi bi-box-arrow-left nav-item-icon"></i>
+                    <span class="nav-item-label">Cerrar sesión</span>
+                </button>
+            </form>
             <button class="sidebar-collapse-btn" id="toggleSidebar" type="button">
                 <i class="bi bi-chevron-left collapse-icon"></i>
                 <span class="collapse-label">Colapsar</span>
             </button>
         </div>
     </aside>
+    <script>
+    document.querySelectorAll('[data-admin-logout-form]').forEach(function (form) {
+        form.addEventListener('submit', function (event) {
+            if (form.dataset.confirmed === '1') return;
+            event.preventDefault();
+            if (window.Swal && typeof window.Swal.fire === 'function') {
+                window.Swal.fire({
+                    title: '¿Cerrar sesión?',
+                    text: 'Tendrás que ingresar nuevamente para acceder al panel.',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonText: 'Sí, cerrar sesión',
+                    cancelButtonText: 'Cancelar',
+                    confirmButtonColor: '#d33'
+                }).then(function (result) {
+                    if (result.isConfirmed) { form.dataset.confirmed = '1'; form.requestSubmit(); }
+                });
+            } else if (window.confirm('¿Deseas cerrar sesión?')) {
+                form.dataset.confirmed = '1';
+                form.requestSubmit();
+            }
+        });
+    });
+    </script>
 
     <!-- overlay mobile -->
     <div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1039;" onclick="document.getElementById('adminSidebar').classList.remove('mobile-open');this.style.display='none';"></div>

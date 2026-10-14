@@ -176,3 +176,7 @@ Centralizacion de datos institucionales (Topbar, octubre 2026)
 - Se conservan los switches de direccion, telefono, correo, redes y boton ingresar, y el texto del boton.
 - No se modifican redes sociales de seccion_item ni sus URL en esta etapa; requieren auditoria independiente.
 - Sin cambios de esquema SQL ni migraciones. Aplicar primero en QA; produccion se publica por separado.
+
+
+CIERRE DE SESION (2026-10-14)
+El sidebar de includes/admin_layout.php usa formulario POST a cerrar_sesion.php y confirmacion SweetAlert (fallback confirm). Se envia token CSRF en sesion; cancelar no envia formulario. cerrar_sesion.php valida metodo y token, limpia $_SESSION, invalida cookie PHP y ejecuta session_destroy(); redirige 303 a index.php?login=1. admin.php redirige sesiones no autenticadas a esa misma URL y componentes/topbar.php abre el modal de login al detectarla. login_check.php regenera el identificador de sesion tras autenticar. Sin cambios de SQL. Probar logout/login, cancelar, acceso directo admin.php, retroceso y navegacion en QA.

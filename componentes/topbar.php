@@ -266,6 +266,15 @@ if ($mostrarEmail && $email !== '') {
 
 <script>
     (function () {
+        var loginRequested = new URLSearchParams(window.location.search).get('login') === '1';
+        if (loginRequested) {
+            document.addEventListener('DOMContentLoaded', function () {
+                var loginModal = document.getElementById('modalLogin');
+                if (loginModal && window.bootstrap && window.bootstrap.Modal) {
+                    window.bootstrap.Modal.getOrCreateInstance(loginModal).show();
+                }
+            });
+        }
         var modal = document.getElementById('modalLogin');
         var areaSelector = document.getElementById('loginAreaSelector');
         var showAdminLogin = document.getElementById('showAdminLogin');

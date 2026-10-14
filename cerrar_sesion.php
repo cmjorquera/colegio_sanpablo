@@ -25,5 +25,5 @@ if (ini_get('session.use_cookies')) {
 }
 session_destroy();
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
-header('Location: index.php?login=1', true, 303);
+header('Location: admin.php', true, 303);
 exit;

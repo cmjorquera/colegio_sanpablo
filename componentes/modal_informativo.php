@@ -2,9 +2,17 @@
 $modalSectionName = 'modal_informativo';
 $modalItems = $sectionItemsMap[$modalSectionName] ?? [];
 $modalItem = null;
+// Vista previa exclusiva de administradores autenticados, sin alterar visibilidad pública.
+$modalPreview = isset($_GET['preview_modal']) && $_GET['preview_modal'] === '1';
+if ($modalPreview) {
+    if (session_status() !== PHP_SESSION_ACTIVE) {
+        session_start();
+    }
+    $modalPreview = !empty($_SESSION['admin_logged']);
+}
 
 foreach ($modalItems as $item) {
-    if (($item['visible'] ?? 'si') !== 'si') {
+    if (!$modalPreview && ($item['visible'] ?? 'si') !== 'si') {
         continue;
     }
 
@@ -67,7 +75,8 @@ if (!function_exists('sp_modal_rich_text')) {
     class="sp-info-modal"
     id="modal-informativo"
     data-sp-info-modal
-    data-mode="<?= e($modalMode) ?>"
+    data-mode="<?= e($modalPreview ? 'siempre' : $modalMode) ?>"
+    data-preview="<?= $modalPreview ? '1' : '0' ?>"
     data-delay="<?= (int) $modalDelay ?>"
     data-hash="<?= e($modalHash) ?>"
     aria-hidden="true"
@@ -288,6 +297,7 @@ if (!function_exists('sp_modal_rich_text')) {
         var delay = parseInt(modal.getAttribute('data-delay') || '0', 10);
         var hash = modal.getAttribute('data-hash') || 'default';
         var storageKey = 'sp_info_modal_seen_' + hash;
+        var preview = modal.getAttribute('data-preview') === '1';
 
         function storageGet(key) {
             try {
@@ -303,7 +313,7 @@ if (!function_exists('sp_modal_rich_text')) {
             } catch (error) {}
         }
 
-        var shouldShow = mode === 'siempre' || storageGet(storageKey) !== '1';
+        var shouldShow = preview || mode === 'siempre' || storageGet(storageKey) !== '1';
 
         if (!shouldShow) {
             modal.remove();
@@ -311,12 +321,13 @@ if (!function_exists('sp_modal_rich_text')) {
         }
 
         function markSeen() {
-            if (mode !== 'siempre') {
+            if (!preview && mode !== 'siempre') {
                 storageSet(storageKey, '1');
             }
         }
 
         function openModal() {
+            if (!modal.isConnected || modal.classList.contains('is-open')) return;
             modal.hidden = false;
             modal.offsetHeight;
             modal.classList.add('is-open');
@@ -349,6 +360,6 @@ if (!function_exists('sp_modal_rich_text')) {
             }
         });
 
-        window.setTimeout(openModal, Math.max(0, delay));
+        window.setTimeout(openModal, preview ? 0 : Math.max(0, delay));
     });
 </script>

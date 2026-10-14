@@ -2,7 +2,7 @@
 session_start();
 
 if (empty($_SESSION['admin_logged'])) {
-    header('Location: index.php');
+    header('Location: index.php?login=1');
     exit;
 }
 

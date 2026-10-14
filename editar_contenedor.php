@@ -114,7 +114,6 @@ function topbar_save_general(mysqli $db, array $section, array $post): void
 {
     cms_ensure_section_tracking_columns($db);
     $idSeccion = (int) $section['id_seccion'];
-    $idInstitucion = (int) $section['id_institucion'];
     $visible = (($post['visible'] ?? 'no') === 'si') ? 'si' : 'no';
     $orden = max(1, (int) ($post['orden'] ?? ($section['orden'] ?? 1)));
     $observacion = trim((string) ($post['observacion'] ?? ''));
@@ -124,15 +123,6 @@ function topbar_save_general(mysqli $db, array $section, array $post): void
     $stmtSeccion->bind_param('sisii', $visible, $orden, $observacion, $idUsuario, $idSeccion);
     $stmtSeccion->execute();
     $stmtSeccion->close();
-
-    $direccion = trim((string) ($post['direccion'] ?? ''));
-    $telefono = trim((string) ($post['telefono'] ?? ''));
-    $email = trim((string) ($post['email'] ?? ''));
-
-    $stmtInstitucion = $db->prepare('UPDATE institucion SET direccion = ?, telefono = ?, email = ? WHERE id_institucion = ?');
-    $stmtInstitucion->bind_param('sssi', $direccion, $telefono, $email, $idInstitucion);
-    $stmtInstitucion->execute();
-    $stmtInstitucion->close();
 
     $configValues = [
         'texto_boton_ingresar' => trim((string) ($post['texto_boton_ingresar'] ?? 'Ingresar')),
@@ -1079,17 +1069,23 @@ admin_render_layout_start([
                         <label class="form-label">Observación</label>
                         <input class="form-control" type="text" name="observacion" value="<?= cms_e($section['observacion'] ?? '') ?>"<?= $topbarReadonlyAttr ?>>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Dirección</label>
-                        <input class="form-control" name="direccion" value="<?= cms_e($site['institution']['direccion'] ?? '') ?>"<?= $topbarReadonlyAttr ?>>
+                    <div class="col-12">
+                        <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 mb-0">
+                            <span>Los datos de contacto se administran únicamente desde <strong>Datos institucionales</strong>. Aquí puedes consultar sus valores actuales y elegir cuáles mostrar.</span>
+                            <a href="admin.php?panel=configuracion" class="btn btn-sm btn-outline-primary"><i class="bi bi-pencil-square me-1"></i>Editar datos institucionales</a>
+                        </div>
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Teléfono</label>
-                        <input class="form-control" name="telefono" value="<?= cms_e($site['institution']['telefono'] ?? '') ?>"<?= $topbarReadonlyAttr ?>>
+                        <label class="form-label">Dirección institucional</label>
+                        <input class="form-control" value="<?= cms_e($site['institution']['direccion'] ?? '') ?>" readonly aria-label="Dirección institucional (solo lectura)">
                     </div>
                     <div class="col-md-4">
-                        <label class="form-label">Correo</label>
-                        <input class="form-control" name="email" value="<?= cms_e($site['institution']['email'] ?? '') ?>"<?= $topbarReadonlyAttr ?>>
+                        <label class="form-label">Teléfono institucional</label>
+                        <input class="form-control" value="<?= cms_e($site['institution']['telefono'] ?? '') ?>" readonly aria-label="Teléfono institucional (solo lectura)">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Correo institucional</label>
+                        <input class="form-control" value="<?= cms_e($site['institution']['email'] ?? '') ?>" readonly aria-label="Correo institucional (solo lectura)">
                     </div>
                     <div class="col-md-6">
                         <label class="form-label">Texto del botón "Ingresar"</label>

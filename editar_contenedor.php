@@ -390,7 +390,30 @@ function admin_render_news_item_editor(array $item, int $idSeccion, array $categ
             <a class="btn btn-soft" href="<?= cms_e($cancelUrl) ?>">Cerrar</a>
         </div>
 
-        <div class="row g-2">
+        <div class="news-editor-tabs mb-3" data-news-editor-tabs>
+            <ul class="nav nav-pills gap-2 flex-wrap mb-3" role="tablist" aria-label="Secciones de edición de noticia">
+                <?php foreach ([
+                    'general' => ['bi-file-text', 'Información general'],
+                    'multimedia' => ['bi-images', 'Multimedia'],
+                    'clasificacion' => ['bi-tags', 'Etiquetas y categoría'],
+                    'opciones' => ['bi-gear', 'Opciones'],
+                ] as $newsTabKey => $newsTabInfo): ?>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link<?= $newsTabKey === 'general' ? ' active' : '' ?>" type="button" data-bs-toggle="tab" data-bs-target="#news-panel-<?= cms_e($formId) ?>-<?= $newsTabKey ?>" role="tab" aria-selected="<?= $newsTabKey === 'general' ? 'true' : 'false' ?>">
+                            <i class="bi <?= $newsTabInfo[0] ?> me-1"></i><?= cms_e($newsTabInfo[1]) ?>
+                        </button>
+                    </li>
+                <?php endforeach; ?>
+            </ul>
+            <div class="tab-content">
+                <?php foreach (['general', 'multimedia', 'clasificacion', 'opciones'] as $newsTabKey): ?>
+                    <div class="tab-pane fade<?= $newsTabKey === 'general' ? ' show active' : '' ?>" id="news-panel-<?= cms_e($formId) ?>-<?= $newsTabKey ?>" role="tabpanel">
+                        <div class="row g-3" data-news-panel-fields="<?= $newsTabKey ?>"></div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <div class="row g-2" data-news-original-fields>
             <div class="col-md-4">
                 <div class="field-card" data-field-shell>
                     <?php admin_modal_field_head('Categoría', 'news_categoria_' . $formId, $sectionInternalName, 'categoria'); ?>
@@ -417,7 +440,7 @@ function admin_render_news_item_editor(array $item, int $idSeccion, array $categ
             <div class="col-md-8">
                 <div class="field-card" data-field-shell>
                     <?php admin_modal_field_head('Descripción', 'news_descripcion_' . $formId, $sectionInternalName, 'descripcion'); ?>
-                    <textarea class="form-control" id="news_descripcion_<?= cms_e($formId) ?>" name="descripcion" rows="3"<?= $readonlyAttr ?>><?= cms_e($item['descripcion'] ?? '') ?></textarea>
+                    <textarea class="form-control js-news-editor" id="news_descripcion_<?= cms_e($formId) ?>" name="descripcion" rows="8"<?= $readonlyAttr ?>><?= cms_e($item['descripcion'] ?? '') ?></textarea>
                 </div>
             </div>
             <div class="col-md-4">
@@ -545,6 +568,33 @@ function admin_render_news_item_editor(array $item, int $idSeccion, array $categ
             <button type="submit" class="btn btn-admin-action"<?= $disabledAttr ?>>Guardar</button>
         </div>
     </form>
+    <script>
+    (function () {
+        // Reubicar los campos existentes, conservando nombres, permisos, eventos y guardado.
+        var form = document.currentScript.previousElementSibling;
+        if (!form || !form.classList.contains('news-inline-edit-panel')) return;
+        var original = form.querySelector('[data-news-original-fields]');
+        var groups = {};
+        form.querySelectorAll('[data-news-panel-fields]').forEach(function (panel) {
+            groups[panel.getAttribute('data-news-panel-fields')] = panel;
+        });
+        var mapping = [
+            ['titulo', 'general'], ['descripcion', 'general'],
+            ['id_categoria', 'clasificacion'], ['etiqueta', 'clasificacion'],
+            ['fecha_publicacion', 'opciones'], ['boton_1_texto', 'opciones'], ['boton_1_url', 'opciones'],
+            ['video_tipo', 'multimedia'], ['imagen', 'multimedia']
+        ];
+        mapping.forEach(function (entry) {
+            var field = original.querySelector('[name="' + entry[0] + '"]');
+            var column = field && field.closest('[class*="col-"]');
+            if (column && groups[entry[1]]) groups[entry[1]].appendChild(column);
+        });
+        var gallery = original.querySelector('[data-news-gallery-wrap]');
+        var galleryColumn = gallery && gallery.closest('[class*="col-"]');
+        if (galleryColumn) groups.multimedia.appendChild(galleryColumn);
+        original.remove();
+    })();
+    </script>
     <?php
 }
 

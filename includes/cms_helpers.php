@@ -1,6 +1,10 @@
 <?php
 require_once __DIR__ . '/../class/conexion.php';
 require_once __DIR__ . '/upload_helpers.php';
+require_once __DIR__ . '/public_routes.php';
+require_once __DIR__ . '/public_images.php';
+require_once __DIR__ . '/submenu_public_media.php';
+require_once __DIR__ . '/menu_media_helpers.php';
 
 function cms_e(?string $value): string
 {

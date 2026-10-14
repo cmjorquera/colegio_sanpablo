@@ -21,6 +21,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/class/conexion.php';
 require_once __DIR__ . '/includes/funciones_auditoria.php';
+require_once __DIR__ . '/includes/admin_permissions.php';
 
 $usuario = trim((string) ($_POST['usuario'] ?? ''));
 $clave = trim((string) ($_POST['clave'] ?? ''));
@@ -85,6 +86,11 @@ try {
             'motivo' => 'clave_incorrecta',
         ]);
         echo json_encode(['ok' => false, 'msg' => 'Usuario o clave incorrectos']);
+        exit;
+    }
+
+    if (function_exists('admin_cuenta_tiene_acceso') && !admin_cuenta_tiene_acceso($user)) {
+        echo json_encode(['ok' => false, 'msg' => 'Tu cuenta no tiene acceso al panel administrativo.']);
         exit;
     }
 

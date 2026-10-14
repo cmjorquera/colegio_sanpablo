@@ -180,3 +180,7 @@ Centralizacion de datos institucionales (Topbar, octubre 2026)
 
 CIERRE DE SESION (2026-10-14)
 El sidebar de includes/admin_layout.php usa formulario POST a cerrar_sesion.php y confirmacion SweetAlert (fallback confirm). Se envia token CSRF en sesion; cancelar no envia formulario. cerrar_sesion.php valida metodo y token, limpia $_SESSION, invalida cookie PHP y ejecuta session_destroy(); redirige 303 a index.php?login=1. admin.php redirige sesiones no autenticadas a esa misma URL y componentes/topbar.php abre el modal de login al detectarla. login_check.php regenera el identificador de sesion tras autenticar. Sin cambios de SQL. Probar logout/login, cancelar, acceso directo admin.php, retroceso y navegacion en QA.
+
+
+CORRECCION ACCESO ADMINISTRATIVO (2026-10-14)
+Se restauro desde main la vista includes/admin_login.php con assets/admin/css/admin-login.css y assets/admin/js/admin-login.js. admin.php sin admin_logged presenta directamente ese formulario (sin redireccion al modal del sitio publico). componentes/topbar.php enlaza a admin.php y ya no incluye el modal antiguo de login ni su script. cerrar_sesion.php destruye la sesion y redirige a admin.php. login_check.php verifica acceso al panel y regenera ID de sesion. En Plesk, qa se despliega a paginaweb.sanpablo.edu.uy segun configuracion confirmada por usuario. No tocar main ni SQL.

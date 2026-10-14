@@ -136,3 +136,10 @@ REGLAS IMPORTANTES
 - El boton "Ver todas las noticias" siempre apunta a noticias.php; url_boton y cantidad_items siguen en seccion_config pero ya no se editan desde editar_contenedor.php (se fuerzan a noticias.php y 4 al guardar).
 - noticias.php es la bitacora publica con pestanas por anio; ya esta implementada (ver seccion ARCHIVOS INVOLUCRADOS).
 - No documentar una tabla noticia si no existe en qaseduc_colegio_spablo.sql.
+
+
+Actualizacion 2026-10-14 — editor de noticias en pestañas (QA)
+- editar_contenedor.php: crear/editar noticia se organiza en cuatro pestañas internas: Informacion general (titulo y descripcion), Multimedia (video, imagen principal y galeria), Etiquetas y categoria, y Opciones (fecha y boton).
+- Se reutilizan los campos existentes dentro del mismo formulario, manteniendo nombres POST, permisos, bloqueo de campos, acciones de galeria y guardado. Los botones Cerrar, Cancelar y Guardar permanecen fuera de las pestañas.
+- Descripcion usa la clase js-news-editor para inicializar el CKEditor 4 ya cargado en editar_contenedor.php. Se conserva el HTML en el campo descripcion; no se ejecutan migraciones ni modificaciones masivas de registros.
+- Revisar funcionalmente en QA: creacion/edicion, editor enriquecido, cambio de pestañas, carga de imagen/video, galeria, permisos y persistencia. No se publica automaticamente en Plesk.

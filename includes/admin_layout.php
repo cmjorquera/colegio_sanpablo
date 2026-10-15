@@ -1079,30 +1079,7 @@ function admin_render_layout_start(array $options = []): void
             </button>
         </div>
     </aside>
-    <script>
-    document.querySelectorAll('[data-admin-logout-form]').forEach(function (form) {
-        form.addEventListener('submit', function (event) {
-            if (form.dataset.confirmed === '1') return;
-            event.preventDefault();
-            if (window.Swal && typeof window.Swal.fire === 'function') {
-                window.Swal.fire({
-                    title: '¿Cerrar sesión?',
-                    text: 'Tendrás que ingresar nuevamente para acceder al panel.',
-                    icon: 'question',
-                    showCancelButton: true,
-                    confirmButtonText: 'Sí, cerrar sesión',
-                    cancelButtonText: 'Cancelar',
-                    confirmButtonColor: '#d33'
-                }).then(function (result) {
-                    if (result.isConfirmed) { form.dataset.confirmed = '1'; form.requestSubmit(); }
-                });
-            } else if (window.confirm('¿Deseas cerrar sesión?')) {
-                form.dataset.confirmed = '1';
-                form.requestSubmit();
-            }
-        });
-    });
-    </script>
+
 
     <!-- overlay mobile -->
     <div id="sidebarOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1039;" onclick="document.getElementById('adminSidebar').classList.remove('mobile-open');this.style.display='none';"></div>
@@ -1172,6 +1149,23 @@ function admin_render_layout_end(array $options = []): void
                 <h5 class="modal-confirm-title" id="notifyModalTitle"></h5>
                 <p class="modal-confirm-msg" id="notifyModalMsg" style="margin-bottom:16px;"></p>
                 <div id="notifyProgress" style="height:3px;border-radius:2px;background:var(--adm-brand-gradient);transform-origin:left;"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmación de cierre de sesión: usa el diseño del panel y no window.confirm -->
+<div class="modal fade admin-logout-modal" id="adminLogoutModal" tabindex="-1" aria-labelledby="adminLogoutTitle" aria-describedby="adminLogoutDescription" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:430px;">
+        <div class="modal-content">
+            <div class="modal-body">
+                <div class="admin-logout-icon"><i class="bi bi-box-arrow-right" aria-hidden="true"></i></div>
+                <h5 id="adminLogoutTitle">¿Cerrar sesión?</h5>
+                <p id="adminLogoutDescription">¿Deseas salir del panel administrativo? Para volver a ingresar tendrás que identificarte nuevamente.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-soft" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-premium" id="adminLogoutConfirm"><i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i> Sí, cerrar sesión</button>
             </div>
         </div>
     </div>
@@ -1321,6 +1315,37 @@ function admin_render_layout_end(array $options = []): void
     };
 
     /* confirmModal helper (global) */
+    /* Cierre de sesión: confirmación institucional, sin confirm() del navegador. */
+    (function () {
+        var pendingLogoutForm = null;
+        var modalElement = document.getElementById('adminLogoutModal');
+        var confirmButton = document.getElementById('adminLogoutConfirm');
+        if (!modalElement || !confirmButton || !window.bootstrap || !bootstrap.Modal) return;
+        var logoutModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+        document.querySelectorAll('[data-admin-logout-form]').forEach(function (form) {
+            form.addEventListener('submit', function (event) {
+                if (form.dataset.confirmed === '1') return;
+                event.preventDefault();
+                pendingLogoutForm = form;
+                logoutModal.show();
+            });
+        });
+        confirmButton.addEventListener('click', function () {
+            if (!pendingLogoutForm) return;
+            var form = pendingLogoutForm;
+            pendingLogoutForm = null;
+            form.dataset.confirmed = '1';
+            confirmButton.disabled = true;
+            logoutModal.hide();
+            if (typeof form.requestSubmit === 'function') form.requestSubmit();
+            else form.submit();
+        });
+        modalElement.addEventListener('hidden.bs.modal', function () {
+            pendingLogoutForm = null;
+            confirmButton.disabled = false;
+        });
+    })();
+
     window.adminConfirm = function (opts) {
         /* opts: { title, msg, type('warning'|'danger'|'info'), btnText, onConfirm } */
         var icon   = document.getElementById('confirmModalIcon');

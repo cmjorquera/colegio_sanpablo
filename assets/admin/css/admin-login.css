@@ -81,3 +81,18 @@
 .admin-login-password-actions{display:flex;justify-content:flex-end;margin:-8px 0 17px;font-size:12px;color:#64758a}
 .admin-login-brand-features span{background:#ffffff18}
 @media(max-width:850px){.admin-login-brand{background-position:center 40%}}
+
+/* Identidad institucional y créditos de desarrollo del acceso administrativo */
+.admin-login-platform-institution{background:linear-gradient(110deg,#153a5c,#215e91 75%,#326c9c);gap:16px}
+.admin-login-institution-logo-wrap{width:116px;min-width:116px;height:66px;background:#fff;border-radius:11px;display:flex;align-items:center;justify-content:center;padding:9px 12px}
+.admin-login-institution-logo{display:block;width:100%;height:100%;object-fit:contain}
+.admin-login-institution-name{display:block;font-size:clamp(16px,1.6vw,21px);font-weight:800;line-height:1.25;color:#fff;letter-spacing:-.02em}
+.admin-login-platform-institution .admin-login-platform-copy p{margin-top:5px}
+.admin-login-developer{text-align:center;margin:21px 0 0;padding:21px 15px 12px;border-top:1px solid #d9e4ef;display:flex;flex-direction:column;align-items:center;gap:5px}
+.admin-login-developer-caption{font-size:11px;text-transform:uppercase;letter-spacing:.14em;font-weight:800;color:#637c98}
+.admin-login-developer-link{font-size:clamp(25px,2.7vw,33px);line-height:1.15;letter-spacing:-.055em;font-weight:900;color:#153b60;text-decoration:none}
+.admin-login-developer-link span:first-child{color:#2776b9}
+.admin-login-developer-link span:last-child{font-size:18px;vertical-align:middle;letter-spacing:0}
+.admin-login-developer-link:hover{color:#226aa5;text-decoration:underline}
+.admin-login-developer-description{font-size:11px;color:#7d90a5}
+@media(max-width:420px){.admin-login-institution-logo-wrap{width:95px;min-width:95px;height:57px}.admin-login-platform-institution{gap:12px}.admin-login-platform-institution .admin-login-platform-copy p{font-size:10px}}

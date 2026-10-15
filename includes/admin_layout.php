@@ -975,7 +975,19 @@ function admin_render_layout_start(array $options = []): void
             .section-card { padding: 14px; }
             .stat-card { padding: 14px; }
         }
-    </style>
+    
+        /* Confirmación de salida: estética consistente con el panel administrativo */
+        .admin-logout-modal .modal-content{border:1px solid #e2e8f0;border-radius:18px;overflow:hidden;box-shadow:0 24px 75px rgba(12,36,65,.22)}
+        .admin-logout-modal .modal-body{padding:32px 30px 22px;text-align:center}
+        .admin-logout-modal .admin-logout-icon{width:64px;height:64px;border-radius:19px;display:grid;place-items:center;margin:0 auto 19px;background:#eaf2fc;color:#205e9a;font-size:30px}
+        .admin-logout-modal h5{font-size:23px;font-weight:750;color:#142b43;letter-spacing:-.03em;margin:0 0 10px}
+        .admin-logout-modal p{font-size:14px;color:#64748b;line-height:1.65;margin:0}
+        .admin-logout-modal .modal-footer{border-top:1px solid #edf1f6;display:flex;justify-content:center;gap:10px;padding:18px 24px 23px}
+        .admin-logout-modal .modal-footer .btn{min-height:42px;border-radius:9px;font-weight:650;padding:9px 16px}
+        .admin-logout-modal .modal-footer .btn-premium{background:#1d5b93;color:#fff;border-color:#1d5b93}
+        .admin-logout-modal .modal-footer .btn-premium:hover{background:#164975;border-color:#164975}
+        .admin-logout-modal .modal-footer .btn:focus-visible{outline:3px solid #e6a72f;outline-offset:2px}
+</style>
     <link rel="stylesheet" href="assets/admin/css/admin.css">
     <?= $extraHead ?>
 </head>

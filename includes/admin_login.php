@@ -39,8 +39,11 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
                 <p class="admin-login-eyebrow"><span class="admin-login-status-dot"></span> Plataforma de gestión de páginas web</p>
                 <h1 id="institution-title"><?= cms_e($nombreInstitucion) ?></h1>
                 <p>Sistema de administración del sitio web institucional: organiza páginas, publica noticias y gestiona imágenes, videos y usuarios.</p>
-                <div class="admin-login-brand-features" aria-label="Funciones de la plataforma">
-                    <span>Páginas web</span><span>Noticias</span><span>Multimedia</span><span>Usuarios</span>
+                <div class="admin-login-feature-grid" aria-label="Funciones del gestor web">
+                    <div class="admin-login-feature"><span class="admin-login-feature-icon" aria-hidden="true">▤</span><span><strong>Páginas web</strong><small>Crea y organiza contenidos.</small></span></div>
+                    <div class="admin-login-feature"><span class="admin-login-feature-icon" aria-hidden="true">▣</span><span><strong>Noticias</strong><small>Publica novedades y comunicados.</small></span></div>
+                    <div class="admin-login-feature"><span class="admin-login-feature-icon" aria-hidden="true">▧</span><span><strong>Multimedia</strong><small>Gestiona imágenes y videos.</small></span></div>
+                    <div class="admin-login-feature"><span class="admin-login-feature-icon" aria-hidden="true">♙</span><span><strong>Usuarios</strong><small>Control de accesos y permisos.</small></span></div>
                 </div>
             </div>
             <div class="admin-login-brand-bottom">
@@ -86,8 +89,8 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
                     <noscript><p>Activa JavaScript en tu navegador para iniciar sesión desde este formulario.</p></noscript>
                 </div>
                 <div class="admin-login-developer" aria-label="Créditos de desarrollo">
-                    <span class="admin-login-developer-caption">Plataforma desarrollada por</span>
-                    <a href="https://webnia.cl/" target="_blank" rel="noopener noreferrer" class="admin-login-developer-link">WEBNIA<span>.CL</span> <span aria-hidden="true">↗</span></a>
+                    <span class="admin-login-developer-caption">Desarrollado por</span>
+                    <a href="https://webnia.cl/" target="_blank" rel="noopener noreferrer" class="admin-login-developer-link">webnia<span>.cl</span></a>
                     <span class="admin-login-developer-description">Desarrollo de sitios web y plataformas de gestión</span>
                 </div>
             </div>

@@ -196,3 +196,7 @@ En includes/admin_login.php la franja superior del panel derecho presenta el log
 
 AJUSTE VISUAL LOGIN CMS (2026-10-15)
 Panel izquierdo de includes/admin_login.php presenta foto del Colegio San Pablo con degradado azul y cuatro funciones reales del CMS (paginas web, noticias, multimedia y usuarios), con iconos y descripciones. CSS exclusivo en assets/admin/css/admin-login.css. La fotografia se carga desde assets/images/login/san_pablo_login.webp; no existe en GitHub qa en el momento del ajuste y debe subirse al servidor o incorporarse posteriormente al repositorio. En la firma inferior derecha se muestra solo el texto enlazado webnia.cl (sin isotipo ni logotipo grafico). La franja superior derecha mantiene identidad del colegio. No modificar autenticacion, main ni SQL.
+
+
+MODAL DE CONFIRMACION DE CIERRE DE SESION (2026-10-15)
+En includes/admin_layout.php, los formularios data-admin-logout-form conservan POST a cerrar_sesion.php y token csrf_logout. Se reemplazo el window.confirm nativo (y dependencia condicional de SweetAlert) por modal Bootstrap adminLogoutModal con estilos coherentes al panel, botones Cancelar y Si, cerrar sesion. JS inicializado al final del layout, despues de bootstrap.min.js, intercepta submit, muestra el modal y solo al confirmar envia el formulario con requestSubmit; Cancelar no envia nada. cerrar_sesion.php continua destruyendo la sesion. No hay cambios de SQL ni de main.

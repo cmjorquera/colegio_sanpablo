@@ -50,14 +50,14 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
         </section>
         <section class="admin-login-content" aria-labelledby="login-title">
             <div class="admin-login-content-inner">
-                <div class="admin-login-platform" aria-label="Información de la plataforma">
-                    <div class="admin-login-platform-mark" aria-hidden="true">
-                        <img src="assets/images/marcas/logo_webnia_02.png" alt="" class="admin-login-webnia-logo" onerror="this.closest('.admin-login-platform-mark').style.display='none'">
+                <div class="admin-login-platform admin-login-platform-institution" aria-label="Identidad del Colegio San Pablo">
+                    <div class="admin-login-institution-logo-wrap">
+                        <img src="<?= cms_e($logoInstitucion) ?>" alt="Logo de <?= cms_e($nombreInstitucion) ?>" class="admin-login-institution-logo">
                     </div>
                     <div class="admin-login-platform-copy">
-                        <span class="admin-login-platform-eyebrow">Tecnología y desarrollo</span>
-                        <a href="https://webnia.cl/" target="_blank" rel="noopener noreferrer" class="admin-login-platform-name" aria-label="Visitar Webnia">webnia<span>.cl</span> <span aria-hidden="true">↗</span></a>
-                        <p>Desarrollo y gestión de sitios web institucionales.</p>
+                        <span class="admin-login-platform-eyebrow">Panel de administración web</span>
+                        <span class="admin-login-institution-name"><?= cms_e($nombreInstitucion) ?></span>
+                        <p>Acceso exclusivo para administrar el sitio institucional.</p>
                     </div>
                 </div>
                 <div class="admin-login-card">
@@ -85,12 +85,10 @@ foreach (['primario' => '#F0A000', 'secundario' => '#EF6C00', 'terciario' => '#1
                     <div class="admin-login-card-footer"><span aria-hidden="true">●</span> Acceso exclusivo para personal autorizado</div>
                     <noscript><p>Activa JavaScript en tu navegador para iniciar sesión desde este formulario.</p></noscript>
                 </div>
-                <div class="admin-login-ecosystem">
-                    <span class="admin-login-ecosystem-label">Plataforma para sitios web educativos</span>
-                    <div class="admin-login-ecosystem-tags" aria-label="Tipos de instituciones compatibles">
-                        <span>◈ Sitios escolares</span><span>▦ Portales institucionales</span><span>◇ Gestión de contenidos</span>
-                    </div>
-                    <p>Desarrollado por <a href="https://webnia.cl/" target="_blank" rel="noopener noreferrer">Webnia.cl</a> · <?= date('Y') ?></p>
+                <div class="admin-login-developer" aria-label="Créditos de desarrollo">
+                    <span class="admin-login-developer-caption">Plataforma desarrollada por</span>
+                    <a href="https://webnia.cl/" target="_blank" rel="noopener noreferrer" class="admin-login-developer-link">WEBNIA<span>.CL</span> <span aria-hidden="true">↗</span></a>
+                    <span class="admin-login-developer-description">Desarrollo de sitios web y plataformas de gestión</span>
                 </div>
             </div>
         </section>
